@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.33130.400
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BK_BIN_Analyzer", "BK_BIN_Analyzer.csproj", "{843FB6F3-5842-4177-B671-EB6B91FB1CA3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{843FB6F3-5842-4177-B671-EB6B91FB1CA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{843FB6F3-5842-4177-B671-EB6B91FB1CA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{843FB6F3-5842-4177-B671-EB6B91FB1CA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{843FB6F3-5842-4177-B671-EB6B91FB1CA3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FA4354BC-3F56-443F-AE0B-360732C729B3}
+	EndGlobalSection
+EndGlobal
