@@ -78,8 +78,8 @@ namespace BK_BIN_Analyzer
                 case (0x01): // C4 or CI4; 16 RGB555-colors, pixels are encoded per row as 4bit IDs
                 {
                     // first parse the color palette
-                    byte[] color_palette = new byte[16 * 3];
-                    for (int i = 0; i < 16; i++)
+                    byte[] color_palette = new byte[0x10 * 3];
+                    for (int i = 0; i < 0x10; i++)
                     {
                         uint color_value = (uint)data[(i * 2) + 0] * 0x100 + (uint)data[(i * 2) + 1];
                         // RGB555
@@ -118,8 +118,8 @@ namespace BK_BIN_Analyzer
                 case (0x02): // C8 or CI8; 32 RGB555-colors, pixels are encoded per row as 8bit IDs
                 {
                     // first parse the color palette
-                    byte[] color_palette = new byte[32 * 3];
-                    for (int i = 0; i < 16; i++)
+                    byte[] color_palette = new byte[0x100 * 3];
+                    for (int i = 0; i < 0x100; i++)
                     {
                         uint color_value = (uint)data[(i * 2) + 0] * 0x100 + (uint)data[(i * 2) + 1];
                         // RGB555
@@ -135,7 +135,7 @@ namespace BK_BIN_Analyzer
                         {
                             // calc the pixel index
                             int px_id = (int)(y * w) + x;
-                            int pal_id = data[0x40 + (px_id)];
+                            int pal_id = data[0x200 + (px_id)];
 
                             // NOTE: the Bitmap constructor expects the colors to be in BGR...
                             pixel_data[(px_id * 3) + 2] = color_palette[(pal_id * 3) + 0];
@@ -291,11 +291,12 @@ namespace BK_BIN_Analyzer
                 Tex_Meta m = this.meta[i];
                 Tex_Data d = this.data[i];
 
-                // can simply take diff to next image
+                // can simply take diff to next image start if not the last one
                 if (i < (this.tex_cnt - 1))
                     d.data_size = this.meta[i + 1].datasection_offset_data - this.meta[i].datasection_offset_data;
-                // take diff to data-size
-                d.data_size = this.data_size - this.meta[i].datasection_offset_data;
+                // otherwise, take diff to data-size
+                else
+                    d.data_size = this.data_size - this.meta[i].datasection_offset_data;
 
                 d.data = new byte[(int) d.data_size];
                 for (int b = 0; b < d.data_size; b++)
@@ -303,6 +304,10 @@ namespace BK_BIN_Analyzer
                     d.data[b] = file_data[d.file_offset + b];
                 }
                 // and finally, parse the image data
+                Console.WriteLine(String.Format("{0}x{1}", m.width, m.height));
+                Console.WriteLine(String.Format("{0}", d.data_size));
+                Console.WriteLine(File_Handler.uint_to_string(d.file_offset, 0xFFFFFFFF));
+                Console.WriteLine(d.data);
                 d.img_rep = parse_img_data(d.data, m.tex_type, m.width, m.height);
             }
         }
