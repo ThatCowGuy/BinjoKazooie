@@ -53,6 +53,16 @@ namespace BK_BIN_Analyzer
                 buffer[i] = file_content[address + i];
             return (byte) File_Handler.bytes_2_int(buffer, data_size);
         }
+        public static Single convert_to_float(int hex)
+        {
+            var bytes = BitConverter.GetBytes(hex);
+            return BitConverter.ToSingle(bytes, 0);
+        }
+        public static Single read_float(byte[] file_content, int address)
+        {
+            int hex = (int) read_int(file_content, address);
+            return convert_to_float(hex);
+        }
 
 
         public static void write_data(byte[] file_content, int offset, byte[] data)

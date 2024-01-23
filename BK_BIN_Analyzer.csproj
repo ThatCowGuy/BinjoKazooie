@@ -46,6 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bone_Segment.cs" />
     <Compile Include="BIN_Handler.cs" />
     <Compile Include="BIN_Header.cs" />
     <Compile Include="Collision_Segment.cs" />

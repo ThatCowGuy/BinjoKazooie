@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using System.IO;
+using System.Diagnostics;
 
 namespace BK_BIN_Analyzer
 {
@@ -27,8 +28,8 @@ namespace BK_BIN_Analyzer
 
         public void set_bounds_for_numericUpDown2()
         {
-            this.numericUpDown2.Value = 0;
             this.numericUpDown2.Minimum = 0;
+            this.numericUpDown2.Value = 0;
             switch (this.numericUpDown1.Value)
             {
                 case (1):
@@ -139,6 +140,7 @@ namespace BK_BIN_Analyzer
 
             this.panel2.Visible = false;
             this.panel3.Visible = false;
+            this.panel4.Visible = false;
 
             if (this.handler.file_loaded == true)
             {
@@ -147,6 +149,7 @@ namespace BK_BIN_Analyzer
                 setup_DGV(dataGridView1);
                 setup_DGV(dataGridView2);
                 setup_DGV(dataGridView3);
+                setup_DGV(dataGridView4);
 
                 // add descriptors to grid 1
                 dataGridView1.Columns.Add("0", "Description");
@@ -188,26 +191,72 @@ namespace BK_BIN_Analyzer
                     dataGridView2.Columns[0].Width = 120;
                     dataGridView2.Columns[1].Width = 75;
 
-                    foreach (string[] element in handler.tex_seg.get_content_of_element((int) this.numericUpDown2.Value))
-                        dataGridView2.Rows.Add(element);
-                    finish_up_DGV(dataGridView2);
-
-                    Tex_Meta m = this.handler.tex_seg.meta[(int)this.numericUpDown2.Value];
-                    int display_w = 128;
-                    int display_h = 128;
-                    double wm_ratio = ((double)m.width / (double)m.height);
-                    if (wm_ratio > 1.0) display_h = (int)(display_h / wm_ratio);
-                    if (wm_ratio < 1.0) display_w = (int)(display_w * wm_ratio);
-                    pictureBox1.Image = new Bitmap(
-                        handler.tex_seg.data[(int) this.numericUpDown2.Value].img_rep,
-                        display_w, display_h
-                    );
-                    pictureBox1.Update();
-
-                    if (this.replacement_cvt != null)
+                    // Sanity check to see if index is valid
+                    if (this.handler.tex_seg.tex_cnt > 0 && this.numericUpDown2.Value < this.handler.tex_seg.tex_cnt)
                     {
-                        enable_button(button4);
+                        foreach (string[] element in handler.tex_seg.get_content_of_element((int) this.numericUpDown2.Value))
+                            dataGridView2.Rows.Add(element);
+
+                        Tex_Meta m = this.handler.tex_seg.meta[(int)this.numericUpDown2.Value];
+                        int display_w = 128;
+                        int display_h = 128;
+                        double wm_ratio = ((double)m.width / (double)m.height);
+                        if (wm_ratio > 1.0) display_h = (int)(display_h / wm_ratio);
+                        if (wm_ratio < 1.0) display_w = (int)(display_w * wm_ratio);
+                        pictureBox1.Image = new Bitmap(
+                            handler.tex_seg.data[(int) this.numericUpDown2.Value].img_rep,
+                            display_w, display_h
+                        );
+                        pictureBox1.Update();
+
+                        if (this.replacement_cvt != null)
+                        {
+                            enable_button(button4);
+                        }
                     }
+                    finish_up_DGV(dataGridView2);
+                }
+                if (seg_name == "Bone Segment")
+                {
+                    foreach (string[] element in handler.bone_seg.get_content())
+                        dataGridView1.Rows.Add(element);
+                    finish_up_DGV(dataGridView1);
+
+                    this.panel4.Visible = true;
+                    this.panel4.Location = get_bottom_of_DGV_1();
+
+                    // add descriptors to grid 3
+                    dataGridView4.Columns.Add("0", "ID");
+                    dataGridView4.Columns[0].DividerWidth = 3;
+                    dataGridView4.Columns.Add("1", "X");
+                    dataGridView4.Columns.Add("2", "Y");
+                    dataGridView4.Columns.Add("3", "Z");
+                    dataGridView4.Columns[3].DividerWidth = 3;
+                    dataGridView4.Columns.Add("4", "Internal Bone ID");
+                    dataGridView4.Columns.Add("5", "Parent Bone ID");
+                    dataGridView4.Columns[0].Width = 75;
+                    dataGridView4.Columns[1].Width = 75;
+                    dataGridView4.Columns[2].Width = 75;
+                    dataGridView4.Columns[3].Width = 75;
+
+                    if (this.checkBox2.Checked == true)
+                    {
+                        for (int id = 0; id < handler.bone_seg.bone_cnt; id++)
+                        {
+                            foreach (string[] element in handler.bone_seg.get_bone_content(id))
+                                dataGridView4.Rows.Add(element);
+                        }
+                        // dataGridView4 is a special one:
+                        // should be scrollable, so we dont use the standard method with data
+                        colorize_DGV(dataGridView4);
+                        dataGridView4.ClearSelection();
+                        dataGridView4.Height = 230;
+                    }
+                    else
+                    {
+                        finish_up_DGV(dataGridView4);
+                    }
+                    panel4.Height = 32 + dataGridView4.Height + 16;
                 }
                 if (seg_name == "Vertex Segment")
                 {
@@ -266,13 +315,19 @@ namespace BK_BIN_Analyzer
         {
             // reset this one to avoid shenanigans
             this.set_bounds_for_numericUpDown2();
-            this.numericUpDown2.Value = 0;
+            this.numericUpDown2.Value = this.numericUpDown2.Minimum;
 
             string seg_name = this.handler.SEGMENT_NAMES[(int)numericUpDown1.Value];
             if (seg_name == "Vertex Segment")
             {
                 this.checkBox1.Visible = true;
+                // this one is off by default, because the header might be of more interest
                 this.checkBox1.Checked = false;
+            }
+            else if (seg_name == "Bone Segment")
+            {
+                // make this one depend on the amount of bone data to show
+                this.checkBox2.Checked = (handler.bone_seg.bone_cnt > 32) ? false : true;
             }
             else
             {
@@ -297,7 +352,7 @@ namespace BK_BIN_Analyzer
             string chosen_filename = Path.Combine(Directory.GetCurrentDirectory(), String.Format("converted.png"));
 
             SaveFileDialog SFD = new SaveFileDialog();
-            SFD.InitialDirectory = File_Handler.get_basedir_or_assets();
+            SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
             SFD.FileName = chosen_filename;
             if (SFD.ShowDialog() == DialogResult.OK)
             {
@@ -361,7 +416,7 @@ namespace BK_BIN_Analyzer
             int new_h = 128;
             int display_w = 128;
             int display_h = 128;
-            if (this.handler.file_loaded == false)
+            if (this.handler.file_loaded == false || this.handler.tex_seg.tex_cnt < 1)
             {
                 // not doing any conversion
                 this.replacement_cvt = new Bitmap(this.replacement_ori);
@@ -477,6 +532,24 @@ namespace BK_BIN_Analyzer
         private void checkBox1_CheckedChanged(object sender, EventArgs e)
         {
             update_display();
+        }
+        private void checkBox2_CheckedChanged(object sender, EventArgs e)
+        {
+            update_display();
+        }
+
+        private void label8_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            Process.Start("https://hack64.net/wiki/doku.php?id=banjo_kazooie");
+        }
+        private void button8_Click(object sender, EventArgs e)
+        {
+            Process.Start("https://docs.google.com/document/d/1wcETwmo98Xfn_MUZ58qS6XAY_ikr592Bz5cl27hTr14/edit");
         }
     }
 }

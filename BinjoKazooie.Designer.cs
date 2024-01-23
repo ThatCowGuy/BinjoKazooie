@@ -32,6 +32,7 @@ namespace BK_BIN_Analyzer
             this.button1 = new System.Windows.Forms.Button();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.numericUpDown1 = new System.Windows.Forms.NumericUpDown();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
@@ -54,7 +55,13 @@ namespace BK_BIN_Analyzer
             this.panel3 = new System.Windows.Forms.Panel();
             this.label9 = new System.Windows.Forms.Label();
             this.dataGridView3 = new System.Windows.Forms.DataGridView();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
+            this.panel4 = new System.Windows.Forms.Panel();
+            this.label8 = new System.Windows.Forms.Label();
+            this.dataGridView4 = new System.Windows.Forms.DataGridView();
+            this.checkBox2 = new System.Windows.Forms.CheckBox();
+            this.button7 = new System.Windows.Forms.Button();
+            this.button8 = new System.Windows.Forms.Button();
+            this.label10 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
@@ -66,6 +73,8 @@ namespace BK_BIN_Analyzer
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).BeginInit();
             this.panel3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView3)).BeginInit();
+            this.panel4.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView4)).BeginInit();
             this.SuspendLayout();
             // 
             // button1
@@ -105,6 +114,18 @@ namespace BK_BIN_Analyzer
             this.panel1.Size = new System.Drawing.Size(541, 158);
             this.panel1.TabIndex = 3;
             this.panel1.Paint += new System.Windows.Forms.PaintEventHandler(this.panel1_Paint);
+            // 
+            // checkBox1
+            // 
+            this.checkBox1.AutoSize = true;
+            this.checkBox1.ForeColor = System.Drawing.SystemColors.Control;
+            this.checkBox1.Location = new System.Drawing.Point(433, 8);
+            this.checkBox1.Name = "checkBox1";
+            this.checkBox1.Size = new System.Drawing.Size(94, 17);
+            this.checkBox1.TabIndex = 6;
+            this.checkBox1.Text = "Show Vertices";
+            this.checkBox1.UseVisualStyleBackColor = true;
+            this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
             // 
             // numericUpDown1
             // 
@@ -349,7 +370,7 @@ namespace BK_BIN_Analyzer
             this.panel3.Controls.Add(this.dataGridView3);
             this.panel3.Location = new System.Drawing.Point(559, 328);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(541, 352);
+            this.panel3.Size = new System.Drawing.Size(541, 92);
             this.panel3.TabIndex = 6;
             // 
             // label9
@@ -375,20 +396,89 @@ namespace BK_BIN_Analyzer
             this.dataGridView3.Location = new System.Drawing.Point(3, 33);
             this.dataGridView3.Name = "dataGridView3";
             this.dataGridView3.RowHeadersVisible = false;
-            this.dataGridView3.Size = new System.Drawing.Size(524, 314);
+            this.dataGridView3.Size = new System.Drawing.Size(524, 49);
             this.dataGridView3.TabIndex = 2;
             // 
-            // checkBox1
+            // panel4
             // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.ForeColor = System.Drawing.SystemColors.Control;
-            this.checkBox1.Location = new System.Drawing.Point(433, 8);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(94, 17);
-            this.checkBox1.TabIndex = 6;
-            this.checkBox1.Text = "Show Vertices";
-            this.checkBox1.UseVisualStyleBackColor = true;
-            this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
+            this.panel4.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel4.Controls.Add(this.checkBox2);
+            this.panel4.Controls.Add(this.label8);
+            this.panel4.Controls.Add(this.dataGridView4);
+            this.panel4.Location = new System.Drawing.Point(559, 426);
+            this.panel4.Name = "panel4";
+            this.panel4.Size = new System.Drawing.Size(541, 92);
+            this.panel4.TabIndex = 7;
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label8.ForeColor = System.Drawing.SystemColors.ButtonFace;
+            this.label8.Location = new System.Drawing.Point(4, 11);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(51, 13);
+            this.label8.TabIndex = 3;
+            this.label8.Text = "Bone List";
+            this.label8.Click += new System.EventHandler(this.label8_Click);
+            // 
+            // dataGridView4
+            // 
+            this.dataGridView4.AllowUserToAddRows = false;
+            this.dataGridView4.AllowUserToDeleteRows = false;
+            this.dataGridView4.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.dataGridView4.BackgroundColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(192)))), ((int)(((byte)(128)))));
+            this.dataGridView4.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridView4.GridColor = System.Drawing.Color.DarkGray;
+            this.dataGridView4.Location = new System.Drawing.Point(3, 33);
+            this.dataGridView4.Name = "dataGridView4";
+            this.dataGridView4.RowHeadersVisible = false;
+            this.dataGridView4.Size = new System.Drawing.Size(524, 49);
+            this.dataGridView4.TabIndex = 2;
+            // 
+            // checkBox2
+            // 
+            this.checkBox2.AutoSize = true;
+            this.checkBox2.ForeColor = System.Drawing.SystemColors.Control;
+            this.checkBox2.Location = new System.Drawing.Point(439, 10);
+            this.checkBox2.Name = "checkBox2";
+            this.checkBox2.Size = new System.Drawing.Size(88, 17);
+            this.checkBox2.TabIndex = 7;
+            this.checkBox2.Text = "Show Entries";
+            this.checkBox2.UseVisualStyleBackColor = true;
+            // 
+            // button7
+            // 
+            this.button7.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
+            this.button7.Location = new System.Drawing.Point(284, 12);
+            this.button7.Name = "button7";
+            this.button7.Size = new System.Drawing.Size(67, 23);
+            this.button7.TabIndex = 16;
+            this.button7.Text = "Hack64";
+            this.button7.UseVisualStyleBackColor = false;
+            this.button7.Click += new System.EventHandler(this.button7_Click);
+            // 
+            // button8
+            // 
+            this.button8.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
+            this.button8.Location = new System.Drawing.Point(357, 12);
+            this.button8.Name = "button8";
+            this.button8.Size = new System.Drawing.Size(92, 23);
+            this.button8.TabIndex = 17;
+            this.button8.Text = "Bottles Molehill";
+            this.button8.UseVisualStyleBackColor = false;
+            this.button8.Click += new System.EventHandler(this.button8_Click);
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label10.ForeColor = System.Drawing.SystemColors.ButtonFace;
+            this.label10.Location = new System.Drawing.Point(193, 17);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(85, 13);
+            this.label10.TabIndex = 18;
+            this.label10.Text = "Documentation :";
             // 
             // BinjoKazooie
             // 
@@ -396,6 +486,10 @@ namespace BK_BIN_Analyzer
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(44)))), ((int)(((byte)(44)))), ((int)(((byte)(44)))));
             this.ClientSize = new System.Drawing.Size(1169, 545);
+            this.Controls.Add(this.label10);
+            this.Controls.Add(this.button8);
+            this.Controls.Add(this.button7);
+            this.Controls.Add(this.panel4);
             this.Controls.Add(this.panel3);
             this.Controls.Add(this.button5);
             this.Controls.Add(this.panel2);
@@ -422,6 +516,9 @@ namespace BK_BIN_Analyzer
             this.panel3.ResumeLayout(false);
             this.panel3.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView3)).EndInit();
+            this.panel4.ResumeLayout(false);
+            this.panel4.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView4)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -455,6 +552,13 @@ namespace BK_BIN_Analyzer
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.DataGridView dataGridView3;
         private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.Panel panel4;
+        private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.DataGridView dataGridView4;
+        private System.Windows.Forms.CheckBox checkBox2;
+        private System.Windows.Forms.Button button7;
+        private System.Windows.Forms.Button button8;
+        private System.Windows.Forms.Label label10;
     }
 }
 

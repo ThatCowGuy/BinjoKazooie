@@ -26,7 +26,7 @@ namespace BK_BIN_Analyzer
             { 2, "DisplayList Segment" },
             { 3, "Vertex Segment" },
             { 4, "Collision Segment" },
-            { 5, "Animation Segment" },
+            { 5, "Bone Segment" },
             { 6, "GeoLayout Segment" },
         };
 
@@ -36,6 +36,7 @@ namespace BK_BIN_Analyzer
         public BIN_Header bin_header = new BIN_Header();
         public Texture_Segment tex_seg = new Texture_Segment();
         public Vertex_Segment vtx_seg = new Vertex_Segment();
+        public Bone_Segment bone_seg = new Bone_Segment();
         public void parse_BIN()
         {
             this.file_loaded = false;
@@ -45,6 +46,7 @@ namespace BK_BIN_Analyzer
             tex_seg.populate(this.content, (int)bin_header.tex_offset);
             vtx_seg.binheader_vtx_cnt = bin_header.vtx_cnt;
             vtx_seg.populate(this.content, (int)bin_header.vtx_offset);
+            bone_seg.populate(this.content, (int)bin_header.bone_offset);
 
             this.file_loaded = true;
         }

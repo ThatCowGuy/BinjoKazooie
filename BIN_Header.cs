@@ -18,13 +18,13 @@ namespace BK_BIN_Analyzer
         // === 0x10 ===============================
         public uint vtx_offset;
         public uint unk_1;
-        public uint anim_offset;
+        public uint bone_offset;
         public uint coll_offset;
         // === 0x20 ===============================
         public uint FX_END;
         public uint FX_offset;
         public uint unk_2; // this is similarly valued as unk_1
-        public uint anim_tex_offset;
+        public uint bone_tex_offset;
         // === 0x30 ===============================
         public ushort tri_cnt;
         public ushort vtx_cnt;
@@ -43,13 +43,13 @@ namespace BK_BIN_Analyzer
             // === 0x10 ===============================
             this.vtx_offset = File_Handler.read_int(file_data, 0x10);
             this.unk_1 = File_Handler.read_int(file_data, 0x14);
-            this.anim_offset = File_Handler.read_int(file_data, 0x18);
+            this.bone_offset = File_Handler.read_int(file_data, 0x18);
             this.coll_offset = File_Handler.read_int(file_data, 0x1C);
             // === 0x20 ===============================
             this.FX_END = File_Handler.read_int(file_data, 0x20);
             this.FX_offset = File_Handler.read_int(file_data, 0x24);
             this.unk_2 = File_Handler.read_int(file_data, 0x28);
-            this.anim_tex_offset = File_Handler.read_int(file_data, 0x2C);
+            this.bone_tex_offset = File_Handler.read_int(file_data, 0x2C);
             // === 0x30 ===============================
             this.tri_cnt = File_Handler.read_short(file_data, 0x30);
             this.vtx_cnt = File_Handler.read_short(file_data, 0x32);
@@ -65,6 +65,12 @@ namespace BK_BIN_Analyzer
                 File_Handler.uint_to_string(this.start_identifier, 0xFFFFFFFF),
                 File_Handler.uint_to_string(this.start_identifier, 10),
                 "Constant: 0x0000_000B"
+            });
+            content.Add(new string[] {
+                "GeoLayout Offset",
+                File_Handler.uint_to_string(this.geo_offset, 0xFFFF),
+                File_Handler.uint_to_string(this.geo_offset, 10),
+                ""
             });
             content.Add(new string[] {
                 "Tex Offset",
@@ -107,8 +113,8 @@ namespace BK_BIN_Analyzer
                 this.unk_1.ToString()
             });
             content.Add(new string[] {
-                "Animation Offset",
-                File_Handler.uint_to_string(this.anim_offset, 0xFFFFFFFF)
+                "Bone Offset",
+                File_Handler.uint_to_string(this.bone_offset, 0xFFFFFFFF)
             });
             content.Add(new string[] {
                 "Collision Offset",
@@ -128,8 +134,8 @@ namespace BK_BIN_Analyzer
                 this.unk_2.ToString()
             });
             content.Add(new string[] {
-                "Anim.Tex Offset",
-                File_Handler.uint_to_string(this.anim_tex_offset, 0xFFFFFFFF)
+                "bone.Tex Offset",
+                File_Handler.uint_to_string(this.bone_tex_offset, 0xFFFFFFFF)
             });
             content.Add(new string[] {
                 "Tri Count",
