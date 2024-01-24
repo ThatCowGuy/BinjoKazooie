@@ -159,12 +159,12 @@ namespace BK_BIN_Analyzer
                             else palette.Add(cpx);
                         }
                     }
-                    if (palette.Count > 32)
+                    if (palette.Count > 256)
                     {
-                        Console.WriteLine("Too many Colors in extracted Palette (CI8 max is 32)");
+                        Console.WriteLine("Too many Colors in extracted Palette (CI8 max is 256)");
                         return null;
                     }
-                    byte[] data = new byte[0x40 + (w * h)];
+                    byte[] data = new byte[0x200 + (w * h)];
                     int pal_id = 0;
                     // NOTE: implicitly creating "black" colors for missing ones because it doesnt matter
                     foreach (ColorPixel pal_col in palette)
@@ -197,7 +197,7 @@ namespace BK_BIN_Analyzer
                                     }
                                 }
                                 int px_pal_id = palette.FindIndex(tmp => tmp.Equals(best_col) == true);
-                                data[0x40 + (px_index)] = (byte)(px_pal_id);
+                                data[0x200 + (px_index)] = (byte)(px_pal_id);
                             }
                         }
                     }

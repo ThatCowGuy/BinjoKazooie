@@ -448,7 +448,7 @@ namespace BK_BIN_Analyzer
                     }
                     case (0x02): // C8 or CI8; 32 RGB555-colors, pixels are encoded per row as 8bit IDs
                     {
-                        int col_cnt = 32;
+                        int col_cnt = 256;
                         this.replacement_palette = MathHelpers.approx_palette_by_most_used_with_diversity(
                             new Bitmap(replacement_ori, new_w, new_h),
                             col_cnt, (int)this.numericUpDown3.Value
