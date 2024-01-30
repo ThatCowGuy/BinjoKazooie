@@ -191,9 +191,9 @@ namespace BK_BIN_Analyzer
                             int px_id = (int)(y * w) + x;
 
                             // NOTE: THIS Bitmap constructor expects the colors to be in BGRA...
-                            pixel_data[(px_id * 4) + 2] = data[(px_id * 4) + 2];
+                            pixel_data[(px_id * 4) + 0] = data[(px_id * 4) + 2];
                             pixel_data[(px_id * 4) + 1] = data[(px_id * 4) + 1];
-                            pixel_data[(px_id * 4) + 0] = data[(px_id * 4) + 0];
+                            pixel_data[(px_id * 4) + 2] = data[(px_id * 4) + 0];
                             // dont forget alpha !
                             pixel_data[(px_id * 4) + 3] = data[(px_id * 4) + 3];
                         }
