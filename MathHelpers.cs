@@ -240,10 +240,9 @@ namespace BK_BIN_Analyzer
                             int px_index = (y * w) + x;
                             Color px = img_clone.GetPixel(x, y);
 
-                            // NOTE: BGR here for C#
-                            data[(px_index * 4) + 2] = px.R;
+                            data[(px_index * 4) + 0] = px.R;
                             data[(px_index * 4) + 1] = px.G;
-                            data[(px_index * 4) + 0] = px.B;
+                            data[(px_index * 4) + 2] = px.B;
                             data[(px_index * 4) + 3] = px.A;
                         }
                     }
