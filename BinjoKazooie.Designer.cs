@@ -56,12 +56,22 @@ namespace BK_BIN_Analyzer
             this.label9 = new System.Windows.Forms.Label();
             this.dataGridView3 = new System.Windows.Forms.DataGridView();
             this.panel4 = new System.Windows.Forms.Panel();
+            this.checkBox2 = new System.Windows.Forms.CheckBox();
             this.label8 = new System.Windows.Forms.Label();
             this.dataGridView4 = new System.Windows.Forms.DataGridView();
-            this.checkBox2 = new System.Windows.Forms.CheckBox();
             this.button7 = new System.Windows.Forms.Button();
             this.button8 = new System.Windows.Forms.Button();
             this.label10 = new System.Windows.Forms.Label();
+            this.button9 = new System.Windows.Forms.Button();
+            this.panel5 = new System.Windows.Forms.Panel();
+            this.label11 = new System.Windows.Forms.Label();
+            this.dataGridView5 = new System.Windows.Forms.DataGridView();
+            this.button10 = new System.Windows.Forms.Button();
+            this.panel6 = new System.Windows.Forms.Panel();
+            this.label12 = new System.Windows.Forms.Label();
+            this.dataGridView6 = new System.Windows.Forms.DataGridView();
+            this.checkBox3 = new System.Windows.Forms.CheckBox();
+            this.button11 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
@@ -75,6 +85,10 @@ namespace BK_BIN_Analyzer
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView3)).BeginInit();
             this.panel4.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView4)).BeginInit();
+            this.panel5.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView5)).BeginInit();
+            this.panel6.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView6)).BeginInit();
             this.SuspendLayout();
             // 
             // button1
@@ -180,6 +194,7 @@ namespace BK_BIN_Analyzer
             // 
             this.panel2.BackColor = System.Drawing.Color.Transparent;
             this.panel2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel2.Controls.Add(this.button9);
             this.panel2.Controls.Add(this.button6);
             this.panel2.Controls.Add(this.label7);
             this.panel2.Controls.Add(this.label6);
@@ -288,7 +303,7 @@ namespace BK_BIN_Analyzer
             // 
             // button4
             // 
-            this.button4.Location = new System.Drawing.Point(7, 97);
+            this.button4.Location = new System.Drawing.Point(7, 126);
             this.button4.Name = "button4";
             this.button4.Size = new System.Drawing.Size(94, 23);
             this.button4.TabIndex = 14;
@@ -392,12 +407,15 @@ namespace BK_BIN_Analyzer
             this.dataGridView3.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.dataGridView3.BackgroundColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(192)))), ((int)(((byte)(128)))));
             this.dataGridView3.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridView3.EditMode = System.Windows.Forms.DataGridViewEditMode.EditOnEnter;
             this.dataGridView3.GridColor = System.Drawing.Color.DarkGray;
             this.dataGridView3.Location = new System.Drawing.Point(3, 33);
             this.dataGridView3.Name = "dataGridView3";
             this.dataGridView3.RowHeadersVisible = false;
             this.dataGridView3.Size = new System.Drawing.Size(524, 49);
             this.dataGridView3.TabIndex = 2;
+            this.dataGridView3.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView3_CellValueChanged);
+            this.dataGridView3.CellValuePushed += new System.Windows.Forms.DataGridViewCellValueEventHandler(this.dataGridView3_CellValuePushed);
             // 
             // panel4
             // 
@@ -409,6 +427,18 @@ namespace BK_BIN_Analyzer
             this.panel4.Name = "panel4";
             this.panel4.Size = new System.Drawing.Size(541, 92);
             this.panel4.TabIndex = 7;
+            // 
+            // checkBox2
+            // 
+            this.checkBox2.AutoSize = true;
+            this.checkBox2.ForeColor = System.Drawing.SystemColors.Control;
+            this.checkBox2.Location = new System.Drawing.Point(439, 10);
+            this.checkBox2.Name = "checkBox2";
+            this.checkBox2.Size = new System.Drawing.Size(88, 17);
+            this.checkBox2.TabIndex = 7;
+            this.checkBox2.Text = "Show Entries";
+            this.checkBox2.UseVisualStyleBackColor = true;
+            this.checkBox2.CheckedChanged += new System.EventHandler(this.checkBox2_CheckedChanged_1);
             // 
             // label8
             // 
@@ -435,17 +465,6 @@ namespace BK_BIN_Analyzer
             this.dataGridView4.RowHeadersVisible = false;
             this.dataGridView4.Size = new System.Drawing.Size(524, 49);
             this.dataGridView4.TabIndex = 2;
-            // 
-            // checkBox2
-            // 
-            this.checkBox2.AutoSize = true;
-            this.checkBox2.ForeColor = System.Drawing.SystemColors.Control;
-            this.checkBox2.Location = new System.Drawing.Point(439, 10);
-            this.checkBox2.Name = "checkBox2";
-            this.checkBox2.Size = new System.Drawing.Size(88, 17);
-            this.checkBox2.TabIndex = 7;
-            this.checkBox2.Text = "Show Entries";
-            this.checkBox2.UseVisualStyleBackColor = true;
             // 
             // button7
             // 
@@ -480,12 +499,140 @@ namespace BK_BIN_Analyzer
             this.label10.TabIndex = 18;
             this.label10.Text = "Documentation :";
             // 
+            // button9
+            // 
+            this.button9.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
+            this.button9.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
+            this.button9.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
+            this.button9.Location = new System.Drawing.Point(7, 97);
+            this.button9.Name = "button9";
+            this.button9.Size = new System.Drawing.Size(94, 23);
+            this.button9.TabIndex = 21;
+            this.button9.Text = "Export All";
+            this.button9.UseVisualStyleBackColor = true;
+            this.button9.Click += new System.EventHandler(this.button9_Click);
+            // 
+            // panel5
+            // 
+            this.panel5.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel5.Controls.Add(this.button10);
+            this.panel5.Controls.Add(this.label11);
+            this.panel5.Controls.Add(this.dataGridView5);
+            this.panel5.Location = new System.Drawing.Point(12, 328);
+            this.panel5.Name = "panel5";
+            this.panel5.Size = new System.Drawing.Size(541, 92);
+            this.panel5.TabIndex = 7;
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label11.ForeColor = System.Drawing.SystemColors.ButtonFace;
+            this.label11.Location = new System.Drawing.Point(4, 11);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(64, 13);
+            this.label11.TabIndex = 3;
+            this.label11.Text = "Triangle List";
+            // 
+            // dataGridView5
+            // 
+            this.dataGridView5.AllowUserToAddRows = false;
+            this.dataGridView5.AllowUserToDeleteRows = false;
+            this.dataGridView5.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.dataGridView5.BackgroundColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(192)))), ((int)(((byte)(128)))));
+            this.dataGridView5.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridView5.EditMode = System.Windows.Forms.DataGridViewEditMode.EditOnEnter;
+            this.dataGridView5.GridColor = System.Drawing.Color.DarkGray;
+            this.dataGridView5.Location = new System.Drawing.Point(3, 33);
+            this.dataGridView5.Name = "dataGridView5";
+            this.dataGridView5.RowHeadersVisible = false;
+            this.dataGridView5.Size = new System.Drawing.Size(524, 49);
+            this.dataGridView5.TabIndex = 2;
+            // 
+            // button10
+            // 
+            this.button10.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
+            this.button10.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
+            this.button10.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
+            this.button10.Location = new System.Drawing.Point(433, 6);
+            this.button10.Name = "button10";
+            this.button10.Size = new System.Drawing.Size(94, 23);
+            this.button10.TabIndex = 22;
+            this.button10.Text = "Export Collision";
+            this.button10.UseVisualStyleBackColor = true;
+            this.button10.Click += new System.EventHandler(this.button10_Click);
+            // 
+            // panel6
+            // 
+            this.panel6.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel6.Controls.Add(this.button11);
+            this.panel6.Controls.Add(this.checkBox3);
+            this.panel6.Controls.Add(this.label12);
+            this.panel6.Controls.Add(this.dataGridView6);
+            this.panel6.Location = new System.Drawing.Point(12, 426);
+            this.panel6.Name = "panel6";
+            this.panel6.Size = new System.Drawing.Size(541, 92);
+            this.panel6.TabIndex = 7;
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label12.ForeColor = System.Drawing.SystemColors.ButtonFace;
+            this.label12.Location = new System.Drawing.Point(4, 11);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(112, 13);
+            this.label12.TabIndex = 3;
+            this.label12.Text = "DisplayList Commands";
+            // 
+            // dataGridView6
+            // 
+            this.dataGridView6.AllowUserToAddRows = false;
+            this.dataGridView6.AllowUserToDeleteRows = false;
+            this.dataGridView6.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.dataGridView6.BackgroundColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(192)))), ((int)(((byte)(128)))));
+            this.dataGridView6.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridView6.EditMode = System.Windows.Forms.DataGridViewEditMode.EditOnEnter;
+            this.dataGridView6.GridColor = System.Drawing.Color.DarkGray;
+            this.dataGridView6.Location = new System.Drawing.Point(3, 33);
+            this.dataGridView6.Name = "dataGridView6";
+            this.dataGridView6.RowHeadersVisible = false;
+            this.dataGridView6.Size = new System.Drawing.Size(524, 49);
+            this.dataGridView6.TabIndex = 2;
+            // 
+            // checkBox3
+            // 
+            this.checkBox3.AutoSize = true;
+            this.checkBox3.ForeColor = System.Drawing.SystemColors.Control;
+            this.checkBox3.Location = new System.Drawing.Point(439, 10);
+            this.checkBox3.Name = "checkBox3";
+            this.checkBox3.Size = new System.Drawing.Size(88, 17);
+            this.checkBox3.TabIndex = 8;
+            this.checkBox3.Text = "Show Entries";
+            this.checkBox3.UseVisualStyleBackColor = true;
+            this.checkBox3.CheckedChanged += new System.EventHandler(this.checkBox3_CheckedChanged_1);
+            // 
+            // button11
+            // 
+            this.button11.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
+            this.button11.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
+            this.button11.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
+            this.button11.Location = new System.Drawing.Point(122, 6);
+            this.button11.Name = "button11";
+            this.button11.Size = new System.Drawing.Size(94, 23);
+            this.button11.TabIndex = 23;
+            this.button11.Text = "Export DL Model";
+            this.button11.UseVisualStyleBackColor = true;
+            this.button11.Click += new System.EventHandler(this.button11_Click);
+            // 
             // BinjoKazooie
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(44)))), ((int)(((byte)(44)))), ((int)(((byte)(44)))));
             this.ClientSize = new System.Drawing.Size(1169, 545);
+            this.Controls.Add(this.panel6);
+            this.Controls.Add(this.panel5);
             this.Controls.Add(this.label10);
             this.Controls.Add(this.button8);
             this.Controls.Add(this.button7);
@@ -519,6 +666,12 @@ namespace BK_BIN_Analyzer
             this.panel4.ResumeLayout(false);
             this.panel4.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView4)).EndInit();
+            this.panel5.ResumeLayout(false);
+            this.panel5.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView5)).EndInit();
+            this.panel6.ResumeLayout(false);
+            this.panel6.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView6)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -559,6 +712,16 @@ namespace BK_BIN_Analyzer
         private System.Windows.Forms.Button button7;
         private System.Windows.Forms.Button button8;
         private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.Button button9;
+        private System.Windows.Forms.Panel panel5;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.DataGridView dataGridView5;
+        private System.Windows.Forms.Button button10;
+        private System.Windows.Forms.Panel panel6;
+        private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.DataGridView dataGridView6;
+        private System.Windows.Forms.CheckBox checkBox3;
+        private System.Windows.Forms.Button button11;
     }
 }
 

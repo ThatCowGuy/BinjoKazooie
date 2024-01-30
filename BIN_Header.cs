@@ -8,6 +8,8 @@ namespace BK_BIN_Analyzer
 {
     public class BIN_Header
     {
+        public bool valid = false;
+
         // parsed properties
         // === 0x00 ===============================
         public uint start_identifier;
@@ -24,7 +26,7 @@ namespace BK_BIN_Analyzer
         public uint FX_END;
         public uint FX_offset;
         public uint unk_2; // this is similarly valued as unk_1
-        public uint bone_tex_offset;
+        public uint anim_tex_offset;
         // === 0x30 ===============================
         public ushort tri_cnt;
         public ushort vtx_cnt;
@@ -32,6 +34,8 @@ namespace BK_BIN_Analyzer
 
         public void populate(byte[] file_data)
         {
+            this.valid = true;
+
             // parsed properties
             // === 0x00 ===============================
             // this.start_identifier = 0x0000000B; // CONST
@@ -49,7 +53,7 @@ namespace BK_BIN_Analyzer
             this.FX_END = File_Handler.read_int(file_data, 0x20);
             this.FX_offset = File_Handler.read_int(file_data, 0x24);
             this.unk_2 = File_Handler.read_int(file_data, 0x28);
-            this.bone_tex_offset = File_Handler.read_int(file_data, 0x2C);
+            this.anim_tex_offset = File_Handler.read_int(file_data, 0x2C);
             // === 0x30 ===============================
             this.tri_cnt = File_Handler.read_short(file_data, 0x30);
             this.vtx_cnt = File_Handler.read_short(file_data, 0x32);
@@ -59,6 +63,11 @@ namespace BK_BIN_Analyzer
         public List<string[]> get_content()
         {
             List<string[]> content = new List<string[]>();
+            if (this.valid == false)
+            {
+                content.Add(new string[] { "No Data" });
+                return content;
+            }
 
             content.Add(new string[] {
                 "BIN Start Identifier",
@@ -68,7 +77,7 @@ namespace BK_BIN_Analyzer
             });
             content.Add(new string[] {
                 "GeoLayout Offset",
-                File_Handler.uint_to_string(this.geo_offset, 0xFFFF),
+                File_Handler.uint_to_string(this.geo_offset, 0xFFFFFFFF),
                 File_Handler.uint_to_string(this.geo_offset, 10),
                 ""
             });
@@ -108,9 +117,8 @@ namespace BK_BIN_Analyzer
                 File_Handler.uint_to_string(this.vtx_offset, 0xFFFFFFFF)
             });
             content.Add(new string[] {
-                "???",
-                File_Handler.uint_to_string(this.unk_1, 0xFFFFFFFF),
-                this.unk_1.ToString()
+                "??? Offset",
+                File_Handler.uint_to_string(this.unk_1, 0xFFFFFFFF)
             });
             content.Add(new string[] {
                 "Bone Offset",
@@ -129,13 +137,12 @@ namespace BK_BIN_Analyzer
                 File_Handler.uint_to_string(this.FX_offset, 0xFFFFFFFF)
             });
             content.Add(new string[] {
-                "???",
-                File_Handler.uint_to_string(this.unk_2, 0xFFFFFFFF),
-                this.unk_2.ToString()
+                "??? Offset",
+                File_Handler.uint_to_string(this.unk_2, 0xFFFFFFFF)
             });
             content.Add(new string[] {
-                "bone.Tex Offset",
-                File_Handler.uint_to_string(this.bone_tex_offset, 0xFFFFFFFF)
+                "Anim Tex Offset",
+                File_Handler.uint_to_string(this.anim_tex_offset, 0xFFFFFFFF)
             });
             content.Add(new string[] {
                 "Tri Count",

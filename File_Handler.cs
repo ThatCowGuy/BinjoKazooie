@@ -72,6 +72,18 @@ namespace BK_BIN_Analyzer
                 file_content[offset + b] = data[b];
             }
         }
+        public static string binary_to_string(uint input, int digit_cnt)
+        {
+            string result = "";
+            for (int digits = 0; digits < digit_cnt; digits++)
+            {
+                if (digits > 0 && digits % 4 == 0)
+                    result += ' ';
+                result += (input % 2 == 1) ? '1' : '0';
+                input /= 2;
+            }
+            return result;
+        }
         public static string uint_to_string(uint input, uint format)
         {
             switch(format)
@@ -84,6 +96,8 @@ namespace BK_BIN_Analyzer
                     return String.Format("0x{0:X04}", input & format);
                 case (0xFFFFFFFF):
                     return String.Format("0x{0:X08}", input & format);
+                case (0b1):
+                    return binary_to_string(input, 8);
             }
             return "";
         }
@@ -93,13 +107,15 @@ namespace BK_BIN_Analyzer
             switch (format)
             {
                 case (10):
-                return String.Format("{0}", input);
+                    return String.Format("{0}", input);
                 case (0xFF):
-                return String.Format("0x{0:X02}", input & format);
+                    return String.Format("0x{0:X02}", input & format);
                 case (0xFFFF):
-                return String.Format("0x{0:X04}", input & format);
+                    return String.Format("0x{0:X04}", input & format);
                 case (0xFFFFFFFF):
-                return String.Format("0x{0:X08}", input & format);
+                    return String.Format("0x{0:X08}", input & format);
+                case (0b1):
+                    return binary_to_string((uint)input, 8);
             }
             return "";
         }
@@ -130,5 +146,7 @@ namespace BK_BIN_Analyzer
 
             return target_dir;
         }
+
+
     }
 }

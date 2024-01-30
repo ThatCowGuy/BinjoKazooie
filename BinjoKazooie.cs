@@ -135,12 +135,14 @@ namespace BK_BIN_Analyzer
             string seg_name = this.handler.SEGMENT_NAMES[(int)numericUpDown1.Value];
             label2.Text = (seg_name);
             label2.Update();
-            label3.Text = String.Format("Loaded BIN = {0}", this.handler.loaded_bin_name);
+            label3.Text = String.Format("Loaded BIN = {0}", this.handler.loaded_bin_path);
             label3.Update();
 
             this.panel2.Visible = false;
             this.panel3.Visible = false;
             this.panel4.Visible = false;
+            this.panel5.Visible = false;
+            this.panel6.Visible = false;
 
             if (this.handler.file_loaded == true)
             {
@@ -150,6 +152,8 @@ namespace BK_BIN_Analyzer
                 setup_DGV(dataGridView2);
                 setup_DGV(dataGridView3);
                 setup_DGV(dataGridView4);
+                setup_DGV(dataGridView5);
+                setup_DGV(dataGridView6);
 
                 // add descriptors to grid 1
                 dataGridView1.Columns.Add("0", "Description");
@@ -168,6 +172,87 @@ namespace BK_BIN_Analyzer
                             dataGridView1.Rows.Add(element);
                     }
                     finish_up_DGV(dataGridView1);
+                }
+                if (seg_name == "Collision Segment")
+                {
+                    if (this.checkBox1.Checked == false)
+                    {
+                        foreach (string[] element in handler.coll_seg.get_content())
+                            dataGridView1.Rows.Add(element);
+                    }
+                    finish_up_DGV(dataGridView1);
+
+                    this.panel5.Visible = true;
+                    this.panel5.Location = get_bottom_of_DGV_1();
+
+                    // add descriptors to grid 3
+                    dataGridView5.Columns.Add("0", "TRI-ID");
+                    dataGridView5.Columns[0].DividerWidth = 3;
+                    dataGridView5.Columns.Add("1", "VTX-ID 1");
+                    dataGridView5.Columns.Add("2", "VTX-ID 2");
+                    dataGridView5.Columns.Add("3", "VTX-ID 3");
+                    dataGridView5.Columns[3].DividerWidth = 3;
+                    dataGridView5.Columns.Add("4", "Floor Type");
+                    dataGridView5.Columns.Add("5", "Sound Type");
+                    dataGridView5.Columns[0].Width = 75;
+                    dataGridView5.Columns[1].Width = 75;
+                    dataGridView5.Columns[2].Width = 75;
+                    dataGridView5.Columns[3].Width = 75;
+
+                    if (this.checkBox1.Checked == true)
+                    {
+                        for (int id = 0; id < handler.coll_seg.tri_cnt; id++)
+                        {
+                            foreach (string[] element in handler.coll_seg.get_tri_content(id))
+                                dataGridView5.Rows.Add(element);
+                        }
+                        // dataGridView5 is a special one:
+                        // should be scrollable, so we dont use the standard method with data
+                        colorize_DGV(dataGridView5);
+                        dataGridView5.ClearSelection();
+                        dataGridView5.Height = 320;
+                    }
+                    else
+                    {
+                        finish_up_DGV(dataGridView5);
+                    }
+                    panel5.Height = 32 + dataGridView5.Height + 16;
+                }
+                if (seg_name == "DisplayList Segment")
+                {
+                    this.panel6.Visible = true;
+
+                    // this header only has 1 meaningful entry anyways, so keep it visible
+                    foreach (string[] element in handler.DL_seg.get_content())
+                        dataGridView1.Rows.Add(element);
+                    finish_up_DGV(dataGridView1);
+                    this.panel6.Location = get_bottom_of_DGV_1();
+
+                    // add descriptors to grid 2
+                    dataGridView6.Columns.Add("0", "code");
+                    dataGridView6.Columns.Add("1", "name");
+                    dataGridView6.Columns.Add("2", "Interpretation");
+                    dataGridView6.Columns[0].Width = 50;
+                    dataGridView6.Columns[1].Width = 160;
+
+                    if (this.checkBox3.Checked == true)
+                    {
+                        for (int id = 0; id < handler.DL_seg.command_cnt; id++)
+                        {
+                            foreach (string[] element in handler.DL_seg.get_cmd_content(id))
+                                dataGridView6.Rows.Add(element);
+                        }
+                        // dataGridView6 is a special one:
+                        // should be scrollable, so we dont use the standard method with data
+                        colorize_DGV(dataGridView6);
+                        dataGridView6.ClearSelection();
+                        dataGridView6.Height = 275;
+                    }
+                    else
+                    {
+                        finish_up_DGV(dataGridView6);
+                    }
+                    panel6.Height = 32 + dataGridView6.Height + 16;
                 }
                 if (seg_name == "Texture Segment")
                 {
@@ -324,10 +409,20 @@ namespace BK_BIN_Analyzer
                 // this one is off by default, because the header might be of more interest
                 this.checkBox1.Checked = false;
             }
+            else if (seg_name == "DisplayList Segment")
+            {
+                // make this one depend on the amount of DL data to show
+                this.checkBox3.Checked = (handler.DL_seg.command_cnt > 32) ? false : true;
+            }
             else if (seg_name == "Bone Segment")
             {
                 // make this one depend on the amount of bone data to show
                 this.checkBox2.Checked = (handler.bone_seg.bone_cnt > 32) ? false : true;
+            }
+            else if (seg_name == "Collision Segment")
+            {
+                // make this one depend on the amount of triangle data to show
+                this.checkBox2.Checked = (handler.coll_seg.tri_cnt > 32) ? false : true;
             }
             else
             {
@@ -372,6 +467,11 @@ namespace BK_BIN_Analyzer
         {
             this.handler.export_image_of_element((int) this.numericUpDown2.Value, true);
         }
+        private void button9_Click(object sender, EventArgs e)
+        {
+            for (int i = 0; i < this.handler.tex_seg.tex_cnt; i++)
+                this.handler.export_image_of_element(i, false);
+        }
 
         private void button3_Click(object sender, EventArgs e)
         {
@@ -389,8 +489,6 @@ namespace BK_BIN_Analyzer
             this.convert_replacement_to_fitting();
             int tex_type = this.handler.tex_seg.meta[(int)this.numericUpDown2.Value].tex_type;
             byte[] replacement_data = MathHelpers.convert_bitmap_to_bytes(this.replacement_cvt, tex_type);
-            Console.WriteLine(tex_type);
-            Console.WriteLine(replacement_data.Length);
             this.handler.overwrite_img_data((int) this.numericUpDown2.Value, replacement_data);
             this.handler.save_BIN();
             this.handler.parse_BIN();
@@ -550,6 +648,34 @@ namespace BK_BIN_Analyzer
         private void button8_Click(object sender, EventArgs e)
         {
             Process.Start("https://docs.google.com/document/d/1wcETwmo98Xfn_MUZ58qS6XAY_ikr592Bz5cl27hTr14/edit");
+        }
+
+        private void dataGridView3_CellValuePushed(object sender, DataGridViewCellValueEventArgs e)
+        {
+        }
+
+        private void dataGridView3_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            // Console.WriteLine(dataGridView3.Rows[e.RowIndex].Cells[e.ColumnIndex].Value);
+        }
+
+        private void checkBox2_CheckedChanged_1(object sender, EventArgs e)
+        {
+            update_display();
+        }
+        private void checkBox3_CheckedChanged_1(object sender, EventArgs e)
+        {
+            update_display();
+        }
+
+        private void button10_Click(object sender, EventArgs e)
+        {
+            this.handler.export_collision_model();
+        }
+
+        private void button11_Click(object sender, EventArgs e)
+        {
+            this.handler.export_displaylist_model();
         }
     }
 }
