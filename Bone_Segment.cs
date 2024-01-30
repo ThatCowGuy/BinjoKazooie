@@ -23,6 +23,8 @@ namespace BK_BIN_Analyzer
 
     public class Bone_Segment
     {
+        public bool valid = false;
+
         // parsed properties
         // === 0x00 ===============================
         public Single scaling_factor; // in percent
@@ -37,6 +39,13 @@ namespace BK_BIN_Analyzer
 
         public void populate(byte[] file_data, int file_offset)
         {
+            if (file_offset == 0)
+            {
+                System.Console.WriteLine("No Collision Segment");
+                this.valid = false;
+                return;
+            }
+            this.valid = true;
             this.file_offset = (uint)file_offset;
             this.file_offset_data = (uint)file_offset + 0x08;
 
@@ -84,6 +93,11 @@ namespace BK_BIN_Analyzer
         public List<string[]> get_content()
         {
             List<string[]> content = new List<string[]>();
+            if (this.valid == false)
+            {
+                content.Add(new string[] { "No Data" });
+                return content;
+            }
 
             content.Add(new string[] {
                 "File Offset",
