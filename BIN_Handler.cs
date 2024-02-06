@@ -92,6 +92,12 @@ namespace BK_BIN_Analyzer
             this.loaded_bin_name = this.loaded_bin_path.Substring((last_slash + 1), (file_ext - last_slash - 1));
             this.parse_BIN();
         }
+
+        public String get_default_texture_name(int index)
+        {
+            return String.Format("{0}_{1:0000}.png", this.loaded_bin_name, index);
+        }
+
         public void export_image_of_element(int index, bool choose_name)
         {
             if (index < 0 || index >= tex_seg.tex_cnt)
@@ -99,7 +105,7 @@ namespace BK_BIN_Analyzer
                 Console.WriteLine("Received invalid index for Image Export.");
                 return;
             }
-            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}_{1:0000}.png", this.loaded_bin_name, index));
+            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), get_default_texture_name(index));
             if (choose_name == true)
             {
                 SaveFileDialog SFD = new SaveFileDialog();
@@ -157,10 +163,39 @@ namespace BK_BIN_Analyzer
             // storing the vtx IDs as loaded by the DLs
             int[] simulated_vtx_buffer = new int[0x20];
             uint written_vertices = 0;
-            Vtx_Elem vtx = null;
-
-            using (StreamWriter outputFile = new StreamWriter(filepath))
+            Tile_Descriptor[] tile_descriptor = new Tile_Descriptor[]
             {
+                new Tile_Descriptor(),
+                new Tile_Descriptor(),
+                new Tile_Descriptor()
+            };
+
+            String mtl_path = filepath.Substring(0, (filepath.Length - 4)) + ".mtl";
+            using (StreamWriter output_mtl = new StreamWriter(mtl_path))
+            {
+                for (int i = 0; i < this.tex_seg.tex_cnt; i++)
+                {
+                    String default_filename = get_default_texture_name(i);
+
+                    // using the default filename as the mtl name, assuming its in exports/
+                    // and writing some default params
+                    output_mtl.WriteLine("newmtl " + default_filename);
+                    output_mtl.WriteLine("Ka 1.000000 1.000000 1.000000");
+                    output_mtl.WriteLine("Kd 1.000000 1.000000 1.000000");
+                    output_mtl.WriteLine("Ks 1.000000 1.000000 1.000000");
+                    output_mtl.WriteLine("Ns 100.000000");
+                    output_mtl.WriteLine("Ni 1.000000");
+                    output_mtl.WriteLine("d 1.000000");
+                    output_mtl.WriteLine("illum 0");
+                    output_mtl.WriteLine("map_Kd " + default_filename);
+                }
+            }
+
+            using (StreamWriter output_obj = new StreamWriter(filepath))
+            {
+                // before we do anything meaningful, we specify the MTL file
+                output_obj.WriteLine("mtllib " + this.loaded_bin_name + ".mtl");
+
                 foreach (DisplayList_Command cmd in this.DL_seg.command_list)
                 {
                     switch (cmd.command_name)
@@ -176,26 +211,45 @@ namespace BK_BIN_Analyzer
                             }
                             break;
 
+                        case ("G_SETTIMG"):
+                            // find the tex that corresponds to this address
+                            for (int i = 0; i < this.tex_seg.tex_cnt; i++)
+                            {
+                                if (cmd.parameters[3] == this.tex_seg.data[i].datasection_offset)
+                                {
+                                    tile_descriptor[0].assigned_tex_meta = this.tex_seg.meta[i];
+                                    tile_descriptor[0].assigned_tex_data = this.tex_seg.data[i];
+                                    String corresponding_filename = get_default_texture_name(i);
+                                    output_obj.WriteLine("usemtl " + corresponding_filename);
+                                    break;
+                                }
+                            }
+                            break;
+
+                        case ("G_TRI1"):
+                            // write the 3 vtx to the obj file  
+                            output_obj.WriteLine(write_vertex(simulated_vtx_buffer[cmd.parameters[0]], tile_descriptor[0]));
+                            output_obj.WriteLine(write_vertex(simulated_vtx_buffer[cmd.parameters[1]], tile_descriptor[0]));
+                            output_obj.WriteLine(write_vertex(simulated_vtx_buffer[cmd.parameters[2]], tile_descriptor[0]));
+                            // and the corresponding tri
+                            output_obj.WriteLine(String.Format("f {0}/{0} {1}/{1} {2}/{2}", (written_vertices + 1), (written_vertices + 2), (written_vertices + 3)));
+                            written_vertices += 3;
+                            break;
+
                         case ("G_TRI2"):
                             // write the 3 vtx to the obj file  
-                            vtx = this.vtx_seg.vtx_list[simulated_vtx_buffer[cmd.parameters[0]]];
-                            outputFile.WriteLine(String.Format("v {0,0:F8} {1,0:F8} {2,0:F8}", vtx.x, vtx.y, vtx.z));
-                            vtx = this.vtx_seg.vtx_list[simulated_vtx_buffer[cmd.parameters[1]]];
-                            outputFile.WriteLine(String.Format("v {0,0:F8} {1,0:F8} {2,0:F8}", vtx.x, vtx.y, vtx.z));
-                            vtx = this.vtx_seg.vtx_list[simulated_vtx_buffer[cmd.parameters[2]]];
-                            outputFile.WriteLine(String.Format("v {0,0:F8} {1,0:F8} {2,0:F8}", vtx.x, vtx.y, vtx.z));
+                            output_obj.WriteLine(write_vertex(simulated_vtx_buffer[cmd.parameters[0]], tile_descriptor[0]));
+                            output_obj.WriteLine(write_vertex(simulated_vtx_buffer[cmd.parameters[1]], tile_descriptor[0]));
+                            output_obj.WriteLine(write_vertex(simulated_vtx_buffer[cmd.parameters[2]], tile_descriptor[0]));
                             // and the corresponding tri
-                            outputFile.WriteLine(String.Format("f {0} {1} {2}", (written_vertices + 1), (written_vertices + 2), (written_vertices + 3)));
+                            output_obj.WriteLine(String.Format("f {0}/{0} {1}/{1} {2}/{2}", (written_vertices + 1), (written_vertices + 2), (written_vertices + 3)));
                             written_vertices += 3;
                             // write the 3 vtx to the obj file
-                            vtx = this.vtx_seg.vtx_list[simulated_vtx_buffer[cmd.parameters[3]]];
-                            outputFile.WriteLine(String.Format("v {0,0:F8} {1,0:F8} {2,0:F8}", vtx.x, vtx.y, vtx.z));
-                            vtx = this.vtx_seg.vtx_list[simulated_vtx_buffer[cmd.parameters[4]]];
-                            outputFile.WriteLine(String.Format("v {0,0:F8} {1,0:F8} {2,0:F8}", vtx.x, vtx.y, vtx.z));
-                            vtx = this.vtx_seg.vtx_list[simulated_vtx_buffer[cmd.parameters[5]]];
-                            outputFile.WriteLine(String.Format("v {0,0:F8} {1,0:F8} {2,0:F8}", vtx.x, vtx.y, vtx.z));
+                            output_obj.WriteLine(write_vertex(simulated_vtx_buffer[cmd.parameters[3]], tile_descriptor[0]));
+                            output_obj.WriteLine(write_vertex(simulated_vtx_buffer[cmd.parameters[4]], tile_descriptor[0]));
+                            output_obj.WriteLine(write_vertex(simulated_vtx_buffer[cmd.parameters[5]], tile_descriptor[0]));
                             // and the corresponding tri
-                            outputFile.WriteLine(String.Format("f {0} {1} {2}", (written_vertices + 1), (written_vertices + 2), (written_vertices + 3)));
+                            output_obj.WriteLine(String.Format("f {0}/{0} {1}/{1} {2}/{2}", (written_vertices + 1), (written_vertices + 2), (written_vertices + 3)));
                             written_vertices += 3;
                             break;
                     }
@@ -203,17 +257,32 @@ namespace BK_BIN_Analyzer
             }
         }
 
+        public String write_vertex(int id, Tile_Descriptor tiledes)
+        {
+            String output = "";
+
+            Vtx_Elem vtx = this.vtx_seg.vtx_list[id];
+            output += String.Format("v {0,0:F8} {1,0:F8} {2,0:F8}\n", vtx.x, vtx.y, vtx.z);
+
+            double uscale = (1.0 / tiledes.assigned_tex_meta.width);
+            double calc_u = ((vtx.u / 64.0) + tiledes.S_shift + 0.5) / tiledes.assigned_tex_meta.width;
+            double vscale = (1.0 / tiledes.assigned_tex_meta.height);
+            double calc_v = ((vtx.v / 64.0) + tiledes.T_shift + 0.5) / tiledes.assigned_tex_meta.height;
+            output += String.Format("vt {0,0:F8} {1,0:F8}", calc_u, calc_v);
+            return output;
+        }
+
         public void write_collision_model(string filepath)
         {
-            using (StreamWriter outputFile = new StreamWriter(filepath))
+            using (StreamWriter output_obj = new StreamWriter(filepath))
             {
                 foreach (Vtx_Elem vtx in this.vtx_seg.vtx_list)
                 {
-                    outputFile.WriteLine(String.Format("v {0,0:F8} {1,0:F8} {2,0:F8}", vtx.x, vtx.y, vtx.z));
+                    output_obj.WriteLine(String.Format("v {0,0:F8} {1,0:F8} {2,0:F8}", vtx.x, vtx.y, vtx.z));
                 }
                 foreach (Tri_Elem tri in this.coll_seg.tri_list)
                 {
-                    outputFile.WriteLine(String.Format("f {0} {1} {2}", (tri.index_1 + 1), (tri.index_2 + 1), (tri.index_3 + 1)));
+                    output_obj.WriteLine(String.Format("f {0} {1} {2}", (tri.index_1 + 1), (tri.index_2 + 1), (tri.index_3 + 1)));
                 }
             }
         }

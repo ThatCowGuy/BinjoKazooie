@@ -11,8 +11,30 @@ namespace BK_BIN_Analyzer
         public byte command_byte;
         public String command_name;
 
-        public uint[] parameters = new uint[8];
+        public uint[] parameters = new uint[16];
     }
+
+    public class Tile_Descriptor
+    {
+        public ushort color_storage_format;
+        public ushort color_storage_bitsize;
+        public ushort bitvals_per_row;
+        public ushort TMEM_tex_offset;
+
+        public ushort corresponding_palette;
+        public Boolean T_clamp;
+        public Boolean T_mirror;
+        public double T_wrap;
+        public double T_shift;
+        public Boolean S_clamp;
+        public Boolean S_mirror;
+        public double S_wrap;
+        public double S_shift;
+
+        public Tex_Meta assigned_tex_meta;
+        public Tex_Data assigned_tex_data;
+    }
+
     public class DisplayList_Segment
     {
         public bool valid = false;
@@ -139,6 +161,40 @@ namespace BK_BIN_Analyzer
                         cmd.parameters[3] = File_Handler.read_int(file_data, file_offset_cmd + 0x04) & 0x00FFFFF;
                         break;
 
+                    case ("G_SETTILE"):
+                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x00);
+                        // color storage format
+                        cmd.parameters[0] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1110_0000__0000_0000_0000_0000);
+                        // color storage bit-size
+                        cmd.parameters[1] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0001_1000__0000_0000_0000_0000);
+                        // num of 64bit vals per row
+                        cmd.parameters[2] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0011__1111_1110_0000_0000);
+                        // TMEM offset of texture
+                        cmd.parameters[3] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_0001_1111_1111);
+
+                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x04);
+                        // target tile descriptor
+                        cmd.parameters[4] = File_Handler.apply_bitmask(tmp, 0b_0000_0111_0000_0000__0000_0000_0000_0000);
+                        // corresponding palette
+                        cmd.parameters[5] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1111_0000__0000_0000_0000_0000);
+                        // T clamp
+                        cmd.parameters[6] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_1000__0000_0000_0000_0000);
+                        // T mirror
+                        cmd.parameters[7] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0100__0000_0000_0000_0000);
+                        // T wrap (this one made me decide to split this command into 2 ints, rather than 4 shorts...)
+                        cmd.parameters[8] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0011__1100_0000_0000_0000);
+                        // T shift
+                        cmd.parameters[9] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0011_1100_0000_0000);
+                        // S clamp
+                        cmd.parameters[10] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_0010_0000_0000);
+                        // S mirror
+                        cmd.parameters[11] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_0001_0000_0000);
+                        // S wrap
+                        cmd.parameters[12] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_0000_1111_0000);
+                        // S shift
+                        cmd.parameters[13] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_0000_0000_1111);
+                        break;
+
                     case ("G_LOADTLUT"):
                         // affected tile descripter index
                         cmd.parameters[0] = File_Handler.read_char(file_data, file_offset_cmd + 0x04);
@@ -171,6 +227,15 @@ namespace BK_BIN_Analyzer
                         cmd.parameters[4] = File_Handler.read_int(file_data, file_offset_cmd + 0x04) & 0x00FFFFF;
                         break;
 
+                    case ("G_TRI1"):
+                        // vertex buffer tri_B_v1 location (doubled)
+                        cmd.parameters[0] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x05) / 2);
+                        // vertex buffer tri_B_v2 location (doubled)
+                        cmd.parameters[1] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x06) / 2);
+                        // vertex buffer tri_B_v3 location (doubled)
+                        cmd.parameters[2] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x07) / 2);
+                        break;
+
                     case ("G_TRI2"):
                         // vertex buffer tri_A_v1 location (doubled)
                         cmd.parameters[0] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x01) / 2);
@@ -179,11 +244,11 @@ namespace BK_BIN_Analyzer
                         // vertex buffer tri_A_v3 location (doubled)
                         cmd.parameters[2] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x03) / 2);
                         //
-                        // vertex buffer tri_A_v1 location (doubled)
+                        // vertex buffer tri_B_v1 location (doubled)
                         cmd.parameters[3] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x05) / 2);
-                        // vertex buffer tri_A_v2 location (doubled)
+                        // vertex buffer tri_B_v2 location (doubled)
                         cmd.parameters[4] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x06) / 2);
-                        // vertex buffer tri_A_v3 location (doubled)
+                        // vertex buffer tri_B_v3 location (doubled)
                         cmd.parameters[5] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x07) / 2);
                         break;
 
@@ -278,6 +343,14 @@ namespace BK_BIN_Analyzer
                     details += String.Format("siz={0} B, ", cmd.parameters[2]);
                     details += String.Format("seg={0}, ", cmd.parameters[3]);
                     details += "@ " + File_Handler.uint_to_string(cmd.parameters[4], 0xFFFFFFFF);
+                    break;
+
+                case ("G_TRI1"):
+                    details += "tri_B=(";
+                    details += String.Format(" {0}, ", cmd.parameters[0]);
+                    details += String.Format("{0}, ", cmd.parameters[1]);
+                    details += String.Format("{0} ", cmd.parameters[2]);
+                    details += "), ";
                     break;
 
                 case ("G_TRI2"):

@@ -146,7 +146,20 @@ namespace BK_BIN_Analyzer
 
             return target_dir;
         }
+        public static uint apply_bitmask(uint input, uint bitmask)
+        {
+            uint res = input & bitmask;
+            while (bitmask % 2 == 0)
+            {
+                res = res >> 1;
+                bitmask = bitmask >> 1;
+            }
+            return res;
+        }
 
-
+        public static uint get_bits(int input, uint bitcnt, uint rshift)
+        {
+            return 0;
+        }
     }
 }
