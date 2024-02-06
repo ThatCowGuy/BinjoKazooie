@@ -218,6 +218,13 @@ namespace BK_BIN_Analyzer
                     }
                     panel5.Height = 32 + dataGridView5.Height + 16;
                 }
+                if (seg_name == "Effects Segment")
+                {
+                    foreach (string[] element in handler.FX_seg.get_content())
+                        dataGridView1.Rows.Add(element);
+
+                    finish_up_DGV(dataGridView1);
+                }
                 if (seg_name == "DisplayList Segment")
                 {
                     this.panel6.Visible = true;
@@ -676,6 +683,11 @@ namespace BK_BIN_Analyzer
         private void button11_Click(object sender, EventArgs e)
         {
             this.handler.export_displaylist_model();
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
         }
     }
 }
