@@ -46,6 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AnimTex_Segment.cs" />
     <Compile Include="Bone_Segment.cs" />
     <Compile Include="BIN_Handler.cs" />
     <Compile Include="BIN_Header.cs" />
@@ -59,6 +60,8 @@
     <Compile Include="BinjoKazooie.Designer.cs">
       <DependentUpon>BinjoKazooie.cs</DependentUpon>
     </Compile>
+    <Compile Include="FX_END_Segment.cs" />
+    <Compile Include="GLTF_Handler.cs" />
     <Compile Include="MathHelpers.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

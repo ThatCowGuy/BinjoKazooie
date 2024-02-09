@@ -173,6 +173,24 @@ namespace BK_BIN_Analyzer
                     }
                     finish_up_DGV(dataGridView1);
                 }
+                if (seg_name == "Effects End Segment")
+                {
+                    if (this.checkBox1.Checked == false)
+                    {
+                        foreach (string[] element in handler.FXEND_seg.get_content())
+                            dataGridView1.Rows.Add(element);
+                    }
+                    finish_up_DGV(dataGridView1);
+                }
+                if (seg_name == "Animated Texture Segment")
+                {
+                    if (this.checkBox1.Checked == false)
+                    {
+                        foreach (string[] element in handler.animtex_seg.get_content())
+                            dataGridView1.Rows.Add(element);
+                    }
+                    finish_up_DGV(dataGridView1);
+                }
                 if (seg_name == "Collision Segment")
                 {
                     if (this.checkBox1.Checked == false)
