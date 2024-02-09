@@ -212,10 +212,10 @@ namespace BK_BIN_Analyzer
                     dataGridView5.Columns[3].DividerWidth = 3;
                     dataGridView5.Columns.Add("4", "Floor Type");
                     dataGridView5.Columns.Add("5", "Sound Type");
-                    dataGridView5.Columns[0].Width = 75;
-                    dataGridView5.Columns[1].Width = 75;
-                    dataGridView5.Columns[2].Width = 75;
-                    dataGridView5.Columns[3].Width = 75;
+                    dataGridView5.Columns[0].Width = 70;
+                    dataGridView5.Columns[1].Width = 70;
+                    dataGridView5.Columns[2].Width = 70;
+                    dataGridView5.Columns[3].Width = 70;
 
                     if (this.checkBox1.Checked == true)
                     {

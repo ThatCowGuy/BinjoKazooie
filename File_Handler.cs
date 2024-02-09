@@ -97,7 +97,7 @@ namespace BK_BIN_Analyzer
                 case (0xFFFFFFFF):
                     return String.Format("0x{0:X08}", input & format);
                 case (0b1):
-                    return binary_to_string(input, 8);
+                    return binary_to_string(input, 16);
             }
             return "";
         }
@@ -115,7 +115,7 @@ namespace BK_BIN_Analyzer
                 case (0xFFFFFFFF):
                     return String.Format("0x{0:X08}", input & format);
                 case (0b1):
-                    return binary_to_string((uint)input, 8);
+                    return binary_to_string((uint)input, 16);
             }
             return "";
         }
