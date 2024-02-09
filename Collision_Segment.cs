@@ -14,6 +14,48 @@ namespace BK_BIN_Analyzer
         public ushort unk_1;
         public ushort floor_type;
         public ushort sound_type;
+
+        /*/=====================================================
+         * Thanks to Unalive for documenting these Flags
+        =====================================================/*/
+        public Dictionary<int, string> COLLISION_FLAGS = new Dictionary<int, string>
+        {
+            { 0x0, "" },
+            { 0x1, "" },
+            { 0x2, "" },
+            { 0x3, "Water" },
+            { 0x4, "Trottable" },
+            { 0x5, "Disc-Rim" },
+            { 0x6, "Un-Trottable" },
+            { 0x7, "" },
+            { 0x8, "~ footstep sfx" },
+            { 0x9, "~ footstep sfx" },
+            { 0xA, "~ footstep sfx" },
+            { 0xB, "~ footstep sfx" },
+            { 0xC, "~ footstep sfx" },
+            { 0xD, "Damage Floor" },
+            { 0xE, "~ Damage func" },
+            { 0xF, "~ Damage func" },
+        };
+        public Dictionary<int, string> SOUND_FLAGS = new Dictionary<int, string>
+        {
+            { 0x0, "GV Tree Leaves" },
+            { 0x1, "" },
+            { 0x2, "" },
+            { 0x3, "" },
+            { 0x4, "" },
+            { 0x5, "" },
+            { 0x6, "" },
+            { 0x7, "" },
+            { 0x8, "Tall Grass" },
+            { 0x9, "" },
+            { 0xA, "" },
+            { 0xB, "Metallic" },
+            { 0xC, "" },
+            { 0xD, "" },
+            { 0xE, "" },
+            { 0xF, "~ global footstep sfx" }
+        };
     }
     public class Unk_Coll_Elem
     {
