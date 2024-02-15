@@ -476,6 +476,7 @@ namespace BK_BIN_Analyzer
             if (SFD.ShowDialog() == DialogResult.OK)
             {
                 chosen_filename = SFD.FileName;
+                File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
                 System.Console.WriteLine(String.Format("Saving Image File {0}...", chosen_filename));
                 img.Save(chosen_filename);
                 return;
@@ -613,6 +614,7 @@ namespace BK_BIN_Analyzer
             OFD.InitialDirectory = File_Handler.get_basedir_or_assets();
             if (OFD.ShowDialog() == DialogResult.OK)
             {
+                File_Handler.remembered_assets_path = Path.GetDirectoryName(OFD.FileName);
                 System.Console.WriteLine(String.Format("Loading File {0}...", OFD.FileName));
             }
             else

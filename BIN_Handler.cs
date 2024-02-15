@@ -94,6 +94,7 @@ namespace BK_BIN_Analyzer
             if (SFD.ShowDialog() == DialogResult.OK)
             {
                 chosen_filename = SFD.FileName;
+                File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
                 System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
 
                 write_gltf_model(chosen_filename);
@@ -407,6 +408,7 @@ namespace BK_BIN_Analyzer
             OFD.Filter = "BIN model Files (*.bin)|*.BIN|All Files (*.*)|*.*";
             if (OFD.ShowDialog() == DialogResult.OK)
             {
+                File_Handler.remembered_assets_path = Path.GetDirectoryName(OFD.FileName);
                 System.Console.WriteLine(String.Format("Loading File {0}...", OFD.FileName));
             }
             else
@@ -443,6 +445,7 @@ namespace BK_BIN_Analyzer
                 if (SFD.ShowDialog() == DialogResult.OK)
                 {
                     chosen_filename = SFD.FileName;
+                    File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
                     System.Console.WriteLine(String.Format("Saving Image File {0}...", chosen_filename));
                     tex_seg.data[index].img_rep.Save(chosen_filename);
                     return;
@@ -463,6 +466,7 @@ namespace BK_BIN_Analyzer
             if (SFD.ShowDialog() == DialogResult.OK)
             {
                 chosen_filename = SFD.FileName;
+                File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
                 System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
                 write_displaylist_model(chosen_filename);
                 return;
@@ -480,6 +484,7 @@ namespace BK_BIN_Analyzer
             if (SFD.ShowDialog() == DialogResult.OK)
             {
                 chosen_filename = SFD.FileName;
+                File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
                 System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
                 write_collision_model(chosen_filename);
                 return;

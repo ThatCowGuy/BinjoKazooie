@@ -135,8 +135,12 @@ namespace BK_BIN_Analyzer
             return "";
         }
 
+        public static String remembered_assets_path = null;
         public static string get_basedir_or_assets()
         {
+            if (remembered_assets_path != null)
+                return remembered_assets_path;
+
             string target_dir = Directory.GetCurrentDirectory();
             // while working on the code, the exe is started from within Debug/ which sucks
             if (target_dir.Contains("Debug") == true)
@@ -146,10 +150,15 @@ namespace BK_BIN_Analyzer
             if (Directory.Exists(Path.Combine(target_dir, "assets")))
                 target_dir = Path.Combine(target_dir, "assets");
 
+            remembered_assets_path = target_dir;
             return target_dir;
         }
+        public static String remembered_exports_path = null;
         public static string get_basedir_or_exports()
         {
+            if (remembered_exports_path != null)
+                return remembered_exports_path;
+
             string target_dir = Directory.GetCurrentDirectory();
             // while working on the code, the exe is started from within Debug/ which sucks
             if (target_dir.Contains("Debug") == true)
@@ -159,6 +168,7 @@ namespace BK_BIN_Analyzer
             if (Directory.Exists(Path.Combine(target_dir, "exports")))
                 target_dir = Path.Combine(target_dir, "exports");
 
+            remembered_exports_path = target_dir;
             return target_dir;
         }
         public static uint apply_bitmask(uint input, uint bitmask)
