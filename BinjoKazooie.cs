@@ -469,10 +469,9 @@ namespace BK_BIN_Analyzer
 
         public void export_image(Bitmap img)
         {
-            string chosen_filename = Path.Combine(Directory.GetCurrentDirectory(), String.Format("converted.png"));
+            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("converted.png"));
 
             SaveFileDialog SFD = new SaveFileDialog();
-            SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
             SFD.FileName = chosen_filename;
             if (SFD.ShowDialog() == DialogResult.OK)
             {
@@ -531,7 +530,6 @@ namespace BK_BIN_Analyzer
         {
             if (this.replacement_ori == null)
             {
-                Console.WriteLine("Nothing to convert yet.");
                 return;
             }
 
@@ -542,6 +540,7 @@ namespace BK_BIN_Analyzer
             if (this.handler.file_loaded == false || this.handler.tex_seg.tex_cnt < 1)
             {
                 // not doing any conversion
+                Console.WriteLine("Nothing to convert to yet.");
                 this.replacement_cvt = new Bitmap(this.replacement_ori);
             }
             else
@@ -556,9 +555,9 @@ namespace BK_BIN_Analyzer
 
                 switch (m.tex_type)
                 {
-                    case (0x01): // C4 or CI4; 16 RGB555-colors, pixels are encoded per row as 4bit IDs
+                    case (0x01): // C4 or CI4; 16 RGBA5551-colors, pixels are encoded per row as 4bit IDs
                     { 
-                        int col_cnt = 16;
+                        int col_cnt = 0x10;
                         this.replacement_palette = MathHelpers.approx_palette_by_most_used_with_diversity(
                             new Bitmap(replacement_ori, new_w, new_h),
                             col_cnt, (int)this.numericUpDown3.Value
@@ -569,9 +568,9 @@ namespace BK_BIN_Analyzer
                         );
                         break;
                     }
-                    case (0x02): // C8 or CI8; 32 RGB555-colors, pixels are encoded per row as 8bit IDs
+                    case (0x02): // C8 or CI8; 256 RGBA5551-colors, pixels are encoded per row as 8bit IDs
                     {
-                        int col_cnt = 256;
+                        int col_cnt = 0x100;
                         this.replacement_palette = MathHelpers.approx_palette_by_most_used_with_diversity(
                             new Bitmap(replacement_ori, new_w, new_h),
                             col_cnt, (int)this.numericUpDown3.Value

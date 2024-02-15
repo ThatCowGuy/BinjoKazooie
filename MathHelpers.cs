@@ -16,12 +16,12 @@ namespace BK_BIN_Analyzer
         public static double color_distance(byte R1, byte G1, byte B1, byte R2, byte G2, byte B2)
         {
             double sq_dist = Math.Pow(R2 - R1, 2) + Math.Pow(G2 - G1, 2) + Math.Pow(B2 - B1, 2);
-            return ((Math.Sqrt(sq_dist)));
-            return sq_dist;
+            return Math.Sqrt(sq_dist);
         }
         public static double color_distance(ColorPixel A, ColorPixel B)
         {
             double sq_dist = Math.Pow(A.r - B.r, 2) + Math.Pow(A.g - B.g, 2) + Math.Pow(A.b - B.b, 2);
+            sq_dist += Math.Pow(A.a - B.a, 2); 
             return Math.Sqrt(sq_dist);
         }
 
@@ -32,7 +32,8 @@ namespace BK_BIN_Analyzer
                 this.r = r;
                 this.g = g;
                 this.b = b;
-                this.a = a;
+                // NOTE: since this constructor is only used for RGBA5551 colors, this is fine
+                this.a = (a > 0 ? 1 : 0); 
                 // fully transparent pixels have irrelevant colors
                 if (this.a == 0)
                 {
@@ -90,8 +91,10 @@ namespace BK_BIN_Analyzer
                         {
                             int px_index = (y * w) + x;
                             Color px = img_clone.GetPixel(x, y);
-                            // converting the image color data into RGB555 at this point already
-                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte)(px.A >> 7));
+                            // converting the image color data into RGBA5551 at this point already
+                            // NOTE: Im using 5 bits of Alpha here to give it some weight; the constructor will convert any alpha > 0
+                            //       to 1 afterwards, which essentially maps all alphas > 0b0000_1000 to 1
+                            ColorPixel cpx = new ColorPixel((byte) (px.R >> 3), (byte) (px.G >> 3), (byte) (px.B >> 3), (byte) (px.A >> 3));
 
                             // only add new colors
                             if (palette.Contains(cpx) == true)
@@ -123,8 +126,10 @@ namespace BK_BIN_Analyzer
                         {
                             int px_index = (y * w) + x;
                             Color px = img_clone.GetPixel(x, y);
-                            // converting the image color data into RGB555 at this point already
-                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte)(px.A >> 7));
+                            // converting the image color data into RGBA5551 at this point already
+                            // NOTE: Im using 5 bits of Alpha here to give it some weight; the constructor will convert any alpha > 0
+                            //       to 1 afterwards, which essentially maps all alphas > 0b0000_1000 to 1
+                            ColorPixel cpx = new ColorPixel((byte) (px.R >> 3), (byte) (px.G >> 3), (byte) (px.B >> 3), (byte) (px.A >> 3));
 
                             if (palette.Contains(cpx) == true)
                             {
@@ -159,8 +164,10 @@ namespace BK_BIN_Analyzer
                         {
                             int px_index = (y * w) + x;
                             Color px = img_clone.GetPixel(x, y);
-                            // converting the image color data into RGB555 at this point already
-                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte) (px.A >> 7));
+                            // converting the image color data into RGBA5551 at this point already
+                            // NOTE: Im using 5 bits of Alpha here to give it some weight; the constructor will convert any alpha > 0
+                            //       to 1 afterwards, which essentially maps all alphas > 0b0000_1000 to 1
+                            ColorPixel cpx = new ColorPixel((byte) (px.R >> 3), (byte) (px.G >> 3), (byte) (px.B >> 3), (byte) (px.A >> 3));
 
                             // only add new colors
                             if (palette.Contains(cpx) == true)
@@ -181,8 +188,7 @@ namespace BK_BIN_Analyzer
                     // NOTE: implicitly creating "black" colors for missing ones because it doesnt matter
                     foreach (ColorPixel pal_col in palette)
                     {
-                        // NOTE: the +0b1 at the end is forcing the alpha bit to be set; this seems to be standard in BK
-                        int col_val = ((int)pal_col.r << 0xB) + ((int)pal_col.g << 0x6) + ((int)pal_col.b << 0x1) + 0b1;
+                        int col_val = ((int)pal_col.r << 0xB) + ((int)pal_col.g << 0x6) + ((int)pal_col.b << 0x1) + ((int) pal_col.a); ;
                         data[(pal_id * 2) + 0] = (byte)(col_val >> 8);
                         data[(pal_id * 2) + 1] = (byte)(col_val >> 0);
                         pal_id++;
@@ -193,8 +199,10 @@ namespace BK_BIN_Analyzer
                         {
                             int px_index = (y * w) + x;
                             Color px = img_clone.GetPixel(x, y);
-                            // converting the image color data into RGB555 at this point already
-                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte) (px.A >> 7));
+                            // converting the image color data into RGBA5551 at this point already
+                            // NOTE: Im using 5 bits of Alpha here to give it some weight; the constructor will convert any alpha > 0
+                            //       to 1 afterwards, which essentially maps all alphas > 0b0000_1000 to 1
+                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte) (px.A >> 3));
 
                             if (palette.Contains(cpx) == true)
                             {
@@ -353,8 +361,10 @@ namespace BK_BIN_Analyzer
                 for (int x = 0; x < w; x++)
                 {
                     Color px = original.GetPixel(x, y);
-                    // converting the image color data into RGB5551 at this point already
-                    ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte) (px.A >> 7));
+                    // converting the image color data into RGBA5551 at this point already
+                    // NOTE: Im using 5 bits of Alpha here to give it some weight; the constructor will convert any alpha > 0
+                    //       to 1 afterwards, which essentially maps all alphas > 0b0000_1000 to 1
+                    ColorPixel cpx = new ColorPixel((byte) (px.R >> 3), (byte) (px.G >> 3), (byte) (px.B >> 3), (byte) (px.A >> 3));
 
                     double best_distance = 1e10;
                     ColorPixel best_color = null;
@@ -390,9 +400,16 @@ namespace BK_BIN_Analyzer
                 {
                     int px_index = (y * w) + x;
                     Color px = original.GetPixel(x, y);
-                    // converting the image color data into RGB5551 at this point already
-                    ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte) (px.A >> 7));
+                    // converting the image color data into RGBA5551 at this point already
+                    // NOTE: Im using 5 bits of Alpha here to give it some weight; the constructor will convert any alpha > 0
+                    //       to 1 afterwards, which essentially maps all alphas > 0b0000_1000 to 1
+                    ColorPixel cpx = new ColorPixel((byte) (px.R >> 3), (byte) (px.G >> 3), (byte) (px.B >> 3), (byte) (px.A >> 3));
                     cpx.count = 1;
+
+                    {
+                        Console.WriteLine(px_index);
+                        cpx.print();
+                    }
 
                     // only add new colors
                     if (palette.Contains(cpx) == true)
@@ -403,12 +420,18 @@ namespace BK_BIN_Analyzer
                     else palette.Add(cpx);
                 }
             }
+            Console.WriteLine(palette.Count);
             // reduce the palette
             palette = palette.OrderByDescending(c => c.count).ToList();
             List<ColorPixel> reduced_palette = new List<ColorPixel>();
             for (int i = 0; i < col_cnt && palette.Count > 0; i++)
             {
                 reduced_palette.Add(palette.ElementAt(0));
+
+                {
+                    Console.WriteLine(i);
+                    palette.ElementAt(0).print();
+                }
                 palette.RemoveAt(0);
             }
             // first pass: merge colors in the top-used if they are really close
@@ -439,7 +462,7 @@ namespace BK_BIN_Analyzer
                     (int) ((matchA.r * matchA.count + matchB.r * matchB.count) / added_counts),
                     (int) ((matchA.g * matchA.count + matchB.g * matchB.count) / added_counts),
                     (int) ((matchA.b * matchA.count + matchB.b * matchB.count) / added_counts),
-                    (int) ((matchA.a * matchA.count + matchB.a * matchB.count) / added_counts)
+                    (int) (0xFF * Math.Max(matchA.a, matchB.a))
                 );
                 merged.count = (int)added_counts;
                 reduced_palette.Add(palette.ElementAt(0));
@@ -474,7 +497,7 @@ namespace BK_BIN_Analyzer
                     (int) ((matchA.r * matchA.count + matchB.r * matchB.count) / added_counts),
                     (int) ((matchA.g * matchA.count + matchB.g * matchB.count) / added_counts),
                     (int) ((matchA.b * matchA.count + matchB.b * matchB.count) / added_counts),
-                    (int) ((matchA.a * matchA.count + matchB.a * matchB.count) / added_counts)
+                    (int) (0xFF * Math.Max(matchA.a, matchB.a))
                 );
                 merged.count = (int) added_counts;
                 reduced_palette.Add(merged);
