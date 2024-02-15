@@ -20,7 +20,7 @@ namespace BK_BIN_Analyzer
         {
             if (file_offset == 0)
             {
-                System.Console.WriteLine("No Collision Segment");
+                System.Console.WriteLine("No Effects Segment");
                 this.valid = false;
                 return;
             }

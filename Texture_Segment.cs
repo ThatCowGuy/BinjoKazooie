@@ -10,6 +10,10 @@ using System.ComponentModel;
 using System.Data;
 using System.Windows.Forms;
 
+// after discounting the palette size, we should be able to detect mipmaps and mulit-textures (for anim)
+// by checking if the texture size is larger than what we would expect from HxWxS.
+// Then we can check, if the "true size" is divisible by the texture size => multi-texture
+// if it isnt, it should be a mipmap (unless one can have mipmapped multi textures, but.... ugh)
 
 namespace BK_BIN_Analyzer
 {
@@ -71,26 +75,41 @@ namespace BK_BIN_Analyzer
         public Tex_Meta[] meta;
         public Tex_Data[] data;
 
+        public uint get_tex_ID_from_datasection_offset(uint datasection_offset)
+        {
+            // Console.WriteLine("looking for fileoffset " + datasection_offset);
+            for (uint i = 0; i < this.tex_cnt; i++)
+            {
+                if (datasection_offset == this.data[i].datasection_offset)
+                    return i;
+            }
+            // no match
+            // Console.WriteLine("No Tex Match found for file_offset: " + file_offset);
+            return 0xFFFF;
+        }
+
         public Bitmap parse_img_data(byte[] data, uint tex_type, uint w, uint h)
         {
             Bitmap parsed_img = null;
             switch (tex_type)
             {
                 // https://n64squid.com/homebrew/n64-sdk/textures/image-formats/
-                case (0x01): // C4 or CI4; 16 RGB555-colors, pixels are encoded per row as 4bit IDs
+                case (0x01): // C4 or CI4; 16 RGB5551-colors, pixels are encoded per row as 4bit IDs
                 {
                     // first parse the color palette
-                    byte[] color_palette = new byte[0x10 * 3];
+                    byte[] color_palette = new byte[0x10 * 4];
                     for (int i = 0; i < 0x10; i++)
                     {
-                        uint color_value = (uint)data[(i * 2) + 0] * 0x100 + (uint)data[(i * 2) + 1];
+                        uint color_value = File_Handler.read_short(data, (i * 2), false);
                         // RGB555
-                        color_palette[i * 3 + 0] = (byte)(((double)((color_value >> 0xB) & 0b011111) / 0b011111) * 0xFF); // R
-                        color_palette[i * 3 + 1] = (byte)(((double)((color_value >> 0x6) & 0b011111) / 0b011111) * 0xFF); // G
-                        color_palette[i * 3 + 2] = (byte)(((double)((color_value >> 0x1) & 0b011111) / 0b011111) * 0xFF); // B
+                        color_palette[i * 4 + 0] = (byte) (((double)((color_value >> 0xB) & 0b011111) / 0b011111) * 0xFF); // R
+                        color_palette[i * 4 + 1] = (byte) (((double)((color_value >> 0x6) & 0b011111) / 0b011111) * 0xFF); // G
+                        color_palette[i * 4 + 2] = (byte) (((double)((color_value >> 0x1) & 0b011111) / 0b011111) * 0xFF); // B
+                        // and grab alpha from final bit
+                        color_palette[i * 4 + 3] = (byte) ((color_value & 0b0001) * 0xFF);
                     }
                     // then parse the image data
-                    byte[] pixel_data = new byte[w * h * 3];
+                    byte[] pixel_data = new byte[w * h * 4];
                     for (int y = 0; y < h; y++)
                     {
                         for (int x = 0; x < w; x++)
@@ -105,32 +124,36 @@ namespace BK_BIN_Analyzer
                                 pal_id = (pal_id >> 0) & 0b1111;
 
                             // NOTE: the Bitmap constructor expects the colors to be in BGR...
-                            pixel_data[(px_id * 3) + 2] = color_palette[(pal_id * 3) + 0];
-                            pixel_data[(px_id * 3) + 1] = color_palette[(pal_id * 3) + 1];
-                            pixel_data[(px_id * 3) + 0] = color_palette[(pal_id * 3) + 2];
+                            pixel_data[(px_id * 4) + 2] = color_palette[(pal_id * 4) + 0];
+                            pixel_data[(px_id * 4) + 1] = color_palette[(pal_id * 4) + 1];
+                            pixel_data[(px_id * 4) + 0] = color_palette[(pal_id * 4) + 2];
+                            // and alpha
+                            pixel_data[(px_id * 4) + 3] = color_palette[(pal_id * 4) + 3];
                         }
                     }
                     parsed_img = new Bitmap(
-                        (int)w, (int)h, (int)(w * 3),
-                        System.Drawing.Imaging.PixelFormat.Format24bppRgb,
+                        (int) w, (int) h, (int) (w * 4),
+                        System.Drawing.Imaging.PixelFormat.Format32bppArgb,
                         GCHandle.Alloc(pixel_data, GCHandleType.Pinned).AddrOfPinnedObject()
                     );
                     break;
                 }
-                case (0x02): // C8 or CI8; 32 RGB555-colors, pixels are encoded per row as 8bit IDs
+                case (0x02): // C8 or CI8; 32 RGB5551-colors, pixels are encoded per row as 8bit IDs
                 {
                     // first parse the color palette
-                    byte[] color_palette = new byte[0x100 * 3];
+                    byte[] color_palette = new byte[0x100 * 4];
                     for (int i = 0; i < 0x100; i++)
                     {
-                        uint color_value = (uint)data[(i * 2) + 0] * 0x100 + (uint)data[(i * 2) + 1];
+                        uint color_value = File_Handler.read_short(data, (i * 2), false);
                         // RGB555
-                        color_palette[i * 3 + 0] = (byte)(((double)((color_value >> 0xB) & 0b011111) / 0b011111) * 0xFF); // R
-                        color_palette[i * 3 + 1] = (byte)(((double)((color_value >> 0x6) & 0b011111) / 0b011111) * 0xFF); // G
-                        color_palette[i * 3 + 2] = (byte)(((double)((color_value >> 0x1) & 0b011111) / 0b011111) * 0xFF); // B
+                        color_palette[i * 4 + 0] = (byte)(((double)((color_value >> 0xB) & 0b011111) / 0b011111) * 0xFF); // R
+                        color_palette[i * 4 + 1] = (byte)(((double)((color_value >> 0x6) & 0b011111) / 0b011111) * 0xFF); // G
+                        color_palette[i * 4 + 2] = (byte)(((double)((color_value >> 0x1) & 0b011111) / 0b011111) * 0xFF); // B
+                        // and grab alpha from final bit
+                        color_palette[i * 4 + 3] = (byte) ((color_value & 0b0001) * 0xFF);
                     }
                     // then parse the image data
-                    byte[] pixel_data = new byte[w * h * 3];
+                    byte[] pixel_data = new byte[w * h * 4];
                     for (int y = 0; y < h; y++)
                     {
                         for (int x = 0; x < w; x++)
@@ -140,19 +163,21 @@ namespace BK_BIN_Analyzer
                             int pal_id = data[0x200 + (px_id)];
 
                             // NOTE: the Bitmap constructor expects the colors to be in BGR...
-                            pixel_data[(px_id * 3) + 2] = color_palette[(pal_id * 3) + 0];
-                            pixel_data[(px_id * 3) + 1] = color_palette[(pal_id * 3) + 1];
-                            pixel_data[(px_id * 3) + 0] = color_palette[(pal_id * 3) + 2];
+                            pixel_data[(px_id * 4) + 2] = color_palette[(pal_id * 4) + 0];
+                            pixel_data[(px_id * 4) + 1] = color_palette[(pal_id * 4) + 1];
+                            pixel_data[(px_id * 4) + 0] = color_palette[(pal_id * 4) + 2];
+                            // and alpha
+                            pixel_data[(px_id * 4) + 3] = color_palette[(pal_id * 4) + 3];
                         }
                     }
                     parsed_img = new Bitmap(
-                        (int)w, (int)h, (int)(w * 3),
-                        System.Drawing.Imaging.PixelFormat.Format24bppRgb,
+                        (int) w, (int) h, (int) (w * 4),
+                        System.Drawing.Imaging.PixelFormat.Format32bppArgb,
                         GCHandle.Alloc(pixel_data, GCHandleType.Pinned).AddrOfPinnedObject()
                     );
                     break;
                 }
-                case (0x04): // RGBA16 or RGB555A1 without a palette; pixels stored as a 16bit texel
+                case (0x04): // RGBA16 or RGBA5551 without a palette; pixels stored as a 16bit texel
                 {
                     // parse the image data
                     byte[] pixel_data = new byte[w * h * 4];
@@ -162,7 +187,7 @@ namespace BK_BIN_Analyzer
                         {
                             // calc the pixel index
                             int px_id = (int)(y * w) + x;
-                            uint color_value = (uint)data[(px_id * 2) + 0] * 0x100 + (uint)data[(px_id * 2) + 1];
+                            uint color_value = File_Handler.read_short(data, (px_id * 2), false);
 
                             // NOTE: THIS Bitmap constructor expects the colors to be in BGRA...
                             pixel_data[(px_id * 4) + 2] = (byte)(((double)((color_value >> 0xB) & 0b011111) / 0b011111) * 0xFF);
@@ -216,13 +241,15 @@ namespace BK_BIN_Analyzer
                             // calc the pixel index
                             int px_id = (int)(y * w) + x;
 
-                            // NOTE: THIS Bitmap constructor expects the colors to be in BGRA...
                             // in IA8, the first nibble is the intensity => every color-value
-                            pixel_data[(px_id * 4) + 2] = (byte)(data[px_id] & 0b11110000);
-                            pixel_data[(px_id * 4) + 1] = (byte)(data[px_id] & 0b11110000);
-                            pixel_data[(px_id * 4) + 0] = (byte)(data[px_id] & 0b11110000);
+                            // NOTE: THIS Bitmap constructor expects the colors to be in BGRA...
+                            // NOTE: This math looks pretty weird, but the 2nd summand is just to interpolate the values from
+                            //       a nibble into a byte, to avoid rounding oddities
+                            pixel_data[(px_id * 4) + 2] = (byte) ((data[px_id] & 0b11110000) + (data[px_id] >> 4));
+                            pixel_data[(px_id * 4) + 1] = (byte) ((data[px_id] & 0b11110000) + (data[px_id] >> 4));
+                            pixel_data[(px_id * 4) + 0] = (byte) ((data[px_id] & 0b11110000) + (data[px_id] >> 4));
                             // dont forget alpha !
-                            pixel_data[(px_id * 4) + 3] = (byte)((data[px_id] << 4) & 0b11110000);
+                            pixel_data[(px_id * 4) + 3] = (byte)(((data[px_id] << 4) & 0b11110000) + (data[px_id] & 0b00001111));
                         }
                     }
                     parsed_img = new Bitmap(
@@ -245,7 +272,7 @@ namespace BK_BIN_Analyzer
         {
             if (file_offset == 0)
             {
-                System.Console.WriteLine("No Collision Segment");
+                System.Console.WriteLine("No Texture Segment");
                 this.valid = false;
                 return;
             }
@@ -255,9 +282,9 @@ namespace BK_BIN_Analyzer
 
             // parsing properties
             // === 0x00 ===============================
-            this.data_size = File_Handler.read_int(file_data, file_offset + 0x00);
-            this.tex_cnt = File_Handler.read_short(file_data, file_offset + 0x04);
-            this.unk_1 = File_Handler.read_short(file_data, file_offset + 0x06);
+            this.data_size = File_Handler.read_int(file_data, file_offset + 0x00, false);
+            this.tex_cnt = File_Handler.read_short(file_data, file_offset + 0x04, false);
+            this.unk_1 = File_Handler.read_short(file_data, file_offset + 0x06, false);
 
             // computing properties
             this.full_header_size = (uint)(0x08 + (this.tex_cnt * 0x10));
@@ -273,13 +300,13 @@ namespace BK_BIN_Analyzer
 
                 // parsing properties
                 // === 0x00 ===============================
-                m.datasection_offset_data = File_Handler.read_int(file_data, (int)(m.file_offset + 0x00));
-                m.tex_type = File_Handler.read_short(file_data, (int)(m.file_offset + 0x04));
-                m.unk_1 = File_Handler.read_short(file_data, (int)(m.file_offset + 0x06));
-                m.width = File_Handler.read_char(file_data, (int)(m.file_offset + 0x08));
-                m.height = File_Handler.read_char(file_data, (int)(m.file_offset + 0x09));
-                m.unk_2 = File_Handler.read_short(file_data, (int)(m.file_offset + 0x0A));
-                m.unk_3 = File_Handler.read_int(file_data, (int)(m.file_offset + 0x0C));
+                m.datasection_offset_data = File_Handler.read_int(file_data, (int)(m.file_offset + 0x00), false);
+                m.tex_type = File_Handler.read_short(file_data, (int)(m.file_offset + 0x04), false);
+                m.unk_1 = File_Handler.read_short(file_data, (int)(m.file_offset + 0x06), false);
+                m.width = File_Handler.read_char(file_data, (int)(m.file_offset + 0x08), false);
+                m.height = File_Handler.read_char(file_data, (int)(m.file_offset + 0x09), false);
+                m.unk_2 = File_Handler.read_short(file_data, (int)(m.file_offset + 0x0A), false);
+                m.unk_3 = File_Handler.read_int(file_data, (int)(m.file_offset + 0x0C), false);
 
                 // computing properties
                 m.file_offset_data = file_offset_data + m.datasection_offset_data;

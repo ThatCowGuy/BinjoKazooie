@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BK_BIN_Analyzer
 {
-    public class Vtx_Elem
+    public class Vtx_Elem : IEquatable<Vtx_Elem>
     {
         public short x;
         public short y;
@@ -14,10 +14,42 @@ namespace BK_BIN_Analyzer
         public short padding;
         public short u;
         public short v;
+        public Single transformed_U;
+        public Single transformed_V;
         public byte r;
         public byte g;
         public byte b;
         public byte a;
+        public void calc_transformed_UVs(Tile_Descriptor tiledes)
+        {
+            return;
+            this.transformed_U = (Single) ((this.u / 64.0) + tiledes.S_shift + 0.5) / tiledes.assigned_tex_meta.width;
+            this.transformed_V = (Single) ((this.v / 64.0) + tiledes.T_shift + 0.5) / tiledes.assigned_tex_meta.height;
+            // ATTENTION !! Im flipping the V coord here bx images are stored upside down
+            //              but Im exporting them right-side up
+            this.transformed_V = -1 * this.transformed_V;
+        }
+        public Object Clone()
+        {
+            return this.MemberwiseClone();
+        }
+
+        public bool Equals(Vtx_Elem other)
+        {
+            if (this.x != other.x) return false;
+            if (this.y != other.y) return false;
+            if (this.z != other.z) return false;
+            return true;
+        }
+        public override bool Equals(Object other)
+        {
+            return this.Equals((Vtx_Elem) other);
+        }
+
+        public String print()
+        {
+            return String.Format("{0}, {1}, {2}", this.x, this.y, this.z);
+        }
     }
     public class Vertex_Segment
     {
@@ -52,7 +84,7 @@ namespace BK_BIN_Analyzer
         {
             if (file_offset == 0)
             {
-                System.Console.WriteLine("No Collision Segment");
+                System.Console.WriteLine("No Vertex Segment");
                 this.valid = false;
                 return;
             }
@@ -63,19 +95,19 @@ namespace BK_BIN_Analyzer
 
             // parsing properties
             // === 0x00 ===============================
-            this.neg_draw_dist_x = (short)File_Handler.read_short(file_data, file_offset + 0x00);
-            this.neg_draw_dist_y = (short)File_Handler.read_short(file_data, file_offset + 0x02);
-            this.neg_draw_dist_z = (short)File_Handler.read_short(file_data, file_offset + 0x04);
-            this.pos_draw_dist_x = (short)File_Handler.read_short(file_data, file_offset + 0x06);
-            this.pos_draw_dist_y = (short)File_Handler.read_short(file_data, file_offset + 0x08);
-            this.pos_draw_dist_z = (short)File_Handler.read_short(file_data, file_offset + 0x0A);
-            this.obj_range_A = (short)File_Handler.read_short(file_data, file_offset + 0x0C);
-            this.obj_range_B = (short)File_Handler.read_short(file_data, file_offset + 0x0E);
+            this.neg_draw_dist_x = (short)File_Handler.read_short(file_data, file_offset + 0x00, false);
+            this.neg_draw_dist_y = (short)File_Handler.read_short(file_data, file_offset + 0x02, false);
+            this.neg_draw_dist_z = (short)File_Handler.read_short(file_data, file_offset + 0x04, false);
+            this.pos_draw_dist_x = (short)File_Handler.read_short(file_data, file_offset + 0x06, false);
+            this.pos_draw_dist_y = (short)File_Handler.read_short(file_data, file_offset + 0x08, false);
+            this.pos_draw_dist_z = (short)File_Handler.read_short(file_data, file_offset + 0x0A, false);
+            this.obj_range_A = (short)File_Handler.read_short(file_data, file_offset + 0x0C, false);
+            this.obj_range_B = (short)File_Handler.read_short(file_data, file_offset + 0x0E, false);
             // === 0x10 ===============================
-            this.coll_range_other = (short)File_Handler.read_short(file_data, file_offset + 0x10);
-            this.coll_range_banjo = (short)File_Handler.read_short(file_data, file_offset + 0x12);
+            this.coll_range_other = (short)File_Handler.read_short(file_data, file_offset + 0x10, false);
+            this.coll_range_banjo = (short)File_Handler.read_short(file_data, file_offset + 0x12, false);
             // NOTE: this value seems to be incorrect sometimes; use BIN Header one
-            this.vtx_cnt_doubled = File_Handler.read_short(file_data, file_offset + 0x14);
+            this.vtx_cnt_doubled = File_Handler.read_short(file_data, file_offset + 0x14, false);
 
             this.vtx_list = new Vtx_Elem[this.binheader_vtx_cnt];
             for (int i = 0; i < this.binheader_vtx_cnt; i++)
@@ -85,19 +117,53 @@ namespace BK_BIN_Analyzer
 
                 // parsing properties
                 // === 0x00 ===============================
-                v.x = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x00);
-                v.y = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x02);
-                v.z = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x04);
-                v.padding = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x06);
-                v.u = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x08);
-                v.v = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x0A);
-                v.r = File_Handler.read_char(file_data, file_offset_vtx + 0x0C);
-                v.g = File_Handler.read_char(file_data, file_offset_vtx + 0x0D);
-                v.b = File_Handler.read_char(file_data, file_offset_vtx + 0x0E);
-                v.a = File_Handler.read_char(file_data, file_offset_vtx + 0x0F);
+                v.x = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x00, false);
+                v.y = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x02, false);
+                v.z = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x04, false);
+                v.padding = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x06, false);
+                v.u = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x08, false);
+                v.v = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x0A, false);
+                v.r = File_Handler.read_char(file_data, file_offset_vtx + 0x0C, false);
+                v.g = File_Handler.read_char(file_data, file_offset_vtx + 0x0D, false);
+                v.b = File_Handler.read_char(file_data, file_offset_vtx + 0x0E, false);
+                v.a = File_Handler.read_char(file_data, file_offset_vtx + 0x0F, false);
 
                 vtx_list[i] = v;
             }
+        }
+
+        public void infer_vtx_data_for_full_tris(List<FullTriangle> full_tri_list)
+        {
+            for (int i = 0; i < full_tri_list.Count; i++)
+            {
+                FullTriangle full_tri = full_tri_list[i];
+                full_tri.vtx_1 = (Vtx_Elem) this.vtx_list[full_tri.index_1].Clone();
+                full_tri.vtx_2 = (Vtx_Elem) this.vtx_list[full_tri.index_2].Clone();
+                full_tri.vtx_3 = (Vtx_Elem) this.vtx_list[full_tri.index_3].Clone();
+            }
+        }
+
+        public String export_IDs_to_Base64()
+        {
+            // NOTE: I am stupid
+            List<Byte> raw_data = new List<Byte>();
+            for (int i = 0; i < this.binheader_vtx_cnt; i++)
+            {
+                raw_data.AddRange(BitConverter.GetBytes((ushort)i));
+            }
+            return System.Convert.ToBase64String(raw_data.ToArray());
+        }
+        public String export_VTX_Coords_to_Base64()
+        {
+            List<Byte> raw_data = new List<Byte>();
+            for (int i = 0; i < this.binheader_vtx_cnt; i++)
+            {
+                Vtx_Elem vtx = this.vtx_list[i];
+                raw_data.AddRange(BitConverter.GetBytes((Single)vtx.x));
+                raw_data.AddRange(BitConverter.GetBytes((Single)vtx.y));
+                raw_data.AddRange(BitConverter.GetBytes((Single)vtx.z));
+            }
+            return System.Convert.ToBase64String(raw_data.ToArray());
         }
 
         public List<string[]> get_vtx_content(int id)

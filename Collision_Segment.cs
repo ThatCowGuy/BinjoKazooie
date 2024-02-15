@@ -8,12 +8,18 @@ namespace BK_BIN_Analyzer
 {
     public class Tri_Elem
     {
+        // parsed properties
         public ushort index_1;
         public ushort index_2;
         public ushort index_3;
         public ushort unk_1;
         public ushort floor_type;
         public ushort sound_type;
+
+        // inferred properties
+        public ushort assigned_tex_ID;
+        public Tex_Data assigned_tex;
+        public FX_Elem assigned_FX;
 
         /*/=====================================================
          * Thanks to Unalive for documenting these Flags
@@ -85,6 +91,24 @@ namespace BK_BIN_Analyzer
         public uint file_offset;
         public uint file_offset_data;
 
+        public List<FullTriangle> export_tris_as_full()
+        {
+            List<FullTriangle> export = new List<FullTriangle>();
+            for (int i = 0; i < this.tri_cnt; i++)
+            {
+                Tri_Elem tri = this.tri_list[i];
+                FullTriangle full_tri = new FullTriangle();
+                full_tri.index_1 = tri.index_1;
+                full_tri.index_2 = tri.index_2;
+                full_tri.index_3 = tri.index_3;
+                full_tri.floor_type = tri.floor_type;
+                full_tri.sound_type = tri.sound_type;
+
+                export.Add(full_tri);
+            }
+            return export;
+        }
+
         public void populate(byte[] file_data, int file_offset)
         {
             if (file_offset == 0)
@@ -98,15 +122,15 @@ namespace BK_BIN_Analyzer
 
             // parsing properties
             // === 0x00 ===============================
-            this.unk_1 = (int)File_Handler.read_int(file_data, file_offset + 0x00);
-            this.unk_2 = (int)File_Handler.read_int(file_data, file_offset + 0x04);
-            this.unk_3 = (int)File_Handler.read_int(file_data, file_offset + 0x08);
-            this.unk_4 = (int)File_Handler.read_int(file_data, file_offset + 0x0C);
+            this.unk_1 = (int)File_Handler.read_int(file_data, file_offset + 0x00, false);
+            this.unk_2 = (int)File_Handler.read_int(file_data, file_offset + 0x04, false);
+            this.unk_3 = (int)File_Handler.read_int(file_data, file_offset + 0x08, false);
+            this.unk_4 = (int)File_Handler.read_int(file_data, file_offset + 0x0C, false);
             // === 0x10 ===============================
-            this.unk_cnt = File_Handler.read_short(file_data, file_offset + 0x10);
-            this.unk_5 = File_Handler.read_short(file_data, file_offset + 0x12);
-            this.tri_cnt = File_Handler.read_short(file_data, file_offset + 0x14);
-            this.unk_6 = File_Handler.read_short(file_data, file_offset + 0x16);
+            this.unk_cnt = File_Handler.read_short(file_data, file_offset + 0x10, false);
+            this.unk_5 = File_Handler.read_short(file_data, file_offset + 0x12, false);
+            this.tri_cnt = File_Handler.read_short(file_data, file_offset + 0x14, false);
+            this.unk_6 = File_Handler.read_short(file_data, file_offset + 0x16, false);
 
             // calculated properties
             this.file_offset_data = (uint)(file_offset + 0x18 + (this.unk_cnt * 0x04));
@@ -119,8 +143,8 @@ namespace BK_BIN_Analyzer
 
                 // parsing properties
                 // === 0x00 ===============================
-                unk.unk_1 = File_Handler.read_short(file_data, file_offset_unk + 0x00);
-                unk.unk_2 = File_Handler.read_short(file_data, file_offset_unk + 0x02);
+                unk.unk_1 = File_Handler.read_short(file_data, file_offset_unk + 0x00, false);
+                unk.unk_2 = File_Handler.read_short(file_data, file_offset_unk + 0x02, false);
 
                 this.unk_list[i] = unk;
             }
@@ -133,17 +157,29 @@ namespace BK_BIN_Analyzer
 
                 // parsing properties
                 // === 0x00 ===============================
-                tri.index_1 = File_Handler.read_short(file_data, file_offset_tri + 0x00);
-                tri.index_2 = File_Handler.read_short(file_data, file_offset_tri + 0x02);
-                tri.index_3 = File_Handler.read_short(file_data, file_offset_tri + 0x04);
-                tri.unk_1 = File_Handler.read_short(file_data, file_offset_tri + 0x06);
-                tri.floor_type = File_Handler.read_short(file_data, file_offset_tri + 0x08);
-                tri.sound_type = File_Handler.read_short(file_data, file_offset_tri + 0x0A);
+                tri.index_1 = File_Handler.read_short(file_data, file_offset_tri + 0x00, false);
+                tri.index_2 = File_Handler.read_short(file_data, file_offset_tri + 0x02, false);
+                tri.index_3 = File_Handler.read_short(file_data, file_offset_tri + 0x04, false);
+                tri.unk_1 = File_Handler.read_short(file_data, file_offset_tri + 0x06, false);
+                tri.floor_type = File_Handler.read_short(file_data, file_offset_tri + 0x08, false);
+                tri.sound_type = File_Handler.read_short(file_data, file_offset_tri + 0x0A, false);
 
                 this.tri_list[i] = tri;
             }
         }
 
+        public String export_TRI_IDs_to_Base64()
+        {
+            List<Byte> raw_data = new List<Byte>();
+            for (int i = 0; i < this.tri_cnt; i++)
+            {
+                Tri_Elem tri = this.tri_list[i];
+                raw_data.AddRange(BitConverter.GetBytes((ushort) tri.index_1));
+                raw_data.AddRange(BitConverter.GetBytes((ushort) tri.index_2));
+                raw_data.AddRange(BitConverter.GetBytes((ushort) tri.index_3));
+            }
+            return System.Convert.ToBase64String(raw_data.ToArray());
+        }
         public List<string[]> get_tri_content(int id)
         {
             Tri_Elem tri = this.tri_list[id];

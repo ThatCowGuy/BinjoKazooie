@@ -41,7 +41,7 @@ namespace BK_BIN_Analyzer
         {
             if (file_offset == 0)
             {
-                System.Console.WriteLine("No Collision Segment");
+                System.Console.WriteLine("No Bone Segment");
                 this.valid = false;
                 return;
             }
@@ -51,9 +51,9 @@ namespace BK_BIN_Analyzer
 
             // parsing properties
             // === 0x00 ===============================
-            this.scaling_factor = File_Handler.read_float(file_data, file_offset + 0x00);
-            this.bone_cnt = File_Handler.read_short(file_data, file_offset + 0x04);
-            this.padding = File_Handler.read_short(file_data, file_offset + 0x06);
+            this.scaling_factor = File_Handler.read_float(file_data, file_offset + 0x00, false);
+            this.bone_cnt = File_Handler.read_short(file_data, file_offset + 0x04, false);
+            this.padding = File_Handler.read_short(file_data, file_offset + 0x06, false);
 
             this.bone_list = new Bone_Elem[this.bone_cnt];
             for (int i = 0; i < this.bone_cnt; i++)
@@ -63,11 +63,11 @@ namespace BK_BIN_Analyzer
 
                 // parsing properties
                 // === 0x00 ===============================
-                bone.x = File_Handler.read_float(file_data, file_offset_bone + 0x00);
-                bone.y = File_Handler.read_float(file_data, file_offset_bone + 0x04);
-                bone.z = File_Handler.read_float(file_data, file_offset_bone + 0x08);
-                bone.internal_ID = File_Handler.read_short(file_data, file_offset_bone + 0x0C);
-                bone.parent_ID = File_Handler.read_short(file_data, file_offset_bone + 0x0E);
+                bone.x = File_Handler.read_float(file_data, file_offset_bone + 0x00, false);
+                bone.y = File_Handler.read_float(file_data, file_offset_bone + 0x04, false);
+                bone.z = File_Handler.read_float(file_data, file_offset_bone + 0x08, false);
+                bone.internal_ID = File_Handler.read_short(file_data, file_offset_bone + 0x0C, false);
+                bone.parent_ID = File_Handler.read_short(file_data, file_offset_bone + 0x0E, false);
 
                 this.bone_list[i] = bone;
             }

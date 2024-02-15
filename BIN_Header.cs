@@ -39,25 +39,25 @@ namespace BK_BIN_Analyzer
             // parsed properties
             // === 0x00 ===============================
             // this.start_identifier = 0x0000000B; // CONST
-            this.start_identifier = File_Handler.read_int(file_data, 0x00);
-            this.geo_offset = File_Handler.read_int(file_data, 0x04);
-            this.tex_offset = File_Handler.read_short(file_data, 0x08);
-            this.geo_type = File_Handler.read_short(file_data, 0x0A);
-            this.DL_offset = File_Handler.read_int(file_data, 0x0C);
+            this.start_identifier = File_Handler.read_int(file_data, 0x00, false);
+            this.geo_offset = File_Handler.read_int(file_data, 0x04, false);
+            this.tex_offset = File_Handler.read_short(file_data, 0x08, false);
+            this.geo_type = File_Handler.read_short(file_data, 0x0A, false);
+            this.DL_offset = File_Handler.read_int(file_data, 0x0C, false);
             // === 0x10 ===============================
-            this.vtx_offset = File_Handler.read_int(file_data, 0x10);
-            this.unk_1 = File_Handler.read_int(file_data, 0x14);
-            this.bone_offset = File_Handler.read_int(file_data, 0x18);
-            this.coll_offset = File_Handler.read_int(file_data, 0x1C);
+            this.vtx_offset = File_Handler.read_int(file_data, 0x10, false);
+            this.unk_1 = File_Handler.read_int(file_data, 0x14, false);
+            this.bone_offset = File_Handler.read_int(file_data, 0x18, false);
+            this.coll_offset = File_Handler.read_int(file_data, 0x1C, false);
             // === 0x20 ===============================
-            this.FX_END = File_Handler.read_int(file_data, 0x20);
-            this.FX_offset = File_Handler.read_int(file_data, 0x24);
-            this.unk_2 = File_Handler.read_int(file_data, 0x28);
-            this.anim_tex_offset = File_Handler.read_int(file_data, 0x2C);
+            this.FX_END = File_Handler.read_int(file_data, 0x20, false);
+            this.FX_offset = File_Handler.read_int(file_data, 0x24, false);
+            this.unk_2 = File_Handler.read_int(file_data, 0x28, false);
+            this.anim_tex_offset = File_Handler.read_int(file_data, 0x2C, false);
             // === 0x30 ===============================
-            this.tri_cnt = File_Handler.read_short(file_data, 0x30);
-            this.vtx_cnt = File_Handler.read_short(file_data, 0x32);
-            this.unk_3 = File_Handler.read_int(file_data, 0x34);
+            this.tri_cnt = File_Handler.read_short(file_data, 0x30, false);
+            this.vtx_cnt = File_Handler.read_short(file_data, 0x32, false);
+            this.unk_3 = File_Handler.read_int(file_data, 0x34, false);
         }
 
         public List<string[]> get_content()

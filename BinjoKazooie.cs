@@ -563,7 +563,7 @@ namespace BK_BIN_Analyzer
                             new Bitmap(replacement_ori, new_w, new_h),
                             col_cnt, (int)this.numericUpDown3.Value
                         );
-                        this.replacement_cvt = MathHelpers.convert_image_to_RGB555_with_palette(
+                        this.replacement_cvt = MathHelpers.convert_image_to_RGB5551_with_palette(
                             new Bitmap(replacement_ori, new_w, new_h),
                             this.replacement_palette
                         );
@@ -576,7 +576,7 @@ namespace BK_BIN_Analyzer
                             new Bitmap(replacement_ori, new_w, new_h),
                             col_cnt, (int)this.numericUpDown3.Value
                         );
-                        this.replacement_cvt = MathHelpers.convert_image_to_RGB555_with_palette(
+                        this.replacement_cvt = MathHelpers.convert_image_to_RGB5551_with_palette(
                             new Bitmap(replacement_ori, new_w, new_h),
                             this.replacement_palette
                         );
@@ -584,7 +584,7 @@ namespace BK_BIN_Analyzer
                     }
                     case (0x04): // RGBA16 or RGB555A1 without a palette; pixels stored as a 16bit texel
                     {
-                        this.replacement_cvt = MathHelpers.convert_image_to_RGB555(
+                        this.replacement_cvt = MathHelpers.convert_image_to_RGB5551(
                             new Bitmap(replacement_ori, new_w, new_h)
                         );
                         break;

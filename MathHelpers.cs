@@ -6,10 +6,13 @@ using System.Threading.Tasks;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
+
+
 namespace BK_BIN_Analyzer
 {
     public static class MathHelpers
     {
+        // public static String convert_to_Base64()
         public static double color_distance(byte R1, byte G1, byte B1, byte R2, byte G2, byte B2)
         {
             double sq_dist = Math.Pow(R2 - R1, 2) + Math.Pow(G2 - G1, 2) + Math.Pow(B2 - B1, 2);
@@ -24,11 +27,19 @@ namespace BK_BIN_Analyzer
 
         public class ColorPixel : IEquatable<ColorPixel>
         {
-            public ColorPixel (int r, int g, int b)
+            public ColorPixel (int r, int g, int b, int a)
             {
                 this.r = r;
                 this.g = g;
                 this.b = b;
+                this.a = a;
+                // fully transparent pixels have irrelevant colors
+                if (this.a == 0)
+                {
+                    this.r = 0;
+                    this.g = 0;
+                    this.b = 0;
+                }
             }
             public override bool Equals(Object obj)
             {
@@ -39,11 +50,13 @@ namespace BK_BIN_Analyzer
                 if (this.r != other.r) return false;
                 if (this.g != other.g) return false;
                 if (this.b != other.b) return false;
+                if (this.a != other.a) return false;
                 return true;
             }
             public double r;
             public double g;
             public double b;
+            public double a;
             public int count = 0;
             public double impact = 0;
             public ColorPixel closest_neighbor;
@@ -52,7 +65,7 @@ namespace BK_BIN_Analyzer
 
             public void print()
             {
-                Console.WriteLine("{0}, {1}, {2} ({3})", r, g, b, count);
+                Console.WriteLine("{0}, {1}, {2}, {3} ({4})", r, g, b, a, count);
             }
         }
         public static byte[] convert_bitmap_to_bytes(Bitmap img, int tex_type)
@@ -66,7 +79,7 @@ namespace BK_BIN_Analyzer
 
             switch (tex_type)
             {
-                case (0x01): // C4 or CI4; 16 RGB555-colors, pixels are encoded per row as 4bit IDs
+                case (0x01): // C4 or CI4; 16 RGB5551-colors, pixels are encoded per row as 4bit IDs
                 {
                     Console.WriteLine("Converting Bitmap to CI4...");
                     // parse the image data in a way that remembers every color
@@ -78,7 +91,7 @@ namespace BK_BIN_Analyzer
                             int px_index = (y * w) + x;
                             Color px = img_clone.GetPixel(x, y);
                             // converting the image color data into RGB555 at this point already
-                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3));
+                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte)(px.A >> 7));
 
                             // only add new colors
                             if (palette.Contains(cpx) == true)
@@ -99,8 +112,7 @@ namespace BK_BIN_Analyzer
                     // NOTE: implicitly creating "black" colors for missing ones because it doesnt matter
                     foreach (ColorPixel pal_col in palette)
                     {
-                        // NOTE: the +0b1 at the end is forcing the alpha bit to be set; this seems to be standard in BK
-                        int col_val = ((int)pal_col.r << 0xB) + ((int)pal_col.g << 0x6) + ((int)pal_col.b << 0x1) + 0b1;
+                        int col_val = ((int)pal_col.r << 0xB) + ((int)pal_col.g << 0x6) + ((int)pal_col.b << 0x1) + ((int)pal_col.a);
                         data[(pal_id * 2) + 0] = (byte)(col_val >> 8);
                         data[(pal_id * 2) + 1] = (byte)(col_val >> 0);
                         pal_id++;
@@ -112,7 +124,7 @@ namespace BK_BIN_Analyzer
                             int px_index = (y * w) + x;
                             Color px = img_clone.GetPixel(x, y);
                             // converting the image color data into RGB555 at this point already
-                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3));
+                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte)(px.A >> 7));
 
                             if (palette.Contains(cpx) == true)
                             {
@@ -148,7 +160,7 @@ namespace BK_BIN_Analyzer
                             int px_index = (y * w) + x;
                             Color px = img_clone.GetPixel(x, y);
                             // converting the image color data into RGB555 at this point already
-                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3));
+                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte) (px.A >> 7));
 
                             // only add new colors
                             if (palette.Contains(cpx) == true)
@@ -182,7 +194,7 @@ namespace BK_BIN_Analyzer
                             int px_index = (y * w) + x;
                             Color px = img_clone.GetPixel(x, y);
                             // converting the image color data into RGB555 at this point already
-                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3));
+                            ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte) (px.A >> 7));
 
                             if (palette.Contains(cpx) == true)
                             {
@@ -295,7 +307,8 @@ namespace BK_BIN_Analyzer
                     byte alpha = px.A;
 
                     converted_img.SetPixel(
-                        x, y, Color.FromArgb(alpha,
+                        x, y, Color.FromArgb(
+                        alpha,
                         intensity,
                         intensity,
                         intensity
@@ -305,7 +318,7 @@ namespace BK_BIN_Analyzer
             }
             return converted_img;
         }
-        public static Bitmap convert_image_to_RGB555(Bitmap original)
+        public static Bitmap convert_image_to_RGB5551(Bitmap original)
         {
             int w = original.Width;
             int h = original.Height;
@@ -319,7 +332,8 @@ namespace BK_BIN_Analyzer
 
                     // converting to RGB555
                     converted_img.SetPixel(
-                        x, y, Color.FromArgb(255,
+                        x, y, Color.FromArgb(
+                        (byte)(px.A > 0 ? 0xFF : 0x00), // dont do ((a >> 7) << 7) because that only returns 0x00 (=0%) or 0x80 (=50%)
                         (byte)((uint)px.R >> 3) << 3,
                         (byte)((uint)px.G >> 3) << 3,
                         (byte)((uint)px.B >> 3) << 3
@@ -328,7 +342,7 @@ namespace BK_BIN_Analyzer
             }
             return converted_img;
         }
-        public static Bitmap convert_image_to_RGB555_with_palette(Bitmap original, List<ColorPixel> palette)
+        public static Bitmap convert_image_to_RGB5551_with_palette(Bitmap original, List<ColorPixel> palette)
         {
             int w = original.Width;
             int h = original.Height;
@@ -339,8 +353,8 @@ namespace BK_BIN_Analyzer
                 for (int x = 0; x < w; x++)
                 {
                     Color px = original.GetPixel(x, y);
-                    // converting the image color data into RGB555 at this point already
-                    ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3));
+                    // converting the image color data into RGB5551 at this point already
+                    ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte) (px.A >> 7));
 
                     double best_distance = 1e10;
                     ColorPixel best_color = null;
@@ -353,7 +367,8 @@ namespace BK_BIN_Analyzer
                         }
                     }
                     converted_img.SetPixel(
-                        x, y, Color.FromArgb(255,
+                        x, y, Color.FromArgb(
+                        (int)best_color.a * 0xFF, // dont do (a << 7) because that only returns 0x00 (=0%) or 0x80 (=50%)
                         (int)best_color.r << 3,
                         (int)best_color.g << 3,
                         (int)best_color.b << 3
@@ -375,8 +390,8 @@ namespace BK_BIN_Analyzer
                 {
                     int px_index = (y * w) + x;
                     Color px = original.GetPixel(x, y);
-                    // converting the image color data into RGB555 at this point already
-                    ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3));
+                    // converting the image color data into RGB5551 at this point already
+                    ColorPixel cpx = new ColorPixel((byte)(px.R >> 3), (byte)(px.G >> 3), (byte)(px.B >> 3), (byte) (px.A >> 7));
                     cpx.count = 1;
 
                     // only add new colors
@@ -421,9 +436,10 @@ namespace BK_BIN_Analyzer
                 reduced_palette.Remove(matchB);
                 double added_counts = (matchA.count + matchB.count);
                 ColorPixel merged = new ColorPixel(
-                    (int)((matchA.r * matchA.count + matchB.r * matchB.count) / added_counts),
-                    (int)((matchA.g * matchA.count + matchB.g * matchB.count) / added_counts),
-                    (int)((matchA.b * matchA.count + matchB.b * matchB.count) / added_counts)
+                    (int) ((matchA.r * matchA.count + matchB.r * matchB.count) / added_counts),
+                    (int) ((matchA.g * matchA.count + matchB.g * matchB.count) / added_counts),
+                    (int) ((matchA.b * matchA.count + matchB.b * matchB.count) / added_counts),
+                    (int) ((matchA.a * matchA.count + matchB.a * matchB.count) / added_counts)
                 );
                 merged.count = (int)added_counts;
                 reduced_palette.Add(palette.ElementAt(0));
@@ -455,9 +471,10 @@ namespace BK_BIN_Analyzer
                 reduced_palette.Remove(matchA);
                 double added_counts = (matchA.count + matchB.count);
                 ColorPixel merged = new ColorPixel(
-                    (int)((matchA.r * matchA.count + matchB.r * matchB.count) / added_counts),
-                    (int)((matchA.g * matchA.count + matchB.g * matchB.count) / added_counts),
-                    (int)((matchA.b * matchA.count + matchB.b * matchB.count) / added_counts)
+                    (int) ((matchA.r * matchA.count + matchB.r * matchB.count) / added_counts),
+                    (int) ((matchA.g * matchA.count + matchB.g * matchB.count) / added_counts),
+                    (int) ((matchA.b * matchA.count + matchB.b * matchB.count) / added_counts),
+                    (int) ((matchA.a * matchA.count + matchB.a * matchB.count) / added_counts)
                 );
                 merged.count = (int) added_counts;
                 reduced_palette.Add(merged);
