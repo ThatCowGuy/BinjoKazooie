@@ -22,12 +22,26 @@ namespace BK_BIN_Analyzer
         public byte a;
         public void calc_transformed_UVs(Tile_Descriptor tiledes)
         {
-            return;
-            this.transformed_U = (Single) ((this.u / 64.0) + tiledes.S_shift + 0.5) / tiledes.assigned_tex_meta.width;
-            this.transformed_V = (Single) ((this.v / 64.0) + tiledes.T_shift + 0.5) / tiledes.assigned_tex_meta.height;
+            if (tiledes.assigned_tex_meta == null || tiledes.assigned_tex_data == null)
+            {
+                this.transformed_U = (Single) ((this.u / 64.0) + 0 + 0.5) / 32.0f;
+                this.transformed_V = (Single) ((this.v / 64.0) + 0 + 0.5) / 32.0f;
+            }
+            else
+            {
+                this.transformed_U = (Single) ((this.u / 64.0) + tiledes.S_shift + 0.5) / tiledes.assigned_tex_meta.width;
+                this.transformed_V = (Single) ((this.v / 64.0) + tiledes.T_shift + 0.5) / tiledes.assigned_tex_meta.height;
+            }
             // ATTENTION !! Im flipping the V coord here bx images are stored upside down
             //              but Im exporting them right-side up
             this.transformed_V = -1 * this.transformed_V;
+        }
+        // NOTE: this ignores the tiledescriptors for now... so no shifting yet (maybe unneccessary ?)
+        public void reverse_UV_transforms(uint w_factor, uint h_factor)
+        {
+            // ATTENTION !! Im undoing the flipping here again
+            this.u = (short) (64.0 * ((this.transformed_U * w_factor) - 0.5));
+            this.v = (short) (64.0 * ((-1 * this.transformed_V * h_factor) - 0.5));
         }
         public Object Clone()
         {
@@ -50,6 +64,25 @@ namespace BK_BIN_Analyzer
         {
             return String.Format("{0}, {1}, {2}", this.x, this.y, this.z);
         }
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0x10];
+            // XYZ Coords
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.x, 2), bytes, 0x00);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.y, 2), bytes, 0x02);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.z, 2), bytes, 0x04);
+            // Padding
+            File_Handler.write_bytes_to_buffer(new byte[2]{ 0x00, 0x00 }, bytes, 0x06);
+            // UVs
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.u, 2), bytes, 0x08);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.v, 2), bytes, 0x0A);
+            // RGBA V-Shades
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.r, 1), bytes, 0x0B);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.g, 1), bytes, 0x0C);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.b, 1), bytes, 0x0D);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.a, 1), bytes, 0x0E);
+            return bytes;
+        }
     }
     public class Vertex_Segment
     {
@@ -57,18 +90,19 @@ namespace BK_BIN_Analyzer
 
         // parsed properties
         // === 0x00 ===============================
-        public short neg_draw_dist_x;
-        public short neg_draw_dist_y;
-        public short neg_draw_dist_z;
-        public short pos_draw_dist_x;
-        public short pos_draw_dist_y;
-        public short pos_draw_dist_z;
-        public short obj_range_A;
-        public short obj_range_B;
+        public short min_x;
+        public short min_y;
+        public short min_z;
+        public short max_x;
+        public short max_y;
+        public short max_z;
+        public short center_x;
+        public short center_y;
         // === 0x10 ===============================
-        public short coll_range_other;
-        public short coll_range_banjo;
-        public ushort vtx_cnt_doubled; // for whatever reason; also wrong sometimes
+        public short center_z;
+        public short local_norm;
+        public ushort vtx_count; // for whatever reason; also wrong sometimes
+        public short global_norm;
 
         public Vtx_Elem[] vtx_list;
 
@@ -95,19 +129,21 @@ namespace BK_BIN_Analyzer
 
             // parsing properties
             // === 0x00 ===============================
-            this.neg_draw_dist_x = (short)File_Handler.read_short(file_data, file_offset + 0x00, false);
-            this.neg_draw_dist_y = (short)File_Handler.read_short(file_data, file_offset + 0x02, false);
-            this.neg_draw_dist_z = (short)File_Handler.read_short(file_data, file_offset + 0x04, false);
-            this.pos_draw_dist_x = (short)File_Handler.read_short(file_data, file_offset + 0x06, false);
-            this.pos_draw_dist_y = (short)File_Handler.read_short(file_data, file_offset + 0x08, false);
-            this.pos_draw_dist_z = (short)File_Handler.read_short(file_data, file_offset + 0x0A, false);
-            this.obj_range_A = (short)File_Handler.read_short(file_data, file_offset + 0x0C, false);
-            this.obj_range_B = (short)File_Handler.read_short(file_data, file_offset + 0x0E, false);
+            this.min_x = (short)File_Handler.read_short(file_data, file_offset + 0x00, false);
+            this.min_y = (short)File_Handler.read_short(file_data, file_offset + 0x02, false);
+            this.min_z = (short)File_Handler.read_short(file_data, file_offset + 0x04, false);
+            this.max_x = (short)File_Handler.read_short(file_data, file_offset + 0x06, false);
+            this.max_y = (short)File_Handler.read_short(file_data, file_offset + 0x08, false);
+            this.max_z = (short)File_Handler.read_short(file_data, file_offset + 0x0A, false);
+            this.center_x = (short)File_Handler.read_short(file_data, file_offset + 0x0C, false);
+            this.center_y = (short)File_Handler.read_short(file_data, file_offset + 0x0E, false);
             // === 0x10 ===============================
-            this.coll_range_other = (short)File_Handler.read_short(file_data, file_offset + 0x10, false);
-            this.coll_range_banjo = (short)File_Handler.read_short(file_data, file_offset + 0x12, false);
-            // NOTE: this value seems to be incorrect sometimes; use BIN Header one
-            this.vtx_cnt_doubled = File_Handler.read_short(file_data, file_offset + 0x14, false);
+            this.center_z = (short)File_Handler.read_short(file_data, file_offset + 0x10, false);
+            this.local_norm = (short)File_Handler.read_short(file_data, file_offset + 0x12, false);
+            this.vtx_count = File_Handler.read_short(file_data, file_offset + 0x14, false);
+            this.global_norm = (short) File_Handler.read_short(file_data, file_offset + 0x16, false);
+
+            int max_dist_ori = 0;
 
             this.vtx_list = new Vtx_Elem[this.binheader_vtx_cnt];
             for (int i = 0; i < this.binheader_vtx_cnt; i++)
@@ -128,8 +164,12 @@ namespace BK_BIN_Analyzer
                 v.b = File_Handler.read_char(file_data, file_offset_vtx + 0x0E, false);
                 v.a = File_Handler.read_char(file_data, file_offset_vtx + 0x0F, false);
 
+                int dist = (int)Math.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+                max_dist_ori = (dist > max_dist_ori) ? dist : max_dist_ori;
+
                 vtx_list[i] = v;
             }
+            Console.WriteLine(File_Handler.uint_to_string(max_dist_ori, 0xFFFF));
         }
 
         public void infer_vtx_data_for_full_tris(List<FullTriangle> full_tri_list)
@@ -205,70 +245,73 @@ namespace BK_BIN_Analyzer
                 "from File Start"
             });
             content.Add(new string[] {
-                "Draw Distance -X",
-                File_Handler.uint_to_string(this.neg_draw_dist_x, 0xFFFF),
-                File_Handler.uint_to_string(this.neg_draw_dist_x, 10),
+                "Minimum X",
+                File_Handler.uint_to_string(this.min_x, 0xFFFF),
+                File_Handler.uint_to_string(this.min_x, 10),
                 ""
             });
             content.Add(new string[] {
-                "Draw Distance -Y",
-                File_Handler.uint_to_string(this.neg_draw_dist_y, 0xFFFF),
-                File_Handler.uint_to_string(this.neg_draw_dist_y, 10),
+                "Minimum Y",
+                File_Handler.uint_to_string(this.min_y, 0xFFFF),
+                File_Handler.uint_to_string(this.min_y, 10),
                 ""
             });
             content.Add(new string[] {
-                "Draw Distance -Z",
-                File_Handler.uint_to_string(this.neg_draw_dist_z, 0xFFFF),
-                File_Handler.uint_to_string(this.neg_draw_dist_z, 10),
+                "Minimum Z",
+                File_Handler.uint_to_string(this.min_z, 0xFFFF),
+                File_Handler.uint_to_string(this.min_z, 10),
                 ""
             });
             content.Add(new string[] {
-                "Draw Distance +X",
-                File_Handler.uint_to_string(this.pos_draw_dist_x, 0xFFFF),
-                File_Handler.uint_to_string(this.pos_draw_dist_x, 10),
-                String.Format("Extent = {0} units", (this.pos_draw_dist_x - this.neg_draw_dist_x))
+                "Maximum X",
+                File_Handler.uint_to_string(this.max_x, 0xFFFF),
+                File_Handler.uint_to_string(this.max_x, 10),
+                String.Format("Extent = {0} units", (this.max_x - this.min_x))
             });
             content.Add(new string[] {
-                "Draw Distance +Y",
-                File_Handler.uint_to_string(this.pos_draw_dist_y, 0xFFFF),
-                File_Handler.uint_to_string(this.pos_draw_dist_y, 10),
-                String.Format("Extent = {0} units", (this.pos_draw_dist_y - this.neg_draw_dist_y))
+                "Maximum Y",
+                File_Handler.uint_to_string(this.max_y, 0xFFFF),
+                File_Handler.uint_to_string(this.max_y, 10),
+                String.Format("Extent = {0} units", (this.max_y - this.min_y))
             });
             content.Add(new string[] {
-                "Draw Distance +Z",
-                File_Handler.uint_to_string(this.pos_draw_dist_z, 0xFFFF),
-                File_Handler.uint_to_string(this.pos_draw_dist_z, 10),
-                String.Format("Extent = {0} units", (this.pos_draw_dist_z - this.neg_draw_dist_z))
+                "Maximum Z",
+                File_Handler.uint_to_string(this.max_z, 0xFFFF),
+                File_Handler.uint_to_string(this.max_z, 10),
+                String.Format("Extent = {0} units", (this.max_z - this.min_z))
             });
             content.Add(new string[] {
-                "Object Range A (?)",
-                File_Handler.uint_to_string(this.obj_range_A, 0xFFFF),
-                File_Handler.uint_to_string(this.obj_range_A, 10),
+                "Center X",
+                File_Handler.uint_to_string(this.center_x, 0xFFFF),
+                File_Handler.uint_to_string(this.center_x, 10),
                 ""
             });
             content.Add(new string[] {
-                "Object Range B (?)",
-                File_Handler.uint_to_string(this.obj_range_B, 0xFFFF),
-                File_Handler.uint_to_string(this.obj_range_B, 10),
-                String.Format("Extent = {0} units", (this.obj_range_B - this.obj_range_A))
+                "Center Y",
+                File_Handler.uint_to_string(this.center_y, 0xFFFF),
+                File_Handler.uint_to_string(this.center_y, 10)
             });
             content.Add(new string[] {
-                "???",
-                File_Handler.uint_to_string(this.coll_range_other, 0xFFFF),
-                File_Handler.uint_to_string(this.coll_range_other, 10),
-                "may be Enemy related"
+                "Center Z",
+                File_Handler.uint_to_string(this.center_z, 0xFFFF),
+                File_Handler.uint_to_string(this.center_z, 10)
             });
             content.Add(new string[] {
-                "???",
-                File_Handler.uint_to_string(this.coll_range_banjo, 0xFFFF),
-                File_Handler.uint_to_string(this.coll_range_banjo, 10),
-                "may be Banjo related"
+                "Local Norm",
+                File_Handler.uint_to_string(this.local_norm, 0xFFFF),
+                File_Handler.uint_to_string(this.local_norm, 10),
+                "largest distance of any vtx to center"
             });
             content.Add(new string[] {
-                "Doubled VTX count",
-                File_Handler.uint_to_string(this.vtx_cnt_doubled, 0xFFFF),
-                File_Handler.uint_to_string(this.vtx_cnt_doubled, 10),
-                String.Format("{0} vertices", (this.vtx_cnt_doubled / 2))
+                "VTX count",
+                File_Handler.uint_to_string(this.vtx_count, 0xFFFF),
+                File_Handler.uint_to_string(this.vtx_count, 10)
+            });
+            content.Add(new string[] {
+                "Global Norm",
+                File_Handler.uint_to_string(this.global_norm, 0xFFFF),
+                File_Handler.uint_to_string(this.global_norm, 10),
+                "largest distance of any vtx to origin"
             });
             content.Add(new string[] {
                 "VTX cnt (BIN Header)",

@@ -406,11 +406,6 @@ namespace BK_BIN_Analyzer
                     ColorPixel cpx = new ColorPixel((byte) (px.R >> 3), (byte) (px.G >> 3), (byte) (px.B >> 3), (byte) (px.A >> 3));
                     cpx.count = 1;
 
-                    {
-                        Console.WriteLine(px_index);
-                        cpx.print();
-                    }
-
                     // only add new colors
                     if (palette.Contains(cpx) == true)
                     {
@@ -420,18 +415,12 @@ namespace BK_BIN_Analyzer
                     else palette.Add(cpx);
                 }
             }
-            Console.WriteLine(palette.Count);
             // reduce the palette
             palette = palette.OrderByDescending(c => c.count).ToList();
             List<ColorPixel> reduced_palette = new List<ColorPixel>();
             for (int i = 0; i < col_cnt && palette.Count > 0; i++)
             {
                 reduced_palette.Add(palette.ElementAt(0));
-
-                {
-                    Console.WriteLine(i);
-                    palette.ElementAt(0).print();
-                }
                 palette.RemoveAt(0);
             }
             // first pass: merge colors in the top-used if they are really close
