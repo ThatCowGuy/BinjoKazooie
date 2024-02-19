@@ -3,3 +3,4 @@ assets/*
 exports/*
 !exports/.gitkeep
 .vs/*
+.vscode/*

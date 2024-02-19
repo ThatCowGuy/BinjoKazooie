@@ -8,16 +8,10 @@ C:\Users\cray4\source\repos\BK_BIN_Analyzer\obj\Debug\BK_BIN_Analyzer.csproj.Cor
 C:\Users\cray4\source\repos\BK_BIN_Analyzer\obj\Debug\BK_BIN_Analyzer.exe
 C:\Users\cray4\source\repos\BK_BIN_Analyzer\obj\Debug\BK_BIN_Analyzer.pdb
 C:\Users\cray4\source\repos\BK_BIN_Analyzer\obj\Debug\BK_BIN_Analyzer.BinjoKazooie.resources
-C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\BK_BIN_Analyzer.exe.config
-C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\BK_BIN_Analyzer.exe
-C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\BK_BIN_Analyzer.pdb
 C:\Users\cray4\source\repos\BinjoKazooie\obj\Debug\BK_BIN_Analyzer.csproj.AssemblyReference.cache
 C:\Users\cray4\source\repos\BinjoKazooie\obj\Debug\BK_BIN_Analyzer.BinjoKazooie.resources
-C:\Users\cray4\source\repos\BinjoKazooie\obj\Debug\BK_BIN_Analyzer.Properties.Resources.resources
 C:\Users\cray4\source\repos\BinjoKazooie\obj\Debug\BK_BIN_Analyzer.csproj.GenerateResource.cache
 C:\Users\cray4\source\repos\BinjoKazooie\obj\Debug\BK_BIN_Analyzer.csproj.CoreCompileInputs.cache
-C:\Users\cray4\source\repos\BinjoKazooie\obj\Debug\BK_BIN_Analyzer.exe
-C:\Users\cray4\source\repos\BinjoKazooie\obj\Debug\BK_BIN_Analyzer.pdb
 C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\Microsoft.Bcl.AsyncInterfaces.dll
 C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\System.Buffers.dll
 C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\System.Memory.dll
@@ -37,3 +31,9 @@ C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\System.Text.Json.xml
 C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\System.Threading.Tasks.Extensions.xml
 C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\System.ValueTuple.xml
 C:\Users\cray4\source\repos\BinjoKazooie\obj\Debug\BK_BIN_Analyzer.csproj.CopyComplete
+C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\Binjo.exe.config
+C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\Binjo.exe
+C:\Users\cray4\source\repos\BinjoKazooie\bin\Debug\Binjo.pdb
+C:\Users\cray4\source\repos\BinjoKazooie\obj\Debug\Binjo.Properties.Resources.resources
+C:\Users\cray4\source\repos\BinjoKazooie\obj\Debug\Binjo.exe
+C:\Users\cray4\source\repos\BinjoKazooie\obj\Debug\Binjo.pdb
