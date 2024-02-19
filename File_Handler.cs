@@ -10,6 +10,32 @@ namespace BK_BIN_Analyzer
 {
     public static class File_Handler
     {
+        public static byte[] uint_to_bytes(uint input, int size)
+        {
+            // this will always be 4 bytes because its converting a "uint"
+            byte[] result = BitConverter.GetBytes(input);
+            if (BitConverter.IsLittleEndian == true)
+                Array.Reverse(result);
+            // C# appearently is allergic to variable sized arrays, so this uglyness needs to be (for now)
+            if (size == 4) return new byte[4] { result[0], result[1], result[2], result[3] };
+            if (size == 2) return new byte[2] {                       result[2], result[3] };
+            if (size == 1) return new byte[1] {                                  result[3] };
+            // error handling
+            Console.WriteLine(String.Format("File_Handler.uint_to_bytes() recieved weird size arg {0}", size));
+            return null;
+        }
+        public static void print_bytes(byte[] bytes)
+        {
+            String res = "";
+            for (int i = 0; i < bytes.Length; i++)
+                res += File_Handler.uint_to_string(bytes[i], 0xFF) + " ";
+            Console.WriteLine(res);
+        }
+        public static void write_bytes_to_buffer(byte[] bytes, byte[] buffer, int offset)
+        {
+            for (int i = 0; i < bytes.Length; i++)
+                buffer[offset + i] = bytes[i];
+        }
         public static ulong bytes_2_int(byte[] input, int offset, int len, bool little_endian)
         {
             ulong res = 0;

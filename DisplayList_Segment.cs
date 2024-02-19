@@ -76,6 +76,20 @@ namespace BK_BIN_Analyzer
         {
             return String.Format("TEX-ID:{0}; Coll:{1}", this.assigned_tex_ID, this.floor_type);
         }
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0x0C];
+            // VTX Indices
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes(this.index_1, 2), bytes, 0x00);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes(this.index_2, 2), bytes, 0x02);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes(this.index_3, 2), bytes, 0x04);
+            // Padding
+            File_Handler.write_bytes_to_buffer(new byte[2] { 0x00, 0x00 }, bytes, 0x06);
+            // Flags
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes(this.floor_type, 2), bytes, 0x08);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes(this.sound_type, 2), bytes, 0x0A);
+            return bytes;
+        }
 
         /*/=====================================================
          * Thanks to Unalive for documenting these Flags

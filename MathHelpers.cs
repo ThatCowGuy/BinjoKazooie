@@ -12,11 +12,31 @@ namespace BK_BIN_Analyzer
 {
     public static class MathHelpers
     {
+        public static int get_max(int[] arr)
+        {
+            return arr.Max();
+        }
+        public static int get_min(int[] arr)
+        {
+            return arr.Min();
+        }
         // public static String convert_to_Base64()
         public static double color_distance(byte R1, byte G1, byte B1, byte R2, byte G2, byte B2)
         {
             double sq_dist = Math.Pow(R2 - R1, 2) + Math.Pow(G2 - G1, 2) + Math.Pow(B2 - B1, 2);
             return Math.Sqrt(sq_dist);
+        }
+        public static double L2_distance(short x1, short y1, short z1, short x2, short y2, short z2)
+        {
+            double dx = x2 - x1;
+            double dy = y2 - y1;
+            double dz = z2 - z1;
+            double sq_dist = dx * dx + dy * dy + dz * dz;
+            return Math.Sqrt(sq_dist);
+        }
+        public static double L2_distance(short x2, short y2, short z2)
+        {
+            return L2_distance(0, 0, 0, x2, y2, z2);
         }
         public static double color_distance(ColorPixel A, ColorPixel B)
         {

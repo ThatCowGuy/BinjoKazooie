@@ -49,6 +49,7 @@ namespace BK_BIN_Analyzer
         public AnimTex_Segment animtex_seg = new AnimTex_Segment();
 
         public List<FullTriangle> full_tri_list = new List<FullTriangle>();
+        public GLTF_Handler GLTF = new GLTF_Handler();
 
         public void parse_BIN()
         {
@@ -73,16 +74,105 @@ namespace BK_BIN_Analyzer
             FXEND_seg.populate(this.content, (int)bin_header.FX_END);
             animtex_seg.populate(this.content, (int)bin_header.anim_tex_offset);
 
-            // now we can sort the full tri list
-            this.full_tri_list.Sort();
-
-            /*
             string output_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("testing.gltf"));
-            this.write_gltf_model(output_filename);
-            string input_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("testing_blender_out.gltf"));
-            this.gltf_to_full_tri_list(input_filename);
-            */
+            //this.write_gltf_model(output_filename);
+            string input_filename = Path.Combine(File_Handler.get_basedir_or_assets(), String.Format("sorra3.gltf"));
+            //this.parse_gltf_additional(input_filename);
+
+            //this.vtx_seg = build_vtx_seg();
+
             this.file_loaded = true;
+        }
+        public Vertex_Segment build_vtx_seg()
+        {
+            Vertex_Segment vtx_seg = new Vertex_Segment();
+            Console.WriteLine("Building VTX Segment...");
+            Console.WriteLine(vtx_seg);
+            vtx_seg.max_x = short.MinValue;
+            vtx_seg.max_y = short.MinValue;
+            vtx_seg.max_z = short.MinValue;
+            vtx_seg.min_x = short.MaxValue;
+            vtx_seg.min_y = short.MaxValue;
+            vtx_seg.min_z = short.MaxValue;
+            vtx_seg.vtx_count = 0;
+            // first loop is only used to determine the extrema aswell as figuring out how many vertices we have
+            foreach (FullTriangle tri in this.full_tri_list)
+            {
+                vtx_seg.max_x = (short) MathHelpers.get_max(new int[] { vtx_seg.max_x, tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x });
+                vtx_seg.max_y = (short) MathHelpers.get_max(new int[] { vtx_seg.max_y, tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y });
+                vtx_seg.max_z = (short) MathHelpers.get_max(new int[] { vtx_seg.max_z, tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z });
+
+                vtx_seg.min_x = (short) MathHelpers.get_min(new int[] { vtx_seg.min_x, tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x });
+                vtx_seg.min_y = (short) MathHelpers.get_min(new int[] { vtx_seg.min_y, tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y });
+                vtx_seg.min_z = (short) MathHelpers.get_min(new int[] { vtx_seg.min_z, tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z });
+
+                // sneaky way of finding the count: Just find the highest referenced index ! 
+                vtx_seg.vtx_count = (ushort) MathHelpers.get_max(new int[] { vtx_seg.vtx_count, tri.index_1, tri.index_2, tri.index_3 });
+            }
+            // (and add one because 0-indexing)
+            vtx_seg.vtx_count += 1;
+            // NOTE: I should get rid of this, because this is only to catch the errors in BB bins
+            vtx_seg.binheader_vtx_cnt = vtx_seg.vtx_count;
+            vtx_seg.vtx_list = new Vtx_Elem[vtx_seg.vtx_count];
+
+            // second loop calculates the norm-extrema and writes the vtx data to the array
+            vtx_seg.center_x = (short) ((vtx_seg.max_x + vtx_seg.min_x) / 2);
+            vtx_seg.center_y = (short) ((vtx_seg.max_y + vtx_seg.min_y) / 2);
+            vtx_seg.center_z = (short) ((vtx_seg.max_z + vtx_seg.min_z) / 2);
+            vtx_seg.local_norm = 0;
+            vtx_seg.global_norm = 0;
+            short local_norm;
+            short global_norm;
+            foreach (FullTriangle tri in this.full_tri_list)
+            {
+                // vtx_1
+                if (vtx_seg.vtx_list[tri.index_1] == null)
+                {
+                    // check if the norms exceed the current extremes
+                    local_norm = (short) MathHelpers.L2_distance(
+                        tri.vtx_1.x, tri.vtx_1.y, tri.vtx_1.z, vtx_seg.center_x, vtx_seg.center_y, vtx_seg.center_z
+                    );
+                    global_norm = (short) MathHelpers.L2_distance(
+                        tri.vtx_1.x, tri.vtx_1.y, tri.vtx_1.z, 0, 0, 0
+                    );
+                    vtx_seg.local_norm = (local_norm > vtx_seg.local_norm) ? local_norm : vtx_seg.local_norm;
+                    vtx_seg.global_norm = (global_norm > vtx_seg.global_norm) ? global_norm : vtx_seg.global_norm;
+                    // and store it
+                    vtx_seg.vtx_list[tri.index_1] = (Vtx_Elem) tri.vtx_1.Clone();
+                }
+                // vtx_2
+                if (vtx_seg.vtx_list[tri.index_2] == null)
+                {
+                    // check if the norms exceed the current extremes
+                    local_norm = (short) MathHelpers.L2_distance(
+                        tri.vtx_2.x, tri.vtx_2.y, tri.vtx_2.z, vtx_seg.center_x, vtx_seg.center_y, vtx_seg.center_z
+                    );
+                    global_norm = (short) MathHelpers.L2_distance(
+                        tri.vtx_2.x, tri.vtx_2.y, tri.vtx_2.z, 0, 0, 0
+                    );
+                    vtx_seg.local_norm = (local_norm > vtx_seg.local_norm) ? local_norm : vtx_seg.local_norm;
+                    vtx_seg.global_norm = (global_norm > vtx_seg.global_norm) ? global_norm : vtx_seg.global_norm;
+                    // and store it
+                    vtx_seg.vtx_list[tri.index_2] = (Vtx_Elem) tri.vtx_2.Clone();
+                }
+                // vtx_3
+                if (vtx_seg.vtx_list[tri.index_3] == null)
+                {
+                    // check if the norms exceed the current extremes
+                    local_norm = (short) MathHelpers.L2_distance(
+                        tri.vtx_3.x, tri.vtx_3.y, tri.vtx_3.z, vtx_seg.center_x, vtx_seg.center_y, vtx_seg.center_z
+                    );
+                    global_norm = (short) MathHelpers.L2_distance(
+                        tri.vtx_3.x, tri.vtx_3.y, tri.vtx_3.z, 0, 0, 0
+                    );
+                    vtx_seg.local_norm = (local_norm > vtx_seg.local_norm) ? local_norm : vtx_seg.local_norm;
+                    vtx_seg.global_norm = (global_norm > vtx_seg.global_norm) ? global_norm : vtx_seg.global_norm;
+                    // and store it
+                    vtx_seg.vtx_list[tri.index_3] = (Vtx_Elem) tri.vtx_3.Clone();
+                }
+            }
+            vtx_seg.valid = true;
+            return vtx_seg;
         }
         public void export_gltf_model()
         {
@@ -103,101 +193,126 @@ namespace BK_BIN_Analyzer
             System.Console.WriteLine("Cancelled");
             return;
         }
-        public List<FullTriangle> gltf_to_full_tri_list(String filepath)
+        public void parse_gltf_additional(String filepath)
         {
             String input_name = filepath;
             String json_content = File.ReadAllText(input_name);
-            GLTF_Handler gltf_input = JsonSerializer.Deserialize<GLTF_Handler>(json_content);
+            this.GLTF = JsonSerializer.Deserialize<GLTF_Handler>(json_content);
 
-            List<FullTriangle> imported_list = new List<FullTriangle>();
-
-            uint counter = 0;
-            foreach (GLTF_BufferInternal buff in gltf_input.buffers)
+            // first, parse and prepare the lowest level / plain data components
+            foreach (GLTF_BufferInternal buff in this.GLTF.buffers)
             {
-                Console.WriteLine(String.Format("=== Reading Buffer: {0}", counter));
-                Console.WriteLine("Len: " + buff.byteLength);
+                // transform the actual content
                 String base64buffer = buff.uri.Replace(GLTF_Handler.URI_PREFIX, "");
                 buff.content = Convert.FromBase64String(base64buffer);
-                counter++;
             }
-            counter = 0;
-            foreach (GLTF_BufferView view in gltf_input.bufferViews)
+            foreach (GLTF_BufferView view in this.GLTF.bufferViews)
             {
-                Console.WriteLine(String.Format("=== Reading View: {0}", counter));
-                Console.WriteLine("Off: " + view.byteOffset);
-                Console.WriteLine("Len: " + view.byteLength);
-                Console.WriteLine("Buf: " + view.buffer);
-                Console.WriteLine("Targ:" + GLTF_Handler.get_target_type(view.target));
-
+                // slice the referenced buffer and store the referenced data here
                 view.linked_content = new byte[view.byteLength];
                 Array.Copy(
-                    gltf_input.buffers.ElementAt((int) view.buffer).content,
+                    this.GLTF.buffers.ElementAt((int) view.buffer).content,
                     view.byteOffset,
                     view.linked_content,
                     0,
                     view.byteLength
                 );
-                counter++;
             }
-            counter = 0;
-            foreach (GLTF_Accessor acc in gltf_input.accessors)
+            foreach (GLTF_Accessor acc in this.GLTF.accessors)
             {
-                Console.WriteLine(String.Format("=== Reading Accessor: {0}", counter));
-                Console.WriteLine("View: " + acc.bufferView);
-                Console.WriteLine("Type: " + acc.type);
-                Console.WriteLine("CT: " + GLTF_Handler.get_component_type(acc.componentType));
-                Console.WriteLine("cnt: " + acc.count);
+                // calculate some internal properties
                 acc.compLength = (GLTF_Handler.get_component_group_size(acc.type) * GLTF_Handler.get_component_type_size(acc.componentType));
                 acc.byteLength = (acc.compLength * acc.count);
-                Console.WriteLine("Len: " + acc.byteLength);
 
+                // slice the referenced bufferview and store the referenced data here
                 acc.linked_content = new byte[acc.byteLength];
                 Array.Copy(
-                    gltf_input.bufferViews.ElementAt((int) acc.bufferView).linked_content,
+                    this.GLTF.bufferViews.ElementAt((int) acc.bufferView).linked_content,
                     acc.byteOffset,
                     acc.linked_content,
                     0,
                     acc.byteLength
                 );
-                counter++;
+
+                if (acc.type == "VEC4")
+                {
+                    Console.WriteLine("Parsing Color Accessor");
+                    Console.WriteLine(acc.componentType);
+                    Console.WriteLine(acc.type);
+                    Console.WriteLine(acc.byteLength);
+                    Console.WriteLine(acc.count);
+                    for (int b = 0; b < acc.byteLength; b+=8)
+                    {
+                        Console.WriteLine(String.Format("{0}{1} {2}{3} {4}{5} {6}{7}",
+                            File_Handler.uint_to_string(acc.linked_content[b + 0], 0xFF),
+                            File_Handler.uint_to_string(acc.linked_content[b + 1], 0xFF),
+                            File_Handler.uint_to_string(acc.linked_content[b + 2], 0xFF),
+                            File_Handler.uint_to_string(acc.linked_content[b + 3], 0xFF),
+                            File_Handler.uint_to_string(acc.linked_content[b + 4], 0xFF),
+                            File_Handler.uint_to_string(acc.linked_content[b + 5], 0xFF),
+                            File_Handler.uint_to_string(acc.linked_content[b + 6], 0xFF),
+                            File_Handler.uint_to_string(acc.linked_content[b + 7], 0xFF)
+                        ));
+                    }
+                }
             }
-            counter = 0;
-            List<FullTriangle> parsed_tris = new List<FullTriangle>();
-            foreach (GLTF_Mesh mesh in gltf_input.meshes)
+
+            // extract all the image data
+            List<Tex_Data> tex_list = new List<Tex_Data>();
+            foreach (GLTF_Texture tex in this.GLTF.textures)
             {
-                Console.WriteLine(String.Format("=== Reading Mesh: {0}", counter));
+                GLTF_Image img = this.GLTF.images[(int) tex.source];
+                // image references external image source
+                if (img.uri != null)
+                {
+                    img.tex_data = new Tex_Data();
+                    img.tex_data.img_rep = new Bitmap(img.uri);
+                    img.tex_data.img_rep.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                }
+                // image references internal source
+                else if (img.bufferView != null)
+                {
+                    GLTF_BufferView view = this.GLTF.bufferViews[(int) img.bufferView];
+                    img.tex_data = new Tex_Data();
+                    using (var stream = new MemoryStream(view.linked_content))
+                    {
+                        img.tex_data.img_rep = new Bitmap(stream);
+                        img.tex_data.img_rep.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Unexpected GLTF_Image encountered; Neither uri nor bufferView present!");
+                }
+                img.tex_meta = new Tex_Meta();
+                img.tex_meta.width = (byte) img.tex_data.img_rep.Width;
+                img.tex_meta.height = (byte) img.tex_data.img_rep.Height;
+                Console.WriteLine(String.Format("Tex: {0}x{1} px", img.tex_meta.width, img.tex_meta.height));
+            }
+
+            // now I can go through the meshes and extract all the tris that are defined in there
+            this.full_tri_list = new List<FullTriangle>();
+            foreach (GLTF_Mesh mesh in this.GLTF.meshes)
+            {
                 foreach (GLTF_Primitive primitive in mesh.primitives)
                 {
-                    int pos_ID;
-                    int idx_ID;
-                    int uv_ID;
-                    GLTF_Accessor pos_acc;
-                    GLTF_Accessor idx_acc;
-                    GLTF_Accessor uv_acc;
-
-                    Console.WriteLine(String.Format("Attr:"));
-                    Console.WriteLine(String.Format("POSITION: {0}", primitive.attributes["POSITION"]));
-                    pos_ID = (int) primitive.attributes["POSITION"];
-                    pos_acc = gltf_input.accessors[pos_ID];
-                    idx_ID = (int) primitive.indices;
-                    idx_acc = gltf_input.accessors[idx_ID];
-                    primitive.collidable = true;
-
-                    if (primitive.attributes.ContainsKey("TEXCOORD_0"))
-                    {
-                        Console.WriteLine(String.Format("TEXCOORD_0: {0}", primitive.attributes["TEXCOORD_0"]));
-                        uv_ID = (int) primitive.attributes["TEXCOORD_0"];
-                        uv_acc = gltf_input.accessors[uv_ID];
-                        primitive.visible = true;
-                    }
-                    gltf_input.parse_tris_from_primitive(parsed_tris, primitive);
+                    this.GLTF.parse_tris_from_primitive(this.full_tri_list, primitive);
                 }
-                counter++;
             }
-            return imported_list;
+
+            foreach (FullTriangle tri in this.full_tri_list)
+            {
+                File_Handler.print_bytes(tri.get_bytes());
+                File_Handler.print_bytes(tri.vtx_1.get_bytes());
+                File_Handler.print_bytes(tri.vtx_2.get_bytes());
+                File_Handler.print_bytes(tri.vtx_3.get_bytes());
+            }
         }
         public void write_gltf_model(String filepath)
         {
+            // first of all, we have to sort the tri list
+            this.full_tri_list.Sort();
+
             GLTF_Handler gltf = new GLTF_Handler();
 
             GLTF_Mesh tmp_mesh = new GLTF_Mesh();

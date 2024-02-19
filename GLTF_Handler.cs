@@ -93,7 +93,23 @@ namespace BK_BIN_Analyzer
 
     public class GLTF_Image
     {
+        public GLTF_Image()
+        {
+            this.name = null;
+            this.uri = null;
+            this.bufferView = null;
+            this.mimeType = null;
+        }
+        public String name { get; set; }
+
+        // Images either contain an uri for an external image source
         public String uri { get; set; }
+        // or they contain a mimeType and a bufferView index for an internal source
+        public Nullable<int> bufferView { get; set; }
+        public String mimeType { get; set; }
+
+        public Tex_Data tex_data;
+        public Tex_Meta tex_meta;
     }
     public class GLTF_Texture
     {
@@ -118,13 +134,18 @@ namespace BK_BIN_Analyzer
 
     public class GLTF_Handler
     {
-        public List<FullTriangle> parse_tris_from_primitive(List<FullTriangle> dest, GLTF_Primitive PRIM)
+        public void parse_tris_from_primitive(List<FullTriangle> dest, GLTF_Primitive PRIM)
         {
             GLTF_Accessor IDX = this.accessors[(int) PRIM.indices];
             GLTF_Accessor POS = this.accessors[(int) PRIM.attributes["POSITION"]];
+            PRIM.collidable = true;
+
             GLTF_Accessor UV = null;
-            if (PRIM.visible == true)
+            if (PRIM.attributes.ContainsKey("TEXCOORD_0") == true)
+            {
                 UV = this.accessors[(int) PRIM.attributes["TEXCOORD_0"]];
+                PRIM.visible = true;
+            }
 
             int tri_count = dest.Count;
             // run through all the Indices
@@ -147,19 +168,8 @@ namespace BK_BIN_Analyzer
                 vtx_3.x = (short) File_Handler.read_float(POS.linked_content, ((12 * idx_3) + 0), true);
                 vtx_3.y = (short) File_Handler.read_float(POS.linked_content, ((12 * idx_3) + 4), true);
                 vtx_3.z = (short) File_Handler.read_float(POS.linked_content, ((12 * idx_3) + 8), true);
-
-                FullTriangle tri = new FullTriangle();
-                // note that we need to keep track of the tri IDs within the bin ourselves..
-                tri.index_1 = (ushort) ((tri_count * 3) + 0);
-                tri.index_2 = (ushort) ((tri_count * 3) + 1);
-                tri.index_3 = (ushort) ((tri_count * 3) + 2);
-                tri.vtx_1 = vtx_1;
-                tri.vtx_2 = vtx_2;
-                tri.vtx_3 = vtx_3;
-
-                if (UV != null)
+                if (PRIM.visible == true)
                 {
-                    tri.visible = true;
                     vtx_1.transformed_U = File_Handler.read_float(UV.linked_content, ((8 * idx_1) + 0), true);
                     vtx_1.transformed_V = File_Handler.read_float(UV.linked_content, ((8 * idx_1) + 4), true);
 
@@ -169,34 +179,58 @@ namespace BK_BIN_Analyzer
                     vtx_3.transformed_U = File_Handler.read_float(UV.linked_content, ((8 * idx_3) + 0), true);
                     vtx_3.transformed_V = File_Handler.read_float(UV.linked_content, ((8 * idx_3) + 4), true);
                 }
+
+                FullTriangle tri = new FullTriangle();
+                tri.collidable = PRIM.collidable;
+                tri.visible = PRIM.visible;
+                // note that we need to keep track of the tri IDs within the bin ourselves..
+                // NOTE: we should really check for duplicates at this point, so that we can keep the vtx seg slim;
+                //       we CANNOT keep the full-tri-list slim, because we need multiple for vis + coll (at least)
+                tri.index_1 = (ushort) ((tri_count * 3) + 0);
+                tri.index_2 = (ushort) ((tri_count * 3) + 1);
+                tri.index_3 = (ushort) ((tri_count * 3) + 2);
+                tri_count += 1;
+                tri.vtx_1 = vtx_1;
+                tri.vtx_2 = vtx_2;
+                tri.vtx_3 = vtx_3;
+
+                // NOTE: non-collidable, visual only mats should have something like NO_COLL in their name to encode that
                 if (PRIM.material != null)
                 {
                     GLTF_Material material = this.materials[(int) PRIM.material];
 
                     // tx_cXXXX_sXXXX_fx...
                     String mat_name = material.name;
+                    mat_name = "c0000_s0000";
                     String coll_encoding = System.Text.RegularExpressions.Regex.Match(mat_name, @"(?<=c)[0-9a-fA-F]{4}").Value;
                     String sound_encoding = System.Text.RegularExpressions.Regex.Match(mat_name, @"(?<=s)[0-9a-fA-F]{4}").Value;
                     tri.floor_type = (ushort) Convert.ToInt32(coll_encoding, 16);
                     tri.sound_type = (ushort) Convert.ToInt32(sound_encoding, 16);
                     tri.collidable = true;
 
+                    // note that this is the tex ID as listed by the parsed textures from the GLTF
                     tri.assigned_tex_ID = (short) material.pbrMetallicRoughness.baseColorTexture.index;
+                    tri.assigned_tex_meta = this.images[tri.assigned_tex_ID].tex_meta;
+                    tri.assigned_tex_data = this.images[tri.assigned_tex_ID].tex_data;
+
+                    // now that we have WxH meta data, we can reverse the UVs into their BK format
+                    tri.vtx_1.reverse_UV_transforms(tri.assigned_tex_meta.width, tri.assigned_tex_meta.height);
+                    tri.vtx_2.reverse_UV_transforms(tri.assigned_tex_meta.width, tri.assigned_tex_meta.height);
+                    tri.vtx_3.reverse_UV_transforms(tri.assigned_tex_meta.width, tri.assigned_tex_meta.height);
                 }
 
+                // and finally, add the new tri
                 dest.Add(tri);
             }
-            return dest;
         }
         public static Dictionary<String, uint> TARGET_TYPES = new Dictionary<String, uint>
         {
-            { "VERTEX", 34962 },        // Indicates the buffer view contains vertex attributes.
-            { "INDEX", 34963 },         // Indicates the buffer view contains indices.
-            { "NORMAL", 34964 },        // Indicates the buffer view contains normal vectors.
-            { "TANGENT", 34965 },       // Indicates the buffer view contains tangent vectors.
-            { "TEXCOORD_0", 34966 },    // Indicates the buffer view contains texture coordinates for texture unit 0.
-            { "TEXCOORD_1", 34967 },    // Indicates the buffer view contains texture coordinates for texture unit 1.
-            { "COLOR_0", 34968 },       // Indicates the buffer view contains vertex colors for color set 0.
+            // digestable
+            { "VERTEX", 34962 },         // vertex attributes (XYZ, UV, RGBA...)
+            { "INDEX", 34963 },          // vertex IDs
+            // following the specs
+            { "ARRAY_BUFFER", 34962 },         // vertex attributes (XYZ, UV, RGBA...)
+            { "ELEMENT_ARRAY_BUFFER", 34963 }, // vertex IDs
         };
         public static Dictionary<String, uint> COMPONENT_TYPES = new Dictionary<String, uint>
         {
@@ -232,12 +266,14 @@ namespace BK_BIN_Analyzer
         }
         public static uint get_component_group_size(String cgroup)
         {
-            if (cgroup == "SCALAR")
+            if (cgroup == "SCALAR") // i
                 return 1;
-            if (cgroup == "VEC2")
+            if (cgroup == "VEC2") // UV
                 return 2;
-            if (cgroup == "VEC3")
+            if (cgroup == "VEC3") // XYZ
                 return 3;
+            if (cgroup == "VEC4") // RGBA
+                return 4;
             return 0;
         }
         public static String URI_PREFIX = "data:application/octet-stream;base64,";

@@ -45,6 +45,8 @@ namespace BK_BIN_Analyzer
         {
             this.handler.select_BIN();
 
+            // this.replacement_ori = this.handler.GLTF.images.ElementAt(1).tex_data.img_rep;
+
             this.numericUpDown1.Value = 0;
             this.numericUpDown1.Minimum = 0;
             this.numericUpDown1.Maximum = this.handler.SEGMENT_NAMES.Count - 1;
