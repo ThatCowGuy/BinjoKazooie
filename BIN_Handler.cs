@@ -14,13 +14,27 @@ using System.Diagnostics;
 using System.Text.Json;
 
 
-namespace BK_BIN_Analyzer
+namespace Binjo
 {
     public class BIN_Handler
     {
         byte[] content;
 
-        public Dictionary<int, string> SEGMENT_NAMES = new Dictionary<int, string>
+        public static Dictionary<int, string> INTERNAL_SEG_NAMES = new Dictionary<int, string>
+        {
+            { 1, "VTX" },
+            { 2, "Tex" },
+            { 3, "DLs" },
+            { 4, "Virt" }, // for things that require a model to be drawn to another texture
+            // ...
+            { 11, "AnTex" }, // unsure if this is actually part of it
+            { 12, "AnTex" },
+            { 13, "AnTex" },
+            { 14, "AnTex" },
+            { 15, "AnTex" },
+        };
+
+        public static Dictionary<int, string> SEGMENT_NAMES = new Dictionary<int, string>
         {
             { 0, "BIN Header" },
             { 1, "Texture Segment" },
@@ -47,6 +61,7 @@ namespace BK_BIN_Analyzer
         public Effects_Segment FX_seg = new Effects_Segment();
         public FX_END_Segment FXEND_seg = new FX_END_Segment();
         public AnimTex_Segment animtex_seg = new AnimTex_Segment();
+        public GeoLayout_Segment geo_seg = new GeoLayout_Segment();
 
         public List<FullTriangle> full_tri_list = new List<FullTriangle>();
         public GLTF_Handler GLTF = new GLTF_Handler();
@@ -73,21 +88,62 @@ namespace BK_BIN_Analyzer
             FX_seg.populate(this.content, (int)bin_header.FX_offset);
             FXEND_seg.populate(this.content, (int)bin_header.FX_END);
             animtex_seg.populate(this.content, (int)bin_header.anim_tex_offset);
-
-            string output_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("testing.gltf"));
-            //this.write_gltf_model(output_filename);
-            string input_filename = Path.Combine(File_Handler.get_basedir_or_assets(), String.Format("sorra3.gltf"));
-            //this.parse_gltf_additional(input_filename);
-
-            //this.vtx_seg = build_vtx_seg();
+            geo_seg.populate(this.content, (int) bin_header.geo_offset);
 
             this.file_loaded = true;
         }
-        public Vertex_Segment build_vtx_seg()
+        public void build_tex_seg()
         {
-            Vertex_Segment vtx_seg = new Vertex_Segment();
+            this.tex_seg = new Texture_Segment();
+            Console.WriteLine("Building Tex Segment...");
+
+            tex_seg.data_size = 0; // summed up in the following loop
+            tex_seg.tex_cnt = (ushort) this.GLTF.textures.Count;
+            tex_seg.meta = new Tex_Meta[tex_seg.tex_cnt];
+            tex_seg.data = new Tex_Data[tex_seg.tex_cnt];
+
+            // NOTE: this initial offset shouldnt be hard coded
+            tex_seg.file_offset = 0x00000038;
+            tex_seg.file_offset_meta = (uint) (tex_seg.file_offset + Texture_Segment.HEADER_SIZE);
+            tex_seg.file_offset_data = (uint) (tex_seg.file_offset_meta + (Tex_Meta.ELEMENT_SIZE * tex_seg.tex_cnt));
+
+            for (int i = 0; i < tex_seg.tex_cnt; i++)
+            {
+                // most of the content within these elements is parsed during the GLTF-parsing already
+                tex_seg.meta[i] = this.GLTF.images[i].tex_meta;
+                tex_seg.data[i] = this.GLTF.images[i].tex_data;
+
+                tex_seg.meta[i].section_offset = (uint) (Texture_Segment.HEADER_SIZE + (Tex_Meta.ELEMENT_SIZE * i));
+                tex_seg.meta[i].file_offset = (uint) (tex_seg.file_offset + tex_seg.meta[i].section_offset);
+                tex_seg.meta[i].datasection_offset_data = 0; // this one is a bit trickier, see later
+
+                if (i == 0)
+                {   
+                    // the first data element offset is equal to the data-section offset
+                    tex_seg.data[i].file_offset = tex_seg.file_offset_data;
+                }
+                else
+                {
+                    // these are slightly more tricky, since their offsets depend on the variying sizes of the preceeding data chunks
+                    tex_seg.data[i].file_offset = (tex_seg.data[(i - 1)].file_offset + tex_seg.data[(i - 1)].data_size);
+                }
+                tex_seg.data[i].section_offset = (uint) (tex_seg.data[i].file_offset - tex_seg.file_offset);
+                tex_seg.data[i].datasection_offset = (uint) (tex_seg.data[i].file_offset - tex_seg.file_offset_data);
+
+                // Reminder that this param actually has to be written to BIN
+                tex_seg.meta[i].datasection_offset_data = tex_seg.data[i].datasection_offset;
+
+                tex_seg.data_size += tex_seg.data[i].data_size;
+            }
+            this.tex_seg.valid = true;
+            Console.WriteLine("Finished Tex Segment.");
+        }
+
+        public void build_vtx_seg()
+        {
+            this.vtx_seg = new Vertex_Segment();
             Console.WriteLine("Building VTX Segment...");
-            Console.WriteLine(vtx_seg);
+
             vtx_seg.max_x = short.MinValue;
             vtx_seg.max_y = short.MinValue;
             vtx_seg.max_z = short.MinValue;
@@ -171,8 +227,8 @@ namespace BK_BIN_Analyzer
                     vtx_seg.vtx_list[tri.index_3] = (Vtx_Elem) tri.vtx_3.Clone();
                 }
             }
-            vtx_seg.valid = true;
-            return vtx_seg;
+            this.vtx_seg.valid = true;
+            Console.WriteLine("Finished VTX Segment.");
         }
         public void export_gltf_model()
         {
@@ -236,6 +292,7 @@ namespace BK_BIN_Analyzer
 
                 if (acc.type == "VEC4")
                 {
+                    /*
                     Console.WriteLine("Parsing Color Accessor");
                     Console.WriteLine(acc.componentType);
                     Console.WriteLine(acc.type);
@@ -254,6 +311,7 @@ namespace BK_BIN_Analyzer
                             File_Handler.uint_to_string(acc.linked_content[b + 7], 0xFF)
                         ));
                     }
+                    */
                 }
             }
 
@@ -267,7 +325,6 @@ namespace BK_BIN_Analyzer
                 {
                     img.tex_data = new Tex_Data();
                     img.tex_data.img_rep = new Bitmap(img.uri);
-                    img.tex_data.img_rep.RotateFlip(RotateFlipType.RotateNoneFlipY);
                 }
                 // image references internal source
                 else if (img.bufferView != null)
@@ -276,18 +333,70 @@ namespace BK_BIN_Analyzer
                     img.tex_data = new Tex_Data();
                     using (var stream = new MemoryStream(view.linked_content))
                     {
+                        // convert the image data into the corresponding Bitmap
                         img.tex_data.img_rep = new Bitmap(stream);
-                        img.tex_data.img_rep.RotateFlip(RotateFlipType.RotateNoneFlipY);
                     }
                 }
                 else
                 {
                     Console.WriteLine("Unexpected GLTF_Image encountered; Neither uri nor bufferView present!");
+                    continue;
                 }
+                img.tex_data.img_rep.RotateFlip(RotateFlipType.RotateNoneFlipY);
+
+                // next, convert the image into a BK friendly format and build the Meta Information
                 img.tex_meta = new Tex_Meta();
-                img.tex_meta.width = (byte) img.tex_data.img_rep.Width;
-                img.tex_meta.height = (byte) img.tex_data.img_rep.Height;
-                Console.WriteLine(String.Format("Tex: {0}x{1} px", img.tex_meta.width, img.tex_meta.height));
+                int ori_w = img.tex_data.img_rep.Width;
+                int ori_h = img.tex_data.img_rep.Height;
+                double wm_ratio = ((double) ori_w / (double) ori_h);
+                int scale_w = 0;
+                int scale_h = 0;
+                // then convert that Bitmap into a BK friendly format
+                // if the image is below 16x16 pixels, we can default to RGBA32 and keep the small size (because upscaling THAT would be useless..)
+                // NOTE: if the GLTF contains images that have 16 or less colors, we also shouldnt use CI8... ugh
+                if (ori_w <= 16 && ori_h <= 16)
+                {
+                    // keep the aspect ratio, but scale the bigger dim to 16
+                    if (wm_ratio >= 1.0) { scale_w = 16; scale_h = (int) (16 / wm_ratio); }
+                    if (wm_ratio <= 1.0) { scale_w = (int) (16 * wm_ratio); scale_h = 16; }
+                    // using a default color diversity of 2 here
+                    img.tex_data.img_rep = Texture_Segment.convert_to_fit(img.tex_data.img_rep, scale_w, scale_h, Texture_Segment.TEX_TYPES["RGBA32"], 2);
+                    img.tex_meta.tex_type = (ushort) Texture_Segment.TEX_TYPES["RGBA32"];
+                    img.tex_meta.width = (byte) scale_w;
+                    img.tex_meta.height = (byte) scale_h;
+                }
+                // if the image is below 32x32 pixels, we can still default to RGBA32
+                if (ori_w <= 32 && ori_h <= 32)
+                {
+                    // keep the aspect ratio, but scale the bigger dim to 32
+                    if (wm_ratio >= 1.0) { scale_w = 32; scale_h = (int) (32 / wm_ratio); }
+                    if (wm_ratio <= 1.0) { scale_w = (int) (32 * wm_ratio); scale_h = 32; }
+                    // using a default color diversity of 2 here
+                    img.tex_data.img_rep = Texture_Segment.convert_to_fit(img.tex_data.img_rep, scale_w, scale_h, Texture_Segment.TEX_TYPES["RGBA32"], 2);
+                    img.tex_meta.tex_type = (ushort) Texture_Segment.TEX_TYPES["RGBA32"];
+                    img.tex_meta.width = (byte) scale_w;
+                    img.tex_meta.height = (byte) scale_h;
+                }
+                else // otherwise, we will use CI8 because its also nice
+                {
+                    // keep the aspect ratio, but scale the bigger dim to 64
+                    if (wm_ratio >= 1.0) { scale_w = 64; scale_h = (int) (64 / wm_ratio); }
+                    if (wm_ratio <= 1.0) { scale_w = (int) (64 * wm_ratio); scale_h = 64; }
+                    img.tex_data.img_rep = Texture_Segment.convert_to_fit(img.tex_data.img_rep, scale_w, scale_h, Texture_Segment.TEX_TYPES["CI8"], 2);
+                    img.tex_meta.tex_type = (ushort) Texture_Segment.TEX_TYPES["CI8"];
+                    img.tex_meta.width = (byte) scale_w;
+                    img.tex_meta.height = (byte) scale_h;
+                }
+                img.tex_data.img_rep.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                // relay the tex type to the data element
+                img.tex_data.tex_type = img.tex_meta.tex_type;
+
+                // and finally calculate some additional information
+                img.tex_data.data = MathHelpers.convert_bitmap_to_bytes(img.tex_data.img_rep, img.tex_meta.tex_type);
+                img.tex_data.data_size = (uint) img.tex_data.data.Length;
+                img.tex_meta.pixel_total = (uint) (scale_w * scale_h);
+
+                Console.WriteLine(String.Format("Parsed Tex: {0}x{1} px, Type={2}", img.tex_meta.width, img.tex_meta.height, img.tex_meta.tex_type));
             }
 
             // now I can go through the meshes and extract all the tris that are defined in there
@@ -302,10 +411,12 @@ namespace BK_BIN_Analyzer
 
             foreach (FullTriangle tri in this.full_tri_list)
             {
+                /*
                 File_Handler.print_bytes(tri.get_bytes());
                 File_Handler.print_bytes(tri.vtx_1.get_bytes());
                 File_Handler.print_bytes(tri.vtx_2.get_bytes());
                 File_Handler.print_bytes(tri.vtx_3.get_bytes());
+                */
             }
         }
         public void write_gltf_model(String filepath)

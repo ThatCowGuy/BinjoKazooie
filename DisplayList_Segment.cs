@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BK_BIN_Analyzer
+namespace Binjo
 {
     // this class is supposed to catch ALL information of a triangle of any type.
     // this sort of catch-all case will make sorting and comparing easier later
@@ -643,7 +643,7 @@ namespace BK_BIN_Analyzer
                     }
                     details += ", ";
                     details += String.Format("size={0} b, ", (4 * Math.Pow(2, cmd.parameters[1])));
-                    details += String.Format("seg={0}, ", cmd.parameters[2]);
+                    details += String.Format("seg={0}, ", BIN_Handler.INTERNAL_SEG_NAMES[(int) cmd.parameters[2]]);
                     details += "@ " + File_Handler.uint_to_string(cmd.parameters[3], 0xFFFFFFFF);
                     break;
 
@@ -654,7 +654,7 @@ namespace BK_BIN_Analyzer
 
                 case ("G_DL"):
                     details += String.Format("final?={0}, ", cmd.parameters[0]);
-                    details += String.Format("seg={0}, ", cmd.parameters[1]);
+                    details += String.Format("seg={0}, ", BIN_Handler.INTERNAL_SEG_NAMES[(int) cmd.parameters[1]]);
                     details += "@ " + File_Handler.uint_to_string(cmd.parameters[2], 0xFFFFFFFF);
                     break;
 
@@ -662,7 +662,7 @@ namespace BK_BIN_Analyzer
                     details += String.Format("buf@={0}, ", cmd.parameters[0]);
                     details += String.Format("cnt={0}, ", cmd.parameters[1]);
                     details += String.Format("siz={0} B, ", cmd.parameters[2]);
-                    details += String.Format("seg={0}, ", cmd.parameters[3]);
+                    details += String.Format("seg={0}, ", BIN_Handler.INTERNAL_SEG_NAMES[(int) cmd.parameters[3]]);
                     details += "@ " + File_Handler.uint_to_string(cmd.parameters[4], 0xFFFFFFFF);
                     break;
 
