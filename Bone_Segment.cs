@@ -8,7 +8,7 @@ using System.Threading.Tasks;
  * Thanks to Unalive for documenting most of the
  * information that's being parsed in this Segment 
 =====================================================/*/
-namespace BK_BIN_Analyzer
+namespace Binjo
 {
     public class Bone_Elem
     {

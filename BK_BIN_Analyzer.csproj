@@ -89,6 +89,7 @@
       <DependentUpon>BinjoKazooie.cs</DependentUpon>
     </Compile>
     <Compile Include="FX_END_Segment.cs" />
+    <Compile Include="GeoLayout_Segment.cs" />
     <Compile Include="GLTF_Handler.cs" />
     <Compile Include="MathHelpers.cs" />
     <Compile Include="Program.cs" />

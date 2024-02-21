@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace BK_BIN_Analyzer
+namespace Binjo
 {
     static class Program
     {
