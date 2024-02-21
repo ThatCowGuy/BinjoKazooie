@@ -15,7 +15,7 @@ using System.Windows.Forms;
 // Then we can check, if the "true size" is divisible by the texture size => multi-texture
 // if it isnt, it should be a mipmap (unless one can have mipmapped multi textures, but.... ugh)
 
-namespace BK_BIN_Analyzer
+namespace Binjo
 {
     public class Tex_Meta
     {
@@ -28,6 +28,7 @@ namespace BK_BIN_Analyzer
         public byte height;
         public ushort unk_2;
         public uint unk_3; // 00, maybe a buffer ? 
+        public static int ELEMENT_SIZE = 0x10;
 
         // locators
         public uint file_offset;
@@ -37,6 +38,19 @@ namespace BK_BIN_Analyzer
         public uint file_offset_data; // for the corresponding tex data
         public uint section_offset_data; // for the corresponding tex data
         public uint pixel_total;
+
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0x10];
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.datasection_offset_data, 4), bytes, 0x00);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.tex_type, 2), bytes, 0x04);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.unk_1, 2), bytes, 0x06);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.width, 1), bytes, 0x08);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.height, 1), bytes, 0x09);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.unk_2, 2), bytes, 0x0A);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.unk_3, 4), bytes, 0x0C);
+            return bytes;
+        }
     }
 
     public class Tex_Data
@@ -51,6 +65,14 @@ namespace BK_BIN_Analyzer
         public uint file_offset;
         public uint section_offset;
         public uint datasection_offset;
+
+        // computed properties
+        public ushort tex_type;
+
+        public byte[] get_bytes()
+        {
+            return MathHelpers.convert_bitmap_to_bytes(this.img_rep, this.tex_type);
+        }
     }
 
     public class Texture_Segment
@@ -62,6 +84,7 @@ namespace BK_BIN_Analyzer
         public uint data_size;
         public ushort tex_cnt;
         public ushort unk_1;
+        public static int HEADER_SIZE = 0x08;
 
         // locators
         public uint file_offset;
@@ -74,6 +97,29 @@ namespace BK_BIN_Analyzer
         // data
         public Tex_Meta[] meta;
         public Tex_Data[] data;
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0x8];
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.data_size, 4), bytes, 0x00);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.tex_cnt, 2), bytes, 0x04);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.unk_1, 2), bytes, 0x06);
+
+            for (int i = 0; i < this.tex_cnt; i++)
+                bytes = File_Handler.concat_arrays(bytes, this.meta[i].get_bytes());
+            for (int i = 0; i < this.tex_cnt; i++)
+                bytes = File_Handler.concat_arrays(bytes, this.data[i].get_bytes());
+
+            return bytes;
+        }
+
+        public static Dictionary<string, int> TEX_TYPES = new Dictionary<string, int>
+        {
+            { "CI4", 0x01 },
+            { "CI8", 0x02 },
+            { "RGBA16", 0x04 },
+            { "RGBA32", 0x08 },
+            { "IA8", 0x10 }
+        };
 
         public uint get_tex_ID_from_datasection_offset(uint datasection_offset)
         {
@@ -88,6 +134,56 @@ namespace BK_BIN_Analyzer
             return 0xFFFF;
         }
 
+        // converts an input image to a WxH sized image of the given type. color diversity is used for CI palette optimization
+        public static Bitmap convert_to_fit(Bitmap input_img, int new_w, int new_h, int new_tex_type, int color_diversity)
+        {
+            switch (new_tex_type)
+            {
+                case (0x01): // C4 or CI4; 16 RGBA5551-colors, pixels are encoded per row as 4bit IDs
+                {
+                    int col_cnt = 0x10;
+                    List<MathHelpers.ColorPixel> replacement_palette = MathHelpers.approx_palette_by_most_used_with_diversity(
+                        new Bitmap(input_img, new_w, new_h),
+                        col_cnt, color_diversity
+                    );
+                    return MathHelpers.convert_image_to_RGB5551_with_palette(
+                        new Bitmap(input_img, new_w, new_h),
+                        replacement_palette
+                    );
+                }
+                case (0x02): // C8 or CI8; 256 RGBA5551-colors, pixels are encoded per row as 8bit IDs
+                {
+                    int col_cnt = 0x100;
+                    List<MathHelpers.ColorPixel> replacement_palette = MathHelpers.approx_palette_by_most_used_with_diversity(
+                        new Bitmap(input_img, new_w, new_h),
+                        col_cnt, color_diversity
+                    );
+                    return MathHelpers.convert_image_to_RGB5551_with_palette(
+                        new Bitmap(input_img, new_w, new_h),
+                        replacement_palette
+                    );
+                }
+                case (0x04): // RGBA16 or RGB555A1 without a palette; pixels stored as a 16bit texel
+                {
+                    return MathHelpers.convert_image_to_RGB5551(
+                        new Bitmap(input_img, new_w, new_h)
+                    );
+                }
+                case (0x08): // RGBA32 or RGB888A8 without a palette; pixels stored as a 32bit texel
+                {
+                    return new Bitmap(input_img, new_w, new_h);
+                }
+                case (0x10): // IA8 - each byte is a pixel; a nibble of intensity and a nibble of alpha;
+                {
+                    return MathHelpers.convert_image_to_IA8(
+                        new Bitmap(input_img, new_w, new_h)
+                    );
+                }
+                default: // UNKNOWN !";
+                    Console.WriteLine("convert_to_fitting() receieved unknown tex type");
+                    return null;
+            }
+        }
         public Bitmap parse_img_data(byte[] data, uint tex_type, uint w, uint h)
         {
             Bitmap parsed_img = null;
@@ -317,6 +413,8 @@ namespace BK_BIN_Analyzer
                 d.file_offset = m.file_offset_data;
                 d.section_offset = m.section_offset_data;
                 d.datasection_offset = m.datasection_offset_data;
+                // also relay the tex type to the data element
+                d.tex_type = m.tex_type;
 
                 this.meta[i] = m;
                 this.data[i] = d;

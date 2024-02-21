@@ -6,10 +6,30 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Windows.Forms;
 
-namespace BK_BIN_Analyzer
+namespace Binjo
 {
     public static class File_Handler
     {
+        public static void print_bytes(byte[] array)
+        {
+            String buffer = "";
+            for (int i = 0; i < array.Length; i++)
+            {
+                if (i % 0x10 == 0)
+                    buffer += "\n";
+                else if (i % 0x02 == 0)
+                    buffer += " ";
+                buffer += File_Handler.uint_to_string(array[i], 0xFF);
+            }
+            Console.WriteLine(buffer);
+        }
+        public static byte[] concat_arrays(byte[] A, byte[] B)
+        {
+            byte[] concat = new byte[A.Length + B.Length];
+            A.CopyTo(concat, 0);
+            B.CopyTo(concat, A.Length);
+            return concat;
+        }
         public static byte[] uint_to_bytes(uint input, int size)
         {
             // this will always be 4 bytes because its converting a "uint"
@@ -23,13 +43,6 @@ namespace BK_BIN_Analyzer
             // error handling
             Console.WriteLine(String.Format("File_Handler.uint_to_bytes() recieved weird size arg {0}", size));
             return null;
-        }
-        public static void print_bytes(byte[] bytes)
-        {
-            String res = "";
-            for (int i = 0; i < bytes.Length; i++)
-                res += File_Handler.uint_to_string(bytes[i], 0xFF) + " ";
-            Console.WriteLine(res);
         }
         public static void write_bytes_to_buffer(byte[] bytes, byte[] buffer, int offset)
         {

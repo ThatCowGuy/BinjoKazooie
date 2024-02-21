@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 
 
-namespace BK_BIN_Analyzer
+namespace Binjo
 {
     public static class MathHelpers
     {
@@ -102,7 +102,7 @@ namespace BK_BIN_Analyzer
             {
                 case (0x01): // C4 or CI4; 16 RGB5551-colors, pixels are encoded per row as 4bit IDs
                 {
-                    Console.WriteLine("Converting Bitmap to CI4...");
+                    Console.WriteLine("Converting CI4 Bitmap to Bytes...");
                     // parse the image data in a way that remembers every color
                     List<ColorPixel> palette = new List<ColorPixel>();
                     for (int y = 0; y < h; y++)
@@ -175,7 +175,7 @@ namespace BK_BIN_Analyzer
                 }
                 case (0x02): // C8 or CI8; 32 RGB555-colors, pixels are encoded per row as 8bit IDs
                 {
-                    Console.WriteLine("Converting Bitmap to CI8...");
+                    Console.WriteLine("Converting CI8 Bitmap to Bytes...");
                     // parse the image data in a way that remembers every color
                     List<ColorPixel> palette = new List<ColorPixel>();
                     for (int y = 0; y < h; y++)
@@ -245,7 +245,7 @@ namespace BK_BIN_Analyzer
                 }
                 case (0x04): // RGBA16 or RGB555A1 without a palette; pixels stored as a 16bit texel
                 {
-                    Console.WriteLine("Converting Bitmap to RGBA16...");
+                    Console.WriteLine("Converting RGBA16 Bitmap to Bytes...");
                     byte[] data = new byte[(w * h * 2)];
                     // parse the image data
                     for (int y = 0; y < h; y++)
@@ -270,7 +270,7 @@ namespace BK_BIN_Analyzer
                 }
                 case (0x08): // RGBA32 or RGB888A8 without a palette; pixels stored as a 32bit texel
                 {
-                    Console.WriteLine("Converting Bitmap to RGBA32...");
+                    Console.WriteLine("Converting RGBA32 Bitmap to Bytes...");
                     byte[] data = new byte[(w * h * 4)];
                     // parse the image data
                     for (int y = 0; y < h; y++)
@@ -290,7 +290,7 @@ namespace BK_BIN_Analyzer
                 }
                 case (0x10): // IA8 - each byte is a pixel; a nibble of intensity and a nibble of alpha;
                 {
-                    Console.WriteLine("Converting Bitmap to IA8...");
+                    Console.WriteLine("Converting IA8 Bitmap to Bytes...");
                     byte[] data = new byte[(w * h)];
                     // parse the image data
                     for (int y = 0; y < h; y++)

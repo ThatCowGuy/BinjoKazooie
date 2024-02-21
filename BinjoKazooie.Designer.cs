@@ -1,5 +1,5 @@
 ﻿
-namespace BK_BIN_Analyzer
+namespace Binjo
 {
     partial class BinjoKazooie
     {
@@ -62,7 +62,6 @@ namespace BK_BIN_Analyzer
             this.dataGridView4 = new System.Windows.Forms.DataGridView();
             this.button7 = new System.Windows.Forms.Button();
             this.button8 = new System.Windows.Forms.Button();
-            this.label10 = new System.Windows.Forms.Label();
             this.panel5 = new System.Windows.Forms.Panel();
             this.button10 = new System.Windows.Forms.Button();
             this.label11 = new System.Windows.Forms.Label();
@@ -72,6 +71,8 @@ namespace BK_BIN_Analyzer
             this.checkBox3 = new System.Windows.Forms.CheckBox();
             this.label12 = new System.Windows.Forms.Label();
             this.dataGridView6 = new System.Windows.Forms.DataGridView();
+            this.button12 = new System.Windows.Forms.Button();
+            this.comboBox1 = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
@@ -97,7 +98,7 @@ namespace BK_BIN_Analyzer
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(113, 23);
             this.button1.TabIndex = 0;
-            this.button1.Text = "Select BIN";
+            this.button1.Text = "Load BIN";
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
@@ -119,12 +120,13 @@ namespace BK_BIN_Analyzer
             // panel1
             // 
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel1.Controls.Add(this.comboBox1);
             this.panel1.Controls.Add(this.checkBox1);
             this.panel1.Controls.Add(this.numericUpDown1);
             this.panel1.Controls.Add(this.label2);
             this.panel1.Controls.Add(this.label1);
             this.panel1.Controls.Add(this.dataGridView1);
-            this.panel1.Location = new System.Drawing.Point(12, 67);
+            this.panel1.Location = new System.Drawing.Point(12, 70);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(541, 158);
             this.panel1.TabIndex = 3;
@@ -160,7 +162,7 @@ namespace BK_BIN_Analyzer
             // 
             this.label2.AutoSize = true;
             this.label2.ForeColor = System.Drawing.Color.White;
-            this.label2.Location = new System.Drawing.Point(107, 11);
+            this.label2.Location = new System.Drawing.Point(243, 11);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(80, 13);
             this.label2.TabIndex = 4;
@@ -483,7 +485,7 @@ namespace BK_BIN_Analyzer
             // button7
             // 
             this.button7.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
-            this.button7.Location = new System.Drawing.Point(284, 12);
+            this.button7.Location = new System.Drawing.Point(388, 41);
             this.button7.Name = "button7";
             this.button7.Size = new System.Drawing.Size(67, 23);
             this.button7.TabIndex = 16;
@@ -494,24 +496,13 @@ namespace BK_BIN_Analyzer
             // button8
             // 
             this.button8.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
-            this.button8.Location = new System.Drawing.Point(357, 12);
+            this.button8.Location = new System.Drawing.Point(461, 41);
             this.button8.Name = "button8";
             this.button8.Size = new System.Drawing.Size(92, 23);
             this.button8.TabIndex = 17;
             this.button8.Text = "Bottles Molehill";
             this.button8.UseVisualStyleBackColor = false;
             this.button8.Click += new System.EventHandler(this.button8_Click);
-            // 
-            // label10
-            // 
-            this.label10.AutoSize = true;
-            this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label10.ForeColor = System.Drawing.SystemColors.ButtonFace;
-            this.label10.Location = new System.Drawing.Point(193, 17);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(85, 13);
-            this.label10.TabIndex = 18;
-            this.label10.Text = "Documentation :";
             // 
             // panel5
             // 
@@ -626,15 +617,47 @@ namespace BK_BIN_Analyzer
             this.dataGridView6.Size = new System.Drawing.Size(524, 49);
             this.dataGridView6.TabIndex = 2;
             // 
+            // button12
+            // 
+            this.button12.Location = new System.Drawing.Point(135, 12);
+            this.button12.Name = "button12";
+            this.button12.Size = new System.Drawing.Size(113, 23);
+            this.button12.TabIndex = 19;
+            this.button12.Text = "Import GLTF";
+            this.button12.UseVisualStyleBackColor = true;
+            this.button12.Click += new System.EventHandler(this.button12_Click);
+            // 
+            // comboBox1
+            // 
+            this.comboBox1.FormattingEnabled = true;
+            this.comboBox1.Items.AddRange(new object[] {
+            "BIN Header",
+            "00 - Texture Segment",
+            "01 - DisplayList Segment",
+            "02 - ",
+            "03 - Vertex Segment",
+            "04 - ???",
+            "05 - Animation Segment",
+            "06 - Collision Segment",
+            "07 - Effects Segment",
+            "08 - Effects-End Segment",
+            "09 - ???",
+            "0A - Animated Texture Segment",
+            "0B - GeoLayout Segment"});
+            this.comboBox1.Location = new System.Drawing.Point(107, 6);
+            this.comboBox1.Name = "comboBox1";
+            this.comboBox1.Size = new System.Drawing.Size(121, 21);
+            this.comboBox1.TabIndex = 7;
+            // 
             // BinjoKazooie
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(44)))), ((int)(((byte)(44)))), ((int)(((byte)(44)))));
             this.ClientSize = new System.Drawing.Size(1169, 605);
+            this.Controls.Add(this.button12);
             this.Controls.Add(this.panel6);
             this.Controls.Add(this.panel5);
-            this.Controls.Add(this.label10);
             this.Controls.Add(this.button8);
             this.Controls.Add(this.button7);
             this.Controls.Add(this.panel4);
@@ -712,7 +735,6 @@ namespace BK_BIN_Analyzer
         private System.Windows.Forms.CheckBox checkBox2;
         private System.Windows.Forms.Button button7;
         private System.Windows.Forms.Button button8;
-        private System.Windows.Forms.Label label10;
         private System.Windows.Forms.Button button9;
         private System.Windows.Forms.Panel panel5;
         private System.Windows.Forms.Label label11;
@@ -723,6 +745,8 @@ namespace BK_BIN_Analyzer
         private System.Windows.Forms.DataGridView dataGridView6;
         private System.Windows.Forms.CheckBox checkBox3;
         private System.Windows.Forms.Button button11;
+        private System.Windows.Forms.Button button12;
+        private System.Windows.Forms.ComboBox comboBox1;
     }
 }
 

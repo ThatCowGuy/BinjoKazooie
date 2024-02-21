@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 // I hate this file structually, but the var-names are predetermined by the GLTF-2 standard
 // and have to be get-settable to be picked up correctly by the JSON-Serializer.
 
-namespace BK_BIN_Analyzer
+namespace Binjo
 {
     public class GLTF_Asset
     {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BK_BIN_Analyzer
+namespace Binjo
 {
     public class Vtx_Elem : IEquatable<Vtx_Elem>
     {
@@ -77,10 +77,10 @@ namespace BK_BIN_Analyzer
             File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.u, 2), bytes, 0x08);
             File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.v, 2), bytes, 0x0A);
             // RGBA V-Shades
-            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.r, 1), bytes, 0x0B);
-            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.g, 1), bytes, 0x0C);
-            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.b, 1), bytes, 0x0D);
-            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.a, 1), bytes, 0x0E);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.r, 1), bytes, 0x0C);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.g, 1), bytes, 0x0D);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.b, 1), bytes, 0x0E);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.a, 1), bytes, 0x0F);
             return bytes;
         }
     }
@@ -113,6 +113,32 @@ namespace BK_BIN_Analyzer
         public uint file_offset;
         public uint file_offset_data;
 
+        public byte[] get_bytes()
+        {
+            // first, we write the header
+            byte[] bytes = new byte[0x18];
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.min_x, 2), bytes, 0x00);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.min_y, 2), bytes, 0x02);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.min_z, 2), bytes, 0x04);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.max_x, 2), bytes, 0x06);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.max_y, 2), bytes, 0x08);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.max_z, 2), bytes, 0x0A);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.center_x, 2), bytes, 0x0C);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.center_y, 2), bytes, 0x0E);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.center_z, 2), bytes, 0x10);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.local_norm, 2), bytes, 0x12);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.vtx_count, 2), bytes, 0x14);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.global_norm, 2), bytes, 0x16);
+
+            // then we append all the vertices as byte arrays
+            for (int id = 0; id < this.vtx_count; id++)
+            {
+                Vtx_Elem vtx = this.vtx_list[id];
+                bytes = File_Handler.concat_arrays(bytes, vtx.get_bytes());
+            }
+
+            return bytes;
+        }
 
         public void populate(byte[] file_data, int file_offset)
         {

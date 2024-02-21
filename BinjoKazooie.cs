@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 using System.IO;
 using System.Diagnostics;
 
-namespace BK_BIN_Analyzer
+namespace Binjo
 {
     public partial class BinjoKazooie : Form
     {
@@ -49,7 +49,7 @@ namespace BK_BIN_Analyzer
 
             this.numericUpDown1.Value = 0;
             this.numericUpDown1.Minimum = 0;
-            this.numericUpDown1.Maximum = this.handler.SEGMENT_NAMES.Count - 1;
+            this.numericUpDown1.Maximum = BIN_Handler.SEGMENT_NAMES.Count - 1;
 
             this.set_bounds_for_numericUpDown2();
 
@@ -134,7 +134,7 @@ namespace BK_BIN_Analyzer
             disable_button(button2);
             disable_button(button4);
 
-            string seg_name = this.handler.SEGMENT_NAMES[(int)numericUpDown1.Value];
+            string seg_name = BIN_Handler.SEGMENT_NAMES[(int)numericUpDown1.Value];
             label2.Text = (seg_name);
             label2.Update();
             label3.Text = String.Format("Loaded BIN = {0}", this.handler.loaded_bin_path);
@@ -241,6 +241,13 @@ namespace BK_BIN_Analyzer
                 if (seg_name == "Effects Segment")
                 {
                     foreach (string[] element in handler.FX_seg.get_content())
+                        dataGridView1.Rows.Add(element);
+
+                    finish_up_DGV(dataGridView1);
+                }
+                if (seg_name == "GeoLayout Segment")
+                {
+                    foreach (string[] element in handler.geo_seg.get_content())
                         dataGridView1.Rows.Add(element);
 
                     finish_up_DGV(dataGridView1);
@@ -429,7 +436,7 @@ namespace BK_BIN_Analyzer
             this.set_bounds_for_numericUpDown2();
             this.numericUpDown2.Value = this.numericUpDown2.Minimum;
 
-            string seg_name = this.handler.SEGMENT_NAMES[(int)numericUpDown1.Value];
+            string seg_name = BIN_Handler.SEGMENT_NAMES[(int)numericUpDown1.Value];
             if (seg_name == "Vertex Segment")
             {
                 this.checkBox1.Visible = true;
@@ -556,56 +563,7 @@ namespace BK_BIN_Analyzer
                 if (wm_ratio > 1.0) display_h = (int)(display_h / wm_ratio);
                 if (wm_ratio < 1.0) display_w = (int)(display_w * wm_ratio);
 
-                switch (m.tex_type)
-                {
-                    case (0x01): // C4 or CI4; 16 RGBA5551-colors, pixels are encoded per row as 4bit IDs
-                    { 
-                        int col_cnt = 0x10;
-                        this.replacement_palette = MathHelpers.approx_palette_by_most_used_with_diversity(
-                            new Bitmap(replacement_ori, new_w, new_h),
-                            col_cnt, (int)this.numericUpDown3.Value
-                        );
-                        this.replacement_cvt = MathHelpers.convert_image_to_RGB5551_with_palette(
-                            new Bitmap(replacement_ori, new_w, new_h),
-                            this.replacement_palette
-                        );
-                        break;
-                    }
-                    case (0x02): // C8 or CI8; 256 RGBA5551-colors, pixels are encoded per row as 8bit IDs
-                    {
-                        int col_cnt = 0x100;
-                        this.replacement_palette = MathHelpers.approx_palette_by_most_used_with_diversity(
-                            new Bitmap(replacement_ori, new_w, new_h),
-                            col_cnt, (int)this.numericUpDown3.Value
-                        );
-                        this.replacement_cvt = MathHelpers.convert_image_to_RGB5551_with_palette(
-                            new Bitmap(replacement_ori, new_w, new_h),
-                            this.replacement_palette
-                        );
-                        break;
-                    }
-                    case (0x04): // RGBA16 or RGB555A1 without a palette; pixels stored as a 16bit texel
-                    {
-                        this.replacement_cvt = MathHelpers.convert_image_to_RGB5551(
-                            new Bitmap(replacement_ori, new_w, new_h)
-                        );
-                        break;
-                    }
-                    case (0x08): // RGBA32 or RGB888A8 without a palette; pixels stored as a 32bit texel
-                    {
-                        this.replacement_cvt = new Bitmap(this.replacement_ori, new_w, new_h);
-                        break;
-                    }
-                    case (0x10): // IA8 - each byte is a pixel; a nibble of intensity and a nibble of alpha;
-                    {
-                        this.replacement_cvt = MathHelpers.convert_image_to_IA8(
-                            new Bitmap(replacement_ori, new_w, new_h)
-                        );
-                        break;
-                    }
-                    default: // UNKNOWN !";
-                        break;
-                }
+                this.replacement_cvt = Texture_Segment.convert_to_fit(this.replacement_ori, new_w, new_h, m.tex_type, (int) this.numericUpDown3.Value);
             }
             this.pictureBox2.Image = new Bitmap(this.replacement_cvt, display_w, display_h);
             this.pictureBox2.Update();
@@ -709,6 +667,19 @@ namespace BK_BIN_Analyzer
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
 
+        }
+
+        private void button12_Click(object sender, EventArgs e)
+        {
+            // string output_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("testing.gltf"));
+            // this.write_gltf_model(output_filename);
+            string input_filename = Path.Combine(File_Handler.get_basedir_or_assets(), String.Format("sorra3.gltf"));
+            this.handler.parse_gltf_additional(input_filename);
+
+            this.handler.build_tex_seg();
+            this.handler.build_vtx_seg();
+            File_Handler.print_bytes(this.handler.tex_seg.get_bytes());
+            File_Handler.print_bytes(this.handler.vtx_seg.get_bytes());
         }
     }
 }
