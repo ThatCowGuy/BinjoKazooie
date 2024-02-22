@@ -145,6 +145,7 @@ namespace Binjo
             this.panel4.Visible = false;
             this.panel5.Visible = false;
             this.panel6.Visible = false;
+            this.panel7.Visible = false;
 
             if (this.handler.file_loaded == true)
             {
@@ -156,6 +157,7 @@ namespace Binjo
                 setup_DGV(dataGridView4);
                 setup_DGV(dataGridView5);
                 setup_DGV(dataGridView6);
+                setup_DGV(dataGridView7);
 
                 // add descriptors to grid 1
                 dataGridView1.Columns.Add("0", "Description");
@@ -205,7 +207,7 @@ namespace Binjo
                     this.panel5.Visible = true;
                     this.panel5.Location = get_bottom_of_DGV_1();
 
-                    // add descriptors to grid 3
+                    // add descriptors to grid 5
                     dataGridView5.Columns.Add("0", "TRI-ID");
                     dataGridView5.Columns[0].DividerWidth = 3;
                     dataGridView5.Columns.Add("1", "VTX-ID 1");
@@ -251,6 +253,22 @@ namespace Binjo
                         dataGridView1.Rows.Add(element);
 
                     finish_up_DGV(dataGridView1);
+
+                    this.panel7.Visible = true;
+                    this.panel7.Location = get_bottom_of_DGV_1();
+
+                    // add descriptors to grid 7
+                    dataGridView7.Columns.Add("0", "GeoLayout Command Chain");
+
+                    foreach (string[] element in handler.geo_seg.get_content_of_elements())
+                        dataGridView7.Rows.Add(element);
+
+                    // dataGridView7 is a special one:
+                    // should be scrollable, so we dont use the standard method with data
+                    colorize_DGV(dataGridView7);
+                    dataGridView7.ClearSelection();
+                    dataGridView7.Height = 360;
+                    panel7.Height = 32 + dataGridView7.Height + 16;
                 }
                 if (seg_name == "DisplayList Segment")
                 {
@@ -680,6 +698,11 @@ namespace Binjo
             this.handler.build_vtx_seg();
             File_Handler.print_bytes(this.handler.tex_seg.get_bytes());
             File_Handler.print_bytes(this.handler.vtx_seg.get_bytes());
+        }
+
+        private void label10_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

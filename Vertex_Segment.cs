@@ -155,17 +155,17 @@ namespace Binjo
 
             // parsing properties
             // === 0x00 ===============================
-            this.min_x = (short)File_Handler.read_short(file_data, file_offset + 0x00, false);
-            this.min_y = (short)File_Handler.read_short(file_data, file_offset + 0x02, false);
-            this.min_z = (short)File_Handler.read_short(file_data, file_offset + 0x04, false);
-            this.max_x = (short)File_Handler.read_short(file_data, file_offset + 0x06, false);
-            this.max_y = (short)File_Handler.read_short(file_data, file_offset + 0x08, false);
-            this.max_z = (short)File_Handler.read_short(file_data, file_offset + 0x0A, false);
-            this.center_x = (short)File_Handler.read_short(file_data, file_offset + 0x0C, false);
-            this.center_y = (short)File_Handler.read_short(file_data, file_offset + 0x0E, false);
+            this.min_x = (short) File_Handler.read_short(file_data, file_offset + 0x00, false);
+            this.min_y = (short) File_Handler.read_short(file_data, file_offset + 0x02, false);
+            this.min_z = (short) File_Handler.read_short(file_data, file_offset + 0x04, false);
+            this.max_x = (short) File_Handler.read_short(file_data, file_offset + 0x06, false);
+            this.max_y = (short) File_Handler.read_short(file_data, file_offset + 0x08, false);
+            this.max_z = (short) File_Handler.read_short(file_data, file_offset + 0x0A, false);
+            this.center_x = (short) File_Handler.read_short(file_data, file_offset + 0x0C, false);
+            this.center_y = (short) File_Handler.read_short(file_data, file_offset + 0x0E, false);
             // === 0x10 ===============================
-            this.center_z = (short)File_Handler.read_short(file_data, file_offset + 0x10, false);
-            this.local_norm = (short)File_Handler.read_short(file_data, file_offset + 0x12, false);
+            this.center_z = (short) File_Handler.read_short(file_data, file_offset + 0x10, false);
+            this.local_norm = (short) File_Handler.read_short(file_data, file_offset + 0x12, false);
             this.vtx_count = File_Handler.read_short(file_data, file_offset + 0x14, false);
             this.global_norm = (short) File_Handler.read_short(file_data, file_offset + 0x16, false);
 
@@ -175,27 +175,26 @@ namespace Binjo
             for (int i = 0; i < this.binheader_vtx_cnt; i++)
             {
                 Vtx_Elem v = new Vtx_Elem();
-                int file_offset_vtx = (int)(this.file_offset_data + (i * 0x10));
+                int file_offset_vtx = (int) (this.file_offset_data + (i * 0x10));
 
                 // parsing properties
                 // === 0x00 ===============================
-                v.x = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x00, false);
-                v.y = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x02, false);
-                v.z = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x04, false);
-                v.padding = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x06, false);
-                v.u = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x08, false);
-                v.v = (short)File_Handler.read_short(file_data, file_offset_vtx + 0x0A, false);
+                v.x = (short) File_Handler.read_short(file_data, file_offset_vtx + 0x00, false);
+                v.y = (short) File_Handler.read_short(file_data, file_offset_vtx + 0x02, false);
+                v.z = (short) File_Handler.read_short(file_data, file_offset_vtx + 0x04, false);
+                v.padding = (short) File_Handler.read_short(file_data, file_offset_vtx + 0x06, false);
+                v.u = (short) File_Handler.read_short(file_data, file_offset_vtx + 0x08, false);
+                v.v = (short) File_Handler.read_short(file_data, file_offset_vtx + 0x0A, false);
                 v.r = File_Handler.read_char(file_data, file_offset_vtx + 0x0C, false);
                 v.g = File_Handler.read_char(file_data, file_offset_vtx + 0x0D, false);
                 v.b = File_Handler.read_char(file_data, file_offset_vtx + 0x0E, false);
                 v.a = File_Handler.read_char(file_data, file_offset_vtx + 0x0F, false);
 
-                int dist = (int)Math.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+                int dist = (int) Math.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
                 max_dist_ori = (dist > max_dist_ori) ? dist : max_dist_ori;
 
                 vtx_list[i] = v;
             }
-            Console.WriteLine(File_Handler.uint_to_string(max_dist_ori, 0xFFFF));
         }
 
         public void infer_vtx_data_for_full_tris(List<FullTriangle> full_tri_list)

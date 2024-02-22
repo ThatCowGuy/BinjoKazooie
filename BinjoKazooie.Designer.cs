@@ -32,6 +32,7 @@ namespace Binjo
             this.button1 = new System.Windows.Forms.Button();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.numericUpDown1 = new System.Windows.Forms.NumericUpDown();
             this.label2 = new System.Windows.Forms.Label();
@@ -72,7 +73,9 @@ namespace Binjo
             this.label12 = new System.Windows.Forms.Label();
             this.dataGridView6 = new System.Windows.Forms.DataGridView();
             this.button12 = new System.Windows.Forms.Button();
-            this.comboBox1 = new System.Windows.Forms.ComboBox();
+            this.panel7 = new System.Windows.Forms.Panel();
+            this.label10 = new System.Windows.Forms.Label();
+            this.dataGridView7 = new System.Windows.Forms.DataGridView();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
@@ -90,6 +93,8 @@ namespace Binjo
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView5)).BeginInit();
             this.panel6.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView6)).BeginInit();
+            this.panel7.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView7)).BeginInit();
             this.SuspendLayout();
             // 
             // button1
@@ -131,6 +136,28 @@ namespace Binjo
             this.panel1.Size = new System.Drawing.Size(541, 158);
             this.panel1.TabIndex = 3;
             this.panel1.Paint += new System.Windows.Forms.PaintEventHandler(this.panel1_Paint);
+            // 
+            // comboBox1
+            // 
+            this.comboBox1.FormattingEnabled = true;
+            this.comboBox1.Items.AddRange(new object[] {
+            "BIN Header",
+            "00 - Texture Segment",
+            "01 - DisplayList Segment",
+            "02 - ",
+            "03 - Vertex Segment",
+            "04 - ???",
+            "05 - Animation Segment",
+            "06 - Collision Segment",
+            "07 - Effects Segment",
+            "08 - Effects-End Segment",
+            "09 - ???",
+            "0A - Animated Texture Segment",
+            "0B - GeoLayout Segment"});
+            this.comboBox1.Location = new System.Drawing.Point(107, 6);
+            this.comboBox1.Name = "comboBox1";
+            this.comboBox1.Size = new System.Drawing.Size(121, 21);
+            this.comboBox1.TabIndex = 7;
             // 
             // checkBox1
             // 
@@ -627,27 +654,42 @@ namespace Binjo
             this.button12.UseVisualStyleBackColor = true;
             this.button12.Click += new System.EventHandler(this.button12_Click);
             // 
-            // comboBox1
+            // panel7
             // 
-            this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Items.AddRange(new object[] {
-            "BIN Header",
-            "00 - Texture Segment",
-            "01 - DisplayList Segment",
-            "02 - ",
-            "03 - Vertex Segment",
-            "04 - ???",
-            "05 - Animation Segment",
-            "06 - Collision Segment",
-            "07 - Effects Segment",
-            "08 - Effects-End Segment",
-            "09 - ???",
-            "0A - Animated Texture Segment",
-            "0B - GeoLayout Segment"});
-            this.comboBox1.Location = new System.Drawing.Point(107, 6);
-            this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(121, 21);
-            this.comboBox1.TabIndex = 7;
+            this.panel7.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel7.Controls.Add(this.label10);
+            this.panel7.Controls.Add(this.dataGridView7);
+            this.panel7.Location = new System.Drawing.Point(559, 524);
+            this.panel7.Name = "panel7";
+            this.panel7.Size = new System.Drawing.Size(541, 92);
+            this.panel7.TabIndex = 7;
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label10.ForeColor = System.Drawing.SystemColors.ButtonFace;
+            this.label10.Location = new System.Drawing.Point(4, 11);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(128, 13);
+            this.label10.TabIndex = 3;
+            this.label10.Text = "GeoLayout Command List";
+            this.label10.Click += new System.EventHandler(this.label10_Click);
+            // 
+            // dataGridView7
+            // 
+            this.dataGridView7.AllowUserToAddRows = false;
+            this.dataGridView7.AllowUserToDeleteRows = false;
+            this.dataGridView7.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.dataGridView7.BackgroundColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(192)))), ((int)(((byte)(128)))));
+            this.dataGridView7.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridView7.EditMode = System.Windows.Forms.DataGridViewEditMode.EditOnEnter;
+            this.dataGridView7.GridColor = System.Drawing.Color.DarkGray;
+            this.dataGridView7.Location = new System.Drawing.Point(3, 33);
+            this.dataGridView7.Name = "dataGridView7";
+            this.dataGridView7.RowHeadersVisible = false;
+            this.dataGridView7.Size = new System.Drawing.Size(524, 49);
+            this.dataGridView7.TabIndex = 2;
             // 
             // BinjoKazooie
             // 
@@ -655,6 +697,7 @@ namespace Binjo
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(44)))), ((int)(((byte)(44)))), ((int)(((byte)(44)))));
             this.ClientSize = new System.Drawing.Size(1169, 605);
+            this.Controls.Add(this.panel7);
             this.Controls.Add(this.button12);
             this.Controls.Add(this.panel6);
             this.Controls.Add(this.panel5);
@@ -696,6 +739,9 @@ namespace Binjo
             this.panel6.ResumeLayout(false);
             this.panel6.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView6)).EndInit();
+            this.panel7.ResumeLayout(false);
+            this.panel7.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView7)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -747,6 +793,9 @@ namespace Binjo
         private System.Windows.Forms.Button button11;
         private System.Windows.Forms.Button button12;
         private System.Windows.Forms.ComboBox comboBox1;
+        private System.Windows.Forms.Panel panel7;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.DataGridView dataGridView7;
     }
 }
 
