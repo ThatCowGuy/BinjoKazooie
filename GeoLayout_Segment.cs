@@ -75,7 +75,7 @@ namespace Binjo
                 }
                 // read whatever else
                 cmd.content.Add(File_Handler.read_int(file_data, (i + 0x00), false));
-                Console.WriteLine(cmd_len);
+
                 cmd_len -= 0x04;
                 i += 0x04;
             }

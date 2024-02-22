@@ -76,6 +76,7 @@ namespace Binjo
             this.panel7 = new System.Windows.Forms.Panel();
             this.label10 = new System.Windows.Forms.Label();
             this.dataGridView7 = new System.Windows.Forms.DataGridView();
+            this.button13 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
@@ -584,6 +585,7 @@ namespace Binjo
             // panel6
             // 
             this.panel6.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel6.Controls.Add(this.button13);
             this.panel6.Controls.Add(this.button11);
             this.panel6.Controls.Add(this.checkBox3);
             this.panel6.Controls.Add(this.label12);
@@ -691,6 +693,19 @@ namespace Binjo
             this.dataGridView7.Size = new System.Drawing.Size(524, 49);
             this.dataGridView7.TabIndex = 2;
             // 
+            // button13
+            // 
+            this.button13.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
+            this.button13.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
+            this.button13.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
+            this.button13.Location = new System.Drawing.Point(222, 6);
+            this.button13.Name = "button13";
+            this.button13.Size = new System.Drawing.Size(94, 23);
+            this.button13.TabIndex = 24;
+            this.button13.Text = "Export DL Text";
+            this.button13.UseVisualStyleBackColor = true;
+            this.button13.Click += new System.EventHandler(this.button13_Click);
+            // 
             // BinjoKazooie
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -796,6 +811,7 @@ namespace Binjo
         private System.Windows.Forms.Panel panel7;
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.DataGridView dataGridView7;
+        private System.Windows.Forms.Button button13;
     }
 }
 

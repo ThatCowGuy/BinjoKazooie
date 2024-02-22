@@ -24,8 +24,10 @@ namespace Binjo
         {
             { 1, "VTX" },
             { 2, "Tex" },
-            { 3, "DLs" },
+            { 3, "Mode" }, // static data that defines the possible rendermodes (core2/modelRender.c#L204)
             { 4, "Virt" }, // for things that require a model to be drawn to another texture
+            // ...
+            { 9, "DLs" },
             // ...
             { 11, "AnTex" }, // unsure if this is actually part of it
             { 12, "AnTex" },
@@ -700,6 +702,24 @@ namespace Binjo
             System.Console.WriteLine("Cancelled");
             return;
         }
+        public void export_displaylist_text()
+        {
+            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}_DL.txt", this.loaded_bin_name));
+
+            SaveFileDialog SFD = new SaveFileDialog();
+            SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
+            SFD.FileName = chosen_filename;
+            if (SFD.ShowDialog() == DialogResult.OK)
+            {
+                chosen_filename = SFD.FileName;
+                File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
+                System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
+                write_displaylist_text(chosen_filename);
+                return;
+            }
+            System.Console.WriteLine("Cancelled");
+            return;
+        }
         public void export_collision_model()
         {
             string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}_COLL.obj", this.loaded_bin_name));
@@ -718,6 +738,24 @@ namespace Binjo
             System.Console.WriteLine("Cancelled");
             return;
         }
+        public void write_displaylist_text(string filepath)
+        {
+            using (StreamWriter output_txt = new StreamWriter(filepath))
+            {
+                uint i = 0;
+                foreach (DisplayList_Command cmd in this.DL_seg.command_list)
+                {
+                    output_txt.WriteLine(String.Format("{0} | {1} {2} -- {3}",
+                        File_Handler.uint_to_string(i, 0xFFFF),
+                        File_Handler.uint_to_string(cmd.raw_content[0], 0xFFFFFFFF),
+                        File_Handler.uint_to_string(cmd.raw_content[1], 0xFFFFFFFF),
+                        cmd.command_name
+                    ));
+                    i += 0x08;
+                }
+            }
+        }
+
         public void write_displaylist_model(string filepath)
         {
             // storing the vtx IDs as loaded by the DLs

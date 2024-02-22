@@ -681,6 +681,10 @@ namespace Binjo
         {
             this.handler.export_displaylist_model();
         }
+        private void button13_Click(object sender, EventArgs e)
+        {
+            this.handler.export_displaylist_text();
+        }
 
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
@@ -704,5 +708,6 @@ namespace Binjo
         {
 
         }
+
     }
 }
