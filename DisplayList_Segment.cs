@@ -136,6 +136,41 @@ namespace Binjo
     }
     public class DisplayList_Command
     {
+        public static Dictionary<int, String> RSP_GEOMODE_FLAGS = new Dictionary<int, String>
+        {
+            { 0x00000001, "G_ZBUFFER"            },
+            { 0x00000004, "G_SHADE"              }, // *
+            { 0x00000200, "G_CULL_FRONT"         }, // *
+            { 0x00000400, "G_CULL_BACK"          },
+            { 0x00010000, "G_FOG"                }, // *
+            { 0x00020000, "G_LIGHTING"           }, // *
+            { 0x00040000, "G_TEXTURE_GEN"        }, // *
+            { 0x00080000, "G_TEXTURE_GEN_LINEAR" }, // *
+            { 0x00200000, "G_SHADING_SMOOTH"     }
+        }; // * usually disabled at start of DL
+        public static String get_affected_flags(uint value)
+        {
+            String flagnames = "";
+            foreach (int key in DisplayList_Command.RSP_GEOMODE_FLAGS.Keys)
+            {
+                if ((value & key) > 0)
+                    flagnames += DisplayList_Command.RSP_GEOMODE_FLAGS[key] + ", ";
+            }
+            return flagnames;
+        }
+        public static Dictionary<String, int> RSP_GEOMODE_FLAGS_REV = new Dictionary<String, int>
+        {
+            { "G_ZBUFFER            ", 0x00000001 },
+            { "G_SHADE              ", 0x00000004 },
+            { "G_CULL_FRONT         ", 0x00000200 },
+            { "G_CULL_BACK          ", 0x00000400 },
+            { "G_FOG                ", 0x00010000 },
+            { "G_LIGHTING           ", 0x00020000 },
+            { "G_TEXTURE_GEN        ", 0x00040000 },
+            { "G_TEXTURE_GEN_LINEAR ", 0x00080000 },
+            { "G_SHADING_SMOOTH     ", 0x00200000 }
+        };
+
         public byte command_byte;
         public String command_name;
 
@@ -322,6 +357,15 @@ namespace Binjo
                 uint tmp;
                 switch (cmd.command_name)
                 {
+                    case ("G_SETGEOMETRYMODE"):
+                        // RSP flags to enable
+                        cmd.parameters[0] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
+                        break;
+                    case ("G_CLEARGEOMETRYMODE"):
+                        // RSP flags to disable
+                        cmd.parameters[0] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
+                        break;
+
                     case ("G_TEXTURE"):
                         tmp = File_Handler.read_char(file_data, file_offset_cmd + 0x02, false);
                         // maximum number of mipmaps
@@ -574,6 +618,9 @@ namespace Binjo
                         break;
 
                     case ("G_ENDDL"):
+                    case ("G_RDPPIPESYNC"):
+                    case ("G_RDPTILESYNC"):
+                    case ("G_RDPFULLSYNC"):
                         // no additional params
                         break;
                 }
@@ -616,6 +663,17 @@ namespace Binjo
             String details = "";
             switch (cmd.command_name)
             {
+                case ("G_SETGEOMETRYMODE"):
+                    // RSP flags to enable
+                    details += "Enable: ";
+                    details += DisplayList_Command.get_affected_flags(cmd.parameters[0]);
+                    break;
+                case ("G_CLEARGEOMETRYMODE"):
+                    // RSP flags to disable
+                    details += "Disable: ";
+                    details += DisplayList_Command.get_affected_flags(cmd.parameters[0]);
+                    break;
+
                 case ("G_TEXTURE"):
                     details += String.Format("m={0}, ", cmd.parameters[0]);
                     details += String.Format("descr=#{0}, ", cmd.parameters[1]);
@@ -667,21 +725,21 @@ namespace Binjo
                     break;
 
                 case ("G_TRI1"):
-                    details += "tri_B=(";
-                    details += String.Format(" {0}, ", cmd.parameters[0]);
+                    details += "tri_B=( ";
+                    details += String.Format("{0}, ", cmd.parameters[0]);
                     details += String.Format("{0}, ", cmd.parameters[1]);
                     details += String.Format("{0} ", cmd.parameters[2]);
                     details += "), ";
                     break;
 
                 case ("G_TRI2"):
-                    details += "tri_A=(";
-                    details += String.Format(" {0}, ", cmd.parameters[0]);
+                    details += "tri_A=( ";
+                    details += String.Format("{0}, ", cmd.parameters[0]);
                     details += String.Format("{0}, ", cmd.parameters[1]);
                     details += String.Format("{0} ", cmd.parameters[2]);
                     details += "), ";
-                    details += "tri_B=(";
-                    details += String.Format(" {0}, ", cmd.parameters[3]);
+                    details += "tri_B=( ";
+                    details += String.Format("{0}, ", cmd.parameters[3]);
                     details += String.Format("{0}, ", cmd.parameters[4]);
                     details += String.Format("{0} ", cmd.parameters[5]);
                     details += ")";
@@ -689,6 +747,15 @@ namespace Binjo
 
                 case ("G_ENDDL"):
                     details = "ENDING";
+                    break;
+                case ("G_RDPPIPESYNC"):
+                    details = "Waiting for RDP Primitive Rendering...";
+                    break;
+                case ("G_RDPTILESYNC"):
+                    details = "Waiting for RDP Rendering...";
+                    break;
+                case ("G_RDPFULLSYNC"):
+                    details = "Waiting for RDP entirely...";
                     break;
             }
 
