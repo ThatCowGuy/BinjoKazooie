@@ -144,6 +144,8 @@ namespace Binjo
             {
                 case (10):
                     return String.Format("{0}", input);
+                case (0xF):
+                    return String.Format("{0:X01}", input & format);
                 case (0xFF):
                     return String.Format("{0:X02}", input & format);
                 case (0xFFFF):
@@ -162,6 +164,8 @@ namespace Binjo
             {
                 case (10):
                     return String.Format("{0}", input);
+                case (0xF):
+                    return String.Format("{0:X01}", input & format);
                 case (0xFF):
                     return String.Format("{0:X02}", input & format);
                 case (0xFFFF):

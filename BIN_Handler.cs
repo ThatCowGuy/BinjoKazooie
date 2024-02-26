@@ -20,21 +20,6 @@ namespace Binjo
     {
         byte[] content;
 
-        public static Dictionary<int, string> INTERNAL_SEG_NAMES = new Dictionary<int, string>
-        {
-            { 1, "VTX" },
-            { 2, "Tex" },
-            { 3, "Mode" }, // static data that defines the possible rendermodes (core2/modelRender.c#L204)
-            { 4, "Virt" }, // for things that require a model to be drawn to another texture
-            // ...
-            { 9, "DLs" },
-            // ...
-            { 11, "AnTex" }, // unsure if this is actually part of it
-            { 12, "AnTex" },
-            { 13, "AnTex" },
-            { 14, "AnTex" },
-            { 15, "AnTex" },
-        };
 
         public static Dictionary<int, string> SEGMENT_NAMES = new Dictionary<int, string>
         {
@@ -356,6 +341,10 @@ namespace Binjo
                 // then convert that Bitmap into a BK friendly format
                 // if the image is below 16x16 pixels, we can default to RGBA32 and keep the small size (because upscaling THAT would be useless..)
                 // NOTE: if the GLTF contains images that have 16 or less colors, we also shouldnt use CI8... ugh
+
+                // NOTE: for starters, I will transform EVERYY image to CI4, to make the DL handling easier
+                // (memory alignment is handled already, dw)
+                /*
                 if (ori_w <= 16 && ori_h <= 16)
                 {
                     // keep the aspect ratio, but scale the bigger dim to 16
@@ -389,6 +378,17 @@ namespace Binjo
                     img.tex_meta.width = (byte) scale_w;
                     img.tex_meta.height = (byte) scale_h;
                 }
+                */
+                {
+                    // CI4
+                    if (wm_ratio >= 1.0) { scale_w = 32; scale_h = (int) (32 / wm_ratio); }
+                    if (wm_ratio <= 1.0) { scale_w = (int) (32 * wm_ratio); scale_h = 32; }
+                    img.tex_data.img_rep = Texture_Segment.convert_to_fit(img.tex_data.img_rep, scale_w, scale_h, Texture_Segment.TEX_TYPES["CI4"], 2);
+                    img.tex_meta.tex_type = (ushort) Texture_Segment.TEX_TYPES["CI4"];
+                    img.tex_meta.width = (byte) scale_w;
+                    img.tex_meta.height = (byte) scale_h;
+                }
+
                 img.tex_data.img_rep.RotateFlip(RotateFlipType.RotateNoneFlipY);
                 // relay the tex type to the data element
                 img.tex_data.tex_type = img.tex_meta.tex_type;

@@ -267,7 +267,7 @@ namespace Binjo
                     // should be scrollable, so we dont use the standard method with data
                     colorize_DGV(dataGridView7);
                     dataGridView7.ClearSelection();
-                    dataGridView7.Height = 360;
+                    dataGridView7.Height = 350;
                     panel7.Height = 32 + dataGridView7.Height + 16;
                 }
                 if (seg_name == "DisplayList Segment")
@@ -298,7 +298,7 @@ namespace Binjo
                         // should be scrollable, so we dont use the standard method with data
                         colorize_DGV(dataGridView6);
                         dataGridView6.ClearSelection();
-                        dataGridView6.Height = 275;
+                        dataGridView6.Height = 330;
                     }
                     else
                     {

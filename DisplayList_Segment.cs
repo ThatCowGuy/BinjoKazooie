@@ -136,45 +136,134 @@ namespace Binjo
     }
     public class DisplayList_Command
     {
-        public static Dictionary<int, String> RSP_GEOMODE_FLAGS = new Dictionary<int, String>
+        public static ulong G_CLEARGEOMETRYMODE(uint flags)
         {
-            { 0x00000001, "G_ZBUFFER"            },
-            { 0x00000004, "G_SHADE"              }, // *
-            { 0x00000200, "G_CULL_FRONT"         }, // *
-            { 0x00000400, "G_CULL_BACK"          },
-            { 0x00010000, "G_FOG"                }, // *
-            { 0x00020000, "G_LIGHTING"           }, // *
-            { 0x00040000, "G_TEXTURE_GEN"        }, // *
-            { 0x00080000, "G_TEXTURE_GEN_LINEAR" }, // *
-            { 0x00200000, "G_SHADING_SMOOTH"     }
-        }; // * usually disabled at start of DL
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_CLEARGEOMETRYMODE"], 56, 8);
+            cmd |= MathHelpers.shift_cut(flags, 0, 32);
+            return cmd;
+        }
+        public static ulong G_SETGEOMETRYMODE(uint flags)
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_SETGEOMETRYMODE"], 56, 8);
+            cmd |= MathHelpers.shift_cut(flags, 0, 32);
+            return cmd;
+        }
+        public static ulong G_TEXTURE(int mipmap_cnt, int descr, Boolean activate, uint scaling_S, uint scaling_T)
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_TEXTURE"], 56, 8);
+            cmd |= MathHelpers.shift_cut((ulong) mipmap_cnt, 43, 3);
+            cmd |= MathHelpers.shift_cut((ulong) descr, 40, 3);
+            cmd |= MathHelpers.shift_cut((ulong) (activate ? 1 : 0), 32, 8); // technically only 1 bit, but the entire byte is reserved
+            cmd |= MathHelpers.shift_cut((ulong) scaling_S, 16, 16);
+            cmd |= MathHelpers.shift_cut((ulong) scaling_T, 0, 16);
+            return cmd;
+        }
+        public static ulong G_SETTIMG(String format, int bitsize, uint seg_address)
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_SETTIMG"], 56, 8);
+            cmd |= MathHelpers.shift_cut((ulong) Dicts.SETTILE_COLFORM[format], 53, 3);
+            ulong bitsize_transformed = (ulong) Math.Log(bitsize / 4, 2);
+            cmd |= MathHelpers.shift_cut(bitsize_transformed, 51, 2);
+            ulong addr_transformed = (ulong)((Dicts.INTERNAL_SEG_NAMES_REV["Tex"] << 24) + seg_address);
+            cmd |= MathHelpers.shift_cut(addr_transformed, 0, 32);
+            return cmd;
+        }
+        // TMEM for palettes should appearently be 0x0100; for pixel data its 0x0000
+        // pal is palette index if parallel-usage is utilized
+        // NOTE: S and T are in reverse in the encoding...
+        public static ulong G_SETTILE(
+            String format, int bitsize, uint width, uint TMEM, int descr, int pal,
+            Boolean clamp_S, Boolean mirror_S, int wrap_S, int shift_S,
+            Boolean clamp_T, Boolean mirror_T, int wrap_T, int shift_T
+        )
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_SETTILE"], 56, 8);
+            cmd |= MathHelpers.shift_cut((ulong) Dicts.SETTILE_COLFORM[format], 53, 3);
+            ulong bitsize_transformed = (ulong) Math.Log(bitsize / 4, 2);
+            cmd |= MathHelpers.shift_cut(bitsize_transformed, 51, 2);
+            ulong num64 = (ulong) ((width * bitsize) / 64);
+            cmd |= MathHelpers.shift_cut(num64, 41, 9); // there is a bit of padding infront of this, so bit #50 is unused
+            cmd |= MathHelpers.shift_cut((ulong) TMEM, 32, 9);
+            cmd |= MathHelpers.shift_cut((ulong) descr, 24, 3);
+            cmd |= MathHelpers.shift_cut((ulong) pal, 20, 4);
+            // T axis
+            cmd |= MathHelpers.shift_cut((ulong) (clamp_T ? 1 : 0), 19, 1);
+            cmd |= MathHelpers.shift_cut((ulong) (mirror_T ? 1 : 0), 18, 1);
+            cmd |= MathHelpers.shift_cut((ulong) wrap_T, 14, 4);
+            cmd |= MathHelpers.shift_cut((ulong) shift_T, 10, 4);
+            // S axis
+            cmd |= MathHelpers.shift_cut((ulong) (clamp_S ? 1 : 0), 9, 1);
+            cmd |= MathHelpers.shift_cut((ulong) (mirror_S ? 1 : 0), 8, 1);
+            cmd |= MathHelpers.shift_cut((ulong) wrap_S, 4, 4);
+            cmd |= MathHelpers.shift_cut((ulong) shift_S, 0, 4);
+            return cmd;
+        }
+        // UL = Upper Left corner of the Texture
+        public static ulong G_SETTILESIZE(uint ULx, uint ULy, int descr, uint width, uint height)
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_SETTILESIZE"], 56, 8);
+            cmd |= MathHelpers.shift_cut((ulong) ULx, 44, 12); // 3 nibbles
+            cmd |= MathHelpers.shift_cut((ulong) ULy, 32, 12); // 3 nibbles
+            cmd |= MathHelpers.shift_cut((ulong) descr, 24, 8);
+            ulong W_transformed = (ulong) (4 * (width - 1));
+            ulong H_transformed = (ulong) (4 * (height - 1));
+            cmd |= MathHelpers.shift_cut(W_transformed, 12, 12); // 3 nibbles
+            cmd |= MathHelpers.shift_cut(H_transformed, 0, 12); // 3 nibbles
+            return cmd;
+        }
+        public static ulong G_LOADTLUT(int descr, uint color_cnt,)
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_LOADTLUT"], 56, 8);
+            cmd |= MathHelpers.shift_cut((ulong) descr, 24, 8);
+            ulong cc_transformed = (ulong) (4 * (color_cnt - 1));
+            cmd |= MathHelpers.shift_cut(cc_transformed, 12, 12); // 3 nibbles
+            return cmd;
+        }
+        // the target string is telling which sort of flags are supposed to be changed
+        // and is translated to a shift value (and technically to a bitlen val too)
+        // modebits is the new bits to set there
+        public static ulong G_SetOtherMode_H(String target, uint bitlen, uint modebits)
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_SetOtherMode_H"], 56, 8);
+            cmd |= MathHelpers.shift_cut((ulong) Dicts.OTHERMODE_H_MDSFT[target], 40, 8);
+            cmd |= MathHelpers.shift_cut((ulong) bitlen, 32, 8);
+            cmd |= MathHelpers.shift_cut((ulong) modebits, 0, 32);
+            return cmd;
+        }
+
+
+        //    |     v48     v32|     v16     v0|
+        //    |  v56     v40   |  v24     v8   |
+        // 0x | 00 00   00 00  | 00 00   00 00 |
+
+
+
         public static String get_affected_flags(uint value)
         {
             String flagnames = "";
-            foreach (int key in DisplayList_Command.RSP_GEOMODE_FLAGS.Keys)
+            foreach (int key in Dicts.RSP_GEOMODE_FLAGS_REV.Keys)
             {
                 if ((value & key) > 0)
-                    flagnames += DisplayList_Command.RSP_GEOMODE_FLAGS[key] + ", ";
+                    // NOTE: Im cutting out the G_ here because its redundant
+                    flagnames += Dicts.RSP_GEOMODE_FLAGS_REV[key].Substring(2) + ", ";
             }
             return flagnames;
         }
-        public static Dictionary<String, int> RSP_GEOMODE_FLAGS_REV = new Dictionary<String, int>
-        {
-            { "G_ZBUFFER            ", 0x00000001 },
-            { "G_SHADE              ", 0x00000004 },
-            { "G_CULL_FRONT         ", 0x00000200 },
-            { "G_CULL_BACK          ", 0x00000400 },
-            { "G_FOG                ", 0x00010000 },
-            { "G_LIGHTING           ", 0x00020000 },
-            { "G_TEXTURE_GEN        ", 0x00040000 },
-            { "G_TEXTURE_GEN_LINEAR ", 0x00080000 },
-            { "G_SHADING_SMOOTH     ", 0x00200000 }
-        };
 
         public byte command_byte;
         public String command_name;
 
         public uint[] parameters = new uint[16];
+
+        public uint[] raw_content = new uint[2];
     }
 
     public class Tile_Descriptor
@@ -203,58 +292,6 @@ namespace Binjo
     {
         public bool valid = false;
 
-        public static Dictionary<byte, string> F3DEX_Command_Names = new Dictionary<byte, string>()
-        {
-            { 0x00, "G_SPNOOP" },
-            { 0x01, "G_MTX" },
-            { 0x03, "G_MOVEMEM" },
-            { 0x04, "G_VTX" },
-            { 0x06, "G_DL" },
-            { 0xAF, "G_LOAD_UCODE" },
-            { 0xB0, "G_BRANCH_Z" },
-            { 0xB1, "G_TRI2" },
-            { 0xB2, "G_MODIFYVTX" },
-            { 0xB3, "G_RDPHALF_2" },
-            { 0xB5, "G_QUAD" },
-            { 0xB6, "G_CLEARGEOMETRYMODE" },
-            { 0xB7, "G_SETGEOMETRYMODE" },
-            { 0xB8, "G_ENDDL" },
-            { 0xB9, "G_SetOtherMode_L" },
-            { 0xBA, "G_SetOtherMode_H" },
-            { 0xBB, "G_TEXTURE" },
-            { 0xBC, "G_MOVEWORD" },
-            { 0xBD, "G_POPMTX" },
-            { 0xBE, "G_CULLDL" },
-            { 0xBF, "G_TRI1" },
-            { 0xC0, "G_NOOP" },
-            { 0xE4, "G_TEXRECT" },
-            { 0xE5, "G_TEXRECTFLIP" },
-            { 0xE6, "G_RDPLOADSYNC" },
-            { 0xE7, "G_RDPPIPESYNC" },
-            { 0xE8, "G_RDPTILESYNC" },
-            { 0xE9, "G_RDPFULLSYNC" },
-            { 0xEA, "G_SETKEYGB" },
-            { 0xEB, "G_SETKEYR" },
-            { 0xEC, "G_SETCONVERT" },
-            { 0xED, "G_SETSCISSOR" },
-            { 0xEE, "G_SETPRIMDEPTH" },
-            { 0xEF, "G_RDPSetOtherMode" },
-            { 0xF0, "G_LOADTLUT" },
-            { 0xF2, "G_SETTILESIZE" },
-            { 0xF3, "G_LOADBLOCK" },
-            { 0xF4, "G_LOADTILE" },
-            { 0xF5, "G_SETTILE" },
-            { 0xF6, "G_FILLRECT" },
-            { 0xF7, "G_SETFILLCOLOR" },
-            { 0xF8, "G_SETFOGCOLOR" },
-            { 0xF9, "G_SETBLENDCOLOR" },
-            { 0xFA, "G_SETPRIMCOLOR" },
-            { 0xFB, "G_SETENVCOLOR" },
-            { 0xFC, "G_SETCOMBINE" },
-            { 0xFD, "G_SETTIMG" },
-            { 0xFE, "G_SETZIMG" },
-            { 0xFF, "G_SETCIMG" }
-        };
 
         // parsed properties
         // === 0x00 ===============================
@@ -312,6 +349,28 @@ namespace Binjo
 
         public void populate(byte[] file_data, int file_offset, Texture_Segment tex_seg, Vertex_Segment vtx_seg, List<FullTriangle> full_tri_list)
         {
+            ulong cmdx = DisplayList_Command.G_CLEARGEOMETRYMODE((uint) (
+                Dicts.RSP_GEOMODE_FLAGS["G_SHADE"] |
+                Dicts.RSP_GEOMODE_FLAGS["G_SHADING_SMOOTH"] |
+                Dicts.RSP_GEOMODE_FLAGS["G_CULL_BOTH"] |
+                Dicts.RSP_GEOMODE_FLAGS["G_FOG"] |
+                Dicts.RSP_GEOMODE_FLAGS["G_LIGHTING"] |
+                Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN"] |
+                Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN_LINEAR"] |
+                Dicts.RSP_GEOMODE_FLAGS["G_LOD"]
+            ));
+            Console.WriteLine(File_Handler.uint_to_string((uint) (cmdx >> 32), 0xFFFFFFFF));
+            Console.WriteLine(File_Handler.uint_to_string((uint) (cmdx >> 00), 0xFFFFFFFF));
+            
+            cmdx = DisplayList_Command.G_SETGEOMETRYMODE((uint) (
+                 Dicts.RSP_GEOMODE_FLAGS["G_SHADE"] |
+                 Dicts.RSP_GEOMODE_FLAGS["G_SHADING_SMOOTH"] |
+                 Dicts.RSP_GEOMODE_FLAGS["G_CULL_BACK"] |
+                 Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN_LINEAR"]
+             ));
+            Console.WriteLine(File_Handler.uint_to_string((uint) (cmdx >> 32), 0xFFFFFFFF));
+            Console.WriteLine(File_Handler.uint_to_string((uint) (cmdx >> 00), 0xFFFFFFFF));
+
             if (file_offset == 0)
             {
                 System.Console.WriteLine("No DisplayList Segment");
@@ -349,19 +408,80 @@ namespace Binjo
                 DisplayList_Command cmd = new DisplayList_Command();
                 int file_offset_cmd = (int)(this.file_offset + 0x08 + (i * 0x08));
 
+                cmd.raw_content[0] = File_Handler.read_int(file_data, file_offset_cmd + 0x00, false);
+                cmd.raw_content[1] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
+
                 // parsing properties
                 // === 0x00 ===============================
                 cmd.command_byte = File_Handler.read_char(file_data, file_offset_cmd + 0x00, false);
-                cmd.command_name = DisplayList_Segment.F3DEX_Command_Names[cmd.command_byte];
+                cmd.command_name = Dicts.F3DEX_CMD_NAMES[cmd.command_byte];
 
                 uint tmp;
                 switch (cmd.command_name)
                 {
-                    case ("G_SETGEOMETRYMODE"):
+                    case ("G_SETCOMBINE"): // why is really really messy... resort to only showing/using the raw data
+                        // FC 12 7F FF FF FF F8 38 : Standard usage for solid RGBA textures
+                        // FC 12 18 24 FF 33 FF FF : Standard usage for alpha RGBA textures
+                        break;
+
+                    case ("G_LOADBLOCK"):
+                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x00, false);
+                        // UL corner S coord
+                        cmd.parameters[0] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1111_1111__1111_0000_0000_0000);
+                        // UL corner T coord
+                        cmd.parameters[1] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_1111_1111_1111);
+                        // tile descriptor
+                        cmd.parameters[2] = File_Handler.read_char(file_data, file_offset_cmd + 0x04, false);
+
+                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
+                        // Texel count - 1
+                        cmd.parameters[3] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1111_1111__1111_0000_0000_0000);
+                        cmd.parameters[3] = (cmd.parameters[3] + 1);
+                        // DXT (this is a really messy one:
+                        // "dxt is an unsigned fixed-point 1.11 [11 digit mantissa] number"
+                        // "dxt is the RECIPROCAL of the number of 64-bit chunks it takes to get a row of texture"
+                        // an example: Take a 32x32 px Tex with 16b colors;
+                        // -> a row of that Tex takes 32x16b = 512b
+                        // -> so it needs (512b/64b) = 8 chunks of 64b to create a row
+                        // -> the reciprocal is 1/8, which in binary is 0.001_0000_0000 = 0x100
+                        cmd.parameters[4] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_1111_1111_1111);
+                        break;
+
+                    case ("G_SETTILESIZE"):
+                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x00, false);
+                        // UL corner S coord
+                        cmd.parameters[0] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1111_1111__1111_0000_0000_0000);
+                        // UL corner T coord
+                        cmd.parameters[1] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_1111_1111_1111);
+                        // tile descriptor
+                        cmd.parameters[2] = File_Handler.read_char(file_data, file_offset_cmd + 0x04, false);
+
+                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
+                        // (Width - 1) * 4
+                        cmd.parameters[3] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1111_1111__1111_0000_0000_0000);
+                        cmd.parameters[3] = (cmd.parameters[3] / 4) + 1;
+                        // (Height - 1) * 4
+                        cmd.parameters[4] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_1111_1111_1111);
+                        cmd.parameters[4] = (cmd.parameters[4] / 4) + 1;
+                        break;
+
+                    // 0E 02 = set TLUT (texel lookup table) color format
+                    //       0000 0000 = no TLUT at all (tex formats RGBA16/32 + IA8)
+                    //       0000 8000 = TLUT type = RGBA16 (tex formats CI4/8)
+                    case ("G_SetOtherMode_H"):
+                        // shift
+                        cmd.parameters[0] = File_Handler.read_char(file_data, file_offset_cmd + 0x02, false);
+                        // num affected bits
+                        cmd.parameters[1] = File_Handler.read_char(file_data, file_offset_cmd + 0x03, false);
+                        // new mode-bits
+                        cmd.parameters[2] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
+                        break;
+
+                    case ("G_G_SETGEOMETRYMODE"):
                         // RSP flags to enable
                         cmd.parameters[0] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
                         break;
-                    case ("G_CLEARGEOMETRYMODE"):
+                    case ("G_G_CLEARGEOMETRYMODE"):
                         // RSP flags to disable
                         cmd.parameters[0] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
                         break;
@@ -618,6 +738,7 @@ namespace Binjo
                         break;
 
                     case ("G_ENDDL"):
+                    case ("G_RDPLOADSYNC"):
                     case ("G_RDPPIPESYNC"):
                     case ("G_RDPTILESYNC"):
                     case ("G_RDPFULLSYNC"):
@@ -663,14 +784,77 @@ namespace Binjo
             String details = "";
             switch (cmd.command_name)
             {
-                case ("G_SETGEOMETRYMODE"):
+                case ("G_SETCOMBINE"):
+                    // FC 12 7F FF FF FF F8 38 : Standard usage for solid RGBA textures
+                    // FC 12 18 24 FF 33 FF FF : Standard usage for alpha RGBA textures
+                    // FC269804 1F14FFFF -- G_SETCOMBINE
+                    // FC129804 3F15FFFF -- G_SETCOMBINE
+                    details += File_Handler.uint_to_string(cmd.raw_content[0], 0xFFFFFFFF) + " ";
+                    details += File_Handler.uint_to_string(cmd.raw_content[1], 0xFFFFFFFF) + " (raw hex)";
+                    break;
+
+                case ("G_LOADBLOCK"):
+                    details += String.Format("UL=({0};{1}), ",
+                        File_Handler.uint_to_string(cmd.parameters[0], 0xFFFF),
+                        File_Handler.uint_to_string(cmd.parameters[1], 0xFFFF)
+                    );
+                    details += String.Format("descr=#{0}, ", cmd.parameters[2]);
+                    details += String.Format("texelCNT={0}, ", File_Handler.uint_to_string(cmd.parameters[3], 0xFFFF));
+                    details += String.Format("DXT={0}", File_Handler.uint_to_string(cmd.parameters[4], 0xFFFF));
+                    break;
+
+                case ("G_SETTILESIZE"):
+                    details += String.Format("UL=({0};{1}), ",
+                        File_Handler.uint_to_string(cmd.parameters[0], 0xFFFF),
+                        File_Handler.uint_to_string(cmd.parameters[1], 0xFFFF)
+                    );
+                    details += String.Format("descr=#{0}, ", cmd.parameters[2]);
+                    details += String.Format("dim={0}x{1} px",
+                        File_Handler.uint_to_string(cmd.parameters[3], 10),
+                        File_Handler.uint_to_string(cmd.parameters[4], 10)
+                    );
+                    break;
+
+                case ("G_SETTILE"):
+                    details += String.Format("fmt={0}, ", Dicts.SETTILE_COLFORM_REV[(int) cmd.parameters[0]]);
+                    details += String.Format("siz={0}b, ", (4 * Math.Pow(2, cmd.parameters[1])));
+                    details += String.Format("64num={0}, ", cmd.parameters[2]);
+                    details += String.Format("TexTMEM@{0}, ", File_Handler.uint_to_string(cmd.parameters[3], 0xFFFF));
+
+                    details += String.Format("descr=#{0}, ", cmd.parameters[4]);
+                    details += String.Format("pal={0}, ", cmd.parameters[5]);
+
+                    details += String.Format("T:{0},{1},{2},{3}; ",
+                        cmd.parameters[6],
+                        cmd.parameters[7],
+                        File_Handler.uint_to_string(cmd.parameters[8], 0xF),
+                        File_Handler.uint_to_string(cmd.parameters[9], 0xF)
+                    );
+                    details += String.Format("S:{0},{1},{2},{3}",
+                        cmd.parameters[10],
+                        cmd.parameters[11],
+                        File_Handler.uint_to_string(cmd.parameters[12], 0xF),
+                        File_Handler.uint_to_string(cmd.parameters[13], 0xF)
+                    );
+                    break;
+
+                // 0E 02 = set TLUT (texel lookup table) color format
+                //       0000 0000 = no TLUT at all (tex formats RGBA16/32 + IA8)
+                //       0000 8000 = TLUT type = RGBA16 (tex formats CI4/8)
+                case ("G_SetOtherMode_H"):
+                    // the shft is basically determining what we are touching (the bit_cnt is neglible for information):
+                    // NOTE: Im cutting out the G_MDSFT_ part because its redundant here
+                    details += String.Format("shft={0}, ", Dicts.OTHERMODE_H_MDSFT_REV[(int) cmd.parameters[0]].Substring(8));
+                    //details += String.Format("bit_cnt={0}, ", cmd.parameters[1]);
+                    details += String.Format("bits={0}", File_Handler.uint_to_string(cmd.parameters[2], 0xFFFFFFFF));
+                    break;
+
+                case ("G_G_SETGEOMETRYMODE"):
                     // RSP flags to enable
-                    details += "Enable: ";
                     details += DisplayList_Command.get_affected_flags(cmd.parameters[0]);
                     break;
-                case ("G_CLEARGEOMETRYMODE"):
+                case ("G_G_CLEARGEOMETRYMODE"):
                     // RSP flags to disable
-                    details += "Disable: ";
                     details += DisplayList_Command.get_affected_flags(cmd.parameters[0]);
                     break;
 
@@ -747,6 +931,9 @@ namespace Binjo
 
                 case ("G_ENDDL"):
                     details = "ENDING";
+                    break;
+                case ("G_RDPLOADSYNC"):
+                    details = "Waiting for Texture load...";
                     break;
                 case ("G_RDPPIPESYNC"):
                     details = "Waiting for RDP Primitive Rendering...";

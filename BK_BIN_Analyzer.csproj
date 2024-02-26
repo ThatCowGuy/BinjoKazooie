@@ -79,6 +79,7 @@
     <Compile Include="BIN_Handler.cs" />
     <Compile Include="BIN_Header.cs" />
     <Compile Include="Collision_Segment.cs" />
+    <Compile Include="Dicts.cs" />
     <Compile Include="DisplayList_Segment.cs" />
     <Compile Include="Effects_Segment.cs" />
     <Compile Include="File_Handler.cs" />

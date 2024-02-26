@@ -12,6 +12,15 @@ namespace Binjo
 {
     public static class MathHelpers
     {
+        // INPUT is first cut off at BITLEN (leftsided),
+        // then shifted left by BITOFFSET (so 0s on the right)
+        // to make building commands easier
+        public static ulong shift_cut(ulong input, int bitoffset, int bitlen)
+        {
+            input = (input & (ulong) (Math.Pow(2, bitlen) - 1));
+            return (input << bitoffset);
+        }
+
         public static int get_max(int[] arr)
         {
             return arr.Max();
