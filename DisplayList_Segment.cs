@@ -252,7 +252,35 @@ namespace Binjo
             cmd |= MathHelpers.shift_cut(DXT, 0, 12); // 3 nibbles
             return cmd;
         }
-
+        public static ulong G_RDPPIPESYNC()
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_RDPPIPESYNC"], 56, 8);
+            return cmd;
+        }
+        // Im copping out hard here; The Game appears to only use a couple of distinct
+        // parameter sets for this command, so instead of going through the struggle of
+        // properly building it, I will derive the to-be-used static parameter set from
+        // a heavily reduced set of input parameters
+        public static ulong G_SETCOMBINE()
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_SETCOMBINE"], 56, 8);
+            cmd |= MathHelpers.shift_cut(0x00129804, 32, 24);
+            cmd |= MathHelpers.shift_cut(0x3F15FFFF, 0,  32);
+            return cmd;
+        }
+        // remember to always call the setup-DL thats statically stored in seg-3:
+        // G_DL(false, "Mode", 0x20);
+        public static ulong G_DL(Boolean final, String segment, int seg_address)
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_DL"], 56, 8);
+            cmd |= MathHelpers.shift_cut((ulong) (final ? 1 : 0), 48, 8);
+            cmd |= MathHelpers.shift_cut((ulong) Dicts.INTERNAL_SEG_NAMES_REV[segment], 24, 8);
+            cmd |= MathHelpers.shift_cut((ulong) seg_address, 0, 24);
+            return cmd;
+        }
 
         //    |     v48     v32|     v16     v0|
         //    |  v56     v40   |  v24     v8   |
