@@ -238,6 +238,20 @@ namespace Binjo
             cmd |= MathHelpers.shift_cut((ulong) modebits, 0, 32);
             return cmd;
         }
+        public static ulong G_LOADBLOCK(uint ULx, uint ULy, int descr, uint width, uint height, String format)
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_LOADBLOCK"], 56, 8);
+            cmd |= MathHelpers.shift_cut((ulong) ULx, 44, 12); // 3 nibbles
+            cmd |= MathHelpers.shift_cut((ulong) ULy, 32, 12); // 3 nibbles
+            cmd |= MathHelpers.shift_cut((ulong) descr, 24, 8);
+            ulong texel_cnt = (ulong) (width * height);
+            cmd |= MathHelpers.shift_cut(texel_cnt, 12, 12); // 3 nibbles
+            uint texel_bitsize = (uint) Dicts.TEXEL_FMT_BITSIZE[format];
+            ulong DXT = MathHelpers.calc_DXT(width, texel_bitsize);
+            cmd |= MathHelpers.shift_cut(DXT, 0, 12); // 3 nibbles
+            return cmd;
+        }
 
 
         //    |     v48     v32|     v16     v0|

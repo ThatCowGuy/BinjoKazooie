@@ -20,6 +20,32 @@ namespace Binjo
             input = (input & (ulong) (Math.Pow(2, bitlen) - 1));
             return (input << bitoffset);
         }
+        // DXT is a binary 12b fractional number with 11b for the mantissa
+        // I return it as a ulong though, because its not neccessary to ever
+        // interpret it as a float; We only ever need to write the raw data
+        public static ulong calc_DXT(uint width, uint bitsize)
+        {
+            ulong bits_per_row = (ulong) (width * bitsize);
+            // DXT (this is a really messy one:
+            // "dxt is an unsigned fixed-point 1.11 [11 digit mantissa] number"
+            // "dxt is the RECIPROCAL of the number of 64-bit chunks it takes to get a row of texture"
+            // an example: Take a 32x32 px Tex with 16b colors;
+            // -> a row of that Tex takes 32x16b = 512b
+            // -> so it needs (512b/64b) = 8 chunks of 64b to create a row
+            // -> the reciprocal is 1/8, which in binary is 0.001_0000_0000 = 0x100
+
+            // since bitsize is divisble by 4, and width is divisible by 16,
+            // bits_per_row has to be divisible by 64; So this is lossless
+            ulong chunks_per_row = (ulong) (bits_per_row / 64.0);
+            // furthermore, this should result in a power of 2, say 16 eg.
+            // 16 = 0b10000, with only 1 bit set. The corresponding DXT should ALSO
+            // only set 1 bit: the 1/16th bit! So we can simply calculate the log2
+            // of the chunks_per_row result to get the set bit, and build the DXT
+            // in the correct binary encoding with that knowledge:
+            int set_bit = (int) Math.Log(chunks_per_row, 2);
+            ulong DXT = (ulong) (0b1 << (11 - set_bit));
+            return DXT;
+        }
 
         public static int get_max(int[] arr)
         {

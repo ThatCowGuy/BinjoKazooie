@@ -104,6 +104,14 @@ namespace Binjo
             { 0x16, "G_MDSFT_COLORDITHER" },
             { 0x17, "G_MDSFT_PIPELINE"    },
         };
+        public static Dictionary<String, int> TEXEL_FMT_BITSIZE = new Dictionary<String, int>
+        {
+            { "RGBA32", 32 },
+            { "RGBA16", 16 },
+            { "CI8", 8 },
+            { "CI4", 4 },
+            { "IA8", 8 },
+        };
 
         public static Dictionary<String, int> SETTILE_COLFORM = new Dictionary<String, int>
         {
