@@ -136,6 +136,28 @@ namespace Binjo
     }
     public class DisplayList_Command
     {
+        public DisplayList_Command(ulong encoding)
+        {
+            this.command_byte = (byte) (encoding >> 56);
+            this.command_name = Dicts.F3DEX_CMD_NAMES[this.command_byte];
+
+            this.raw_content = new uint[]
+            {
+                (uint) ((encoding >> 32) & 0xFFFFFFFF),
+                (uint) ((encoding >> 0)  & 0xFFFFFFFF)
+            };
+        }
+        // this is C#'s shorthand for a constructor that calls another constructor...
+        public DisplayList_Command() : this(0x00) { }
+
+        public byte command_byte;
+        public String command_name;
+
+        public uint[] parameters = new uint[16];
+
+        public uint[] raw_content = new uint[2];
+
+
         public static ulong G_CLEARGEOMETRYMODE(uint flags)
         {
             ulong cmd = 0x00;
@@ -281,10 +303,250 @@ namespace Binjo
             cmd |= MathHelpers.shift_cut((ulong) seg_address, 0, 24);
             return cmd;
         }
+        // NOTE: G_VTX loads a continuous array of vertices into the buffer
+        public static ulong G_VTX(uint buffer_target, uint vtx_cnt, uint vtx_start_id)
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_VTX"], 56, 8);
+            cmd |= MathHelpers.shift_cut((ulong) (2 * buffer_target), 48, 8); // reminder that the buffer id is doubled in encoding
+            cmd |= MathHelpers.shift_cut((ulong) vtx_cnt, 42, 6);
+            ulong mem_size = (ulong) ((vtx_cnt * 0x10) - 1); // dunno why, but the F3DEX wants that -1 here
+            cmd |= MathHelpers.shift_cut(mem_size, 32, 10);
+            cmd |= MathHelpers.shift_cut((ulong) Dicts.INTERNAL_SEG_NAMES_REV["VTX"], 24, 8);
+            ulong seg_address = (ulong) (vtx_start_id * 0x10);
+            cmd |= MathHelpers.shift_cut(seg_address, 0, 24);
+            return cmd;
+        }
+        // NOTE: all the IDs here and in TRI2 are stored doubled-ly
+        public static ulong G_TRI1(uint id_A1, uint id_A2, uint id_A3)
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_TRI1"], 56, 8);
+            // A is stored in the back
+            cmd |= MathHelpers.shift_cut((id_A1 * 2), 16, 8);
+            cmd |= MathHelpers.shift_cut((id_A2 * 2), 8,  8);
+            cmd |= MathHelpers.shift_cut((id_A3 * 2), 0,  8);
+            return cmd;
+        }
+        public static ulong G_TRI2(uint id_A1, uint id_A2, uint id_A3, uint id_B1, uint id_B2, uint id_B3)
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_TRI2"], 56, 8);
+            // A is stored in the FRONT
+            cmd |= MathHelpers.shift_cut((id_A1 * 2), 48, 8);
+            cmd |= MathHelpers.shift_cut((id_A2 * 2), 40, 8);
+            cmd |= MathHelpers.shift_cut((id_A3 * 2), 32, 8);
+            // B is stored in the back
+            cmd |= MathHelpers.shift_cut((id_B1 * 2), 16, 8);
+            cmd |= MathHelpers.shift_cut((id_B2 * 2), 8,  8);
+            cmd |= MathHelpers.shift_cut((id_B3 * 2), 0,  8);
+            return cmd;
+        }
+        public static ulong G_ENDDL()
+        {
+            ulong cmd = 0x00;
+            cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_ENDDL"], 56, 8);
+            return cmd;
+        }
 
         //    |     v48     v32|     v16     v0|
         //    |  v56     v40   |  v24     v8   |
         // 0x | 00 00   00 00  | 00 00   00 00 |
+
+        // this function uses the command byte and the raw encoding to infer all the associated parameters of the command
+        public void infer_parameters()
+        {
+            this.parameters = new uint[16];
+            switch (this.command_name)
+            {
+                case ("G_SETCOMBINE"):
+                    break;
+
+                case ("G_LOADBLOCK"):
+                    // UL corner S coord
+                    this.parameters[0] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_1111_1111__1111_0000_0000_0000);
+                    // UL corner T coord
+                    this.parameters[1] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__0000_1111_1111_1111);
+                    // tile descriptor
+                    this.parameters[2] = File_Handler.apply_bitmask(this.raw_content[1], 0b_1111_1111_0000_0000__0000_0000_0000_0000);
+                    // Texel count - 1
+                    this.parameters[3] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_1111_1111__1111_0000_0000_0000);
+                    this.parameters[3] = (this.parameters[3] + 1);
+                    // DXT (this is a really messy one:
+                    // "dxt is an unsigned fixed-point 1.11 [11 digit mantissa] number"
+                    // "dxt is the RECIPROCAL of the number of 64-bit chunks it takes to get a row of texture"
+                    // an example: Take a 32x32 px Tex with 16b colors;
+                    // -> a row of that Tex takes 32x16b = 512b
+                    // -> so it needs (512b/64b) = 8 chunks of 64b to create a row
+                    // -> the reciprocal is 1/8, which in binary is 0.001_0000_0000 = 0x100
+                    this.parameters[4] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__0000_1111_1111_1111);
+                    break;
+
+                case ("G_SETTILESIZE"):
+                    // UL corner S coord
+                    this.parameters[0] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_1111_1111__1111_0000_0000_0000);
+                    // UL corner T coord
+                    this.parameters[1] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__0000_1111_1111_1111);
+                    // tile descriptor
+                    this.parameters[2] = File_Handler.apply_bitmask(this.raw_content[1], 0b_1111_1111_0000_0000__0000_0000_0000_0000);
+                    // (Width - 1) * 4
+                    this.parameters[3] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_1111_1111__1111_0000_0000_0000);
+                    this.parameters[3] = (this.parameters[3] / 4) + 1;
+                    // (Height - 1) * 4
+                    this.parameters[4] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__0000_1111_1111_1111);
+                    this.parameters[4] = (this.parameters[4] / 4) + 1;
+                    break;
+
+                // 0E 02 = set TLUT (texel lookup table) color format
+                //       0000 0000 = no TLUT at all (tex formats RGBA16/32 + IA8)
+                //       0000 8000 = TLUT type = RGBA16 (tex formats CI4/8)
+                case ("G_SetOtherMode_H"):
+                    // shift
+                    this.parameters[0] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__1111_1111_0000_0000);
+                    // num affected bits
+                    this.parameters[1] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__0000_0000_1111_1111);
+                    // new mode-bits
+                    this.parameters[2] = this.raw_content[1];
+                    break;
+
+                case ("G_G_SETGEOMETRYMODE"):
+                    // RSP flags to enable
+                    this.parameters[0] = this.raw_content[1];
+                    break;
+                case ("G_G_CLEARGEOMETRYMODE"):
+                    // RSP flags to disable
+                    this.parameters[0] = this.raw_content[1];
+                    break;
+
+                case ("G_TEXTURE"):
+                    // maximum number of mipmaps
+                    this.parameters[0] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__0011_1000_0000_0000);
+                    // affected tile descripter index
+                    this.parameters[1] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__0000_0111_0000_0000);
+                    // enable tile descriptor
+                    this.parameters[2] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__0000_0000_1111_1111);
+                    // S Axis scale factor (horizontal)
+                    this.parameters[3] = File_Handler.apply_bitmask(this.raw_content[1], 0b_1111_1111_1111_1111__0000_0000_0000_0000);
+                    // T Axis scale factor (vertical)
+                    this.parameters[4] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__1111_1111_1111_1111);
+                    break;
+
+                case ("G_SETTIMG"):
+                    // color storage format
+                    this.parameters[0] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_1110_0000__0000_0000_0000_0000);
+                    // color storage bit-size
+                    this.parameters[1] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0001_1000__0000_0000_0000_0000);
+                    // data segment num
+                    this.parameters[2] = File_Handler.apply_bitmask(this.raw_content[1], 0b_1111_1111_0000_0000__0000_0000_0000_0000);
+                    // data offset (removing the leading byte, because thats caught in the param before)
+                    this.parameters[3] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_1111_1111__1111_1111_1111_1111);
+                    break;
+
+                case ("G_SETTILE"):
+                    // color storage format
+                    this.parameters[0] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_1110_0000__0000_0000_0000_0000);
+                    // color storage bit-size
+                    this.parameters[1] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0001_1000__0000_0000_0000_0000);
+                    // num of 64bit vals per row
+                    this.parameters[2] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0011__1111_1110_0000_0000);
+                    // TMEM offset of texture
+                    this.parameters[3] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__0000_0001_1111_1111);
+                    // target tile descriptor
+                    this.parameters[4] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0111_0000_0000__0000_0000_0000_0000);
+                    // corresponding palette
+                    this.parameters[5] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_1111_0000__0000_0000_0000_0000);
+                    // T clamp
+                    this.parameters[6] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_1000__0000_0000_0000_0000);
+                    // T mirror
+                    this.parameters[7] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0100__0000_0000_0000_0000);
+                    // T wrap (this one made me decide to split this command into 2 ints, rather than 4 shorts...)
+                    this.parameters[8] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0011__1100_0000_0000_0000);
+                    // T shift
+                    this.parameters[9] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__0011_1100_0000_0000);
+                    // S clamp
+                    this.parameters[10] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__0000_0010_0000_0000);
+                    // S mirror
+                    this.parameters[11] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__0000_0001_0000_0000);
+                    // S wrap
+                    this.parameters[12] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__0000_0000_1111_0000);
+                    // S shift
+                    this.parameters[13] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__0000_0000_0000_1111);
+                    break;
+
+                case ("G_LOADTLUT"):
+                    // affected tile descripter index
+                    this.parameters[0] = File_Handler.apply_bitmask(this.raw_content[1], 0b_1111_1111_0000_0000__0000_0000_0000_0000);
+                    // quadrupled color count (-1)
+                    this.parameters[1] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_1111_1111__1111_0000_0000_0000);
+                    this.parameters[1] = (this.parameters[1] / 4) + 1;
+                    break;
+
+                case ("G_DL"):
+                    // remember return address (which identifies that this is not the end)
+                    this.parameters[0] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_1111_1111__0000_0000_0000_0000);
+                    // data segment num
+                    this.parameters[1] = File_Handler.apply_bitmask(this.raw_content[1], 0b_1111_1111_0000_0000__0000_0000_0000_0000);
+                    // data offset (removing the leading byte, because thats caught in the param before)
+                    this.parameters[2] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_1111_1111__1111_1111_1111_1111);
+                    break;
+
+                case ("G_VTX"):
+                    // vertex buffer target location (doubled)
+                    this.parameters[0] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_1111_1111__0000_0000_0000_0000);
+                    this.parameters[0] = (this.parameters[0] / 2);
+                    // vertex count
+                    this.parameters[1] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__1111_1100_0000_0000);
+                    // vertex sotrage size
+                    this.parameters[2] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__0000_0011_1111_1111);
+                    // data segment num
+                    this.parameters[3] = File_Handler.apply_bitmask(this.raw_content[1], 0b_1111_1111_0000_0000__0000_0000_0000_0000);
+                    // data offset (removing the leading byte, because thats caught in the param before)
+                    this.parameters[4] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_1111_1111__1111_1111_1111_1111);
+                    break;
+
+                case ("G_TRI1"):
+                    // vertex buffer tri_B_v1 location (doubled)
+                    this.parameters[0] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_1111_1111__0000_0000_0000_0000);
+                    this.parameters[0] = (this.parameters[0] / 2);
+                    // vertex buffer tri_B_v2 location (doubled)
+                    this.parameters[1] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__1111_1111_0000_0000);
+                    this.parameters[1] = (this.parameters[1] / 2);
+                    // vertex buffer tri_B_v3 location (doubled)
+                    this.parameters[2] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__0000_0000_1111_1111);
+                    this.parameters[2] = (this.parameters[2] / 2);
+                    break;
+
+                case ("G_TRI2"):
+                    // vertex buffer tri_A_v1 location (doubled)
+                    this.parameters[0] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_1111_1111__0000_0000_0000_0000);
+                    this.parameters[0] = (this.parameters[0] / 2);
+                    // vertex buffer tri_A_v2 location (doubled)
+                    this.parameters[1] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__1111_1111_0000_0000);
+                    this.parameters[1] = (this.parameters[1] / 2);
+                    // vertex buffer tri_A_v3 location (doubled)
+                    this.parameters[2] = File_Handler.apply_bitmask(this.raw_content[0], 0b_0000_0000_0000_0000__0000_0000_1111_1111);
+                    this.parameters[2] = (this.parameters[2] / 2);
+
+                    // vertex buffer tri_B_v1 location (doubled)
+                    this.parameters[3] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_1111_1111__0000_0000_0000_0000);
+                    this.parameters[3] = (this.parameters[3] / 2);
+                    // vertex buffer tri_B_v2 location (doubled)
+                    this.parameters[4] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__1111_1111_0000_0000);
+                    this.parameters[4] = (this.parameters[4] / 2);
+                    // vertex buffer tri_B_v3 location (doubled)
+                    this.parameters[5] = File_Handler.apply_bitmask(this.raw_content[1], 0b_0000_0000_0000_0000__0000_0000_1111_1111);
+                    this.parameters[5] = (this.parameters[5] / 2);
+                    break;
+
+                case ("G_ENDDL"):
+                case ("G_RDPLOADSYNC"):
+                case ("G_RDPPIPESYNC"):
+                case ("G_RDPTILESYNC"):
+                case ("G_RDPFULLSYNC"):
+                    // no additional params
+                    break;
+            }
+        }
 
 
 
@@ -299,13 +561,6 @@ namespace Binjo
             }
             return flagnames;
         }
-
-        public byte command_byte;
-        public String command_name;
-
-        public uint[] parameters = new uint[16];
-
-        public uint[] raw_content = new uint[2];
     }
 
     public class Tile_Descriptor
@@ -387,32 +642,8 @@ namespace Binjo
             }
             return System.Convert.ToBase64String(raw_data.ToArray());
         }
-
-
         public void populate(byte[] file_data, int file_offset, Texture_Segment tex_seg, Vertex_Segment vtx_seg, List<FullTriangle> full_tri_list)
         {
-            ulong cmdx = DisplayList_Command.G_CLEARGEOMETRYMODE((uint) (
-                Dicts.RSP_GEOMODE_FLAGS["G_SHADE"] |
-                Dicts.RSP_GEOMODE_FLAGS["G_SHADING_SMOOTH"] |
-                Dicts.RSP_GEOMODE_FLAGS["G_CULL_BOTH"] |
-                Dicts.RSP_GEOMODE_FLAGS["G_FOG"] |
-                Dicts.RSP_GEOMODE_FLAGS["G_LIGHTING"] |
-                Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN"] |
-                Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN_LINEAR"] |
-                Dicts.RSP_GEOMODE_FLAGS["G_LOD"]
-            ));
-            Console.WriteLine(File_Handler.uint_to_string((uint) (cmdx >> 32), 0xFFFFFFFF));
-            Console.WriteLine(File_Handler.uint_to_string((uint) (cmdx >> 00), 0xFFFFFFFF));
-            
-            cmdx = DisplayList_Command.G_SETGEOMETRYMODE((uint) (
-                 Dicts.RSP_GEOMODE_FLAGS["G_SHADE"] |
-                 Dicts.RSP_GEOMODE_FLAGS["G_SHADING_SMOOTH"] |
-                 Dicts.RSP_GEOMODE_FLAGS["G_CULL_BACK"] |
-                 Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN_LINEAR"]
-             ));
-            Console.WriteLine(File_Handler.uint_to_string((uint) (cmdx >> 32), 0xFFFFFFFF));
-            Console.WriteLine(File_Handler.uint_to_string((uint) (cmdx >> 00), 0xFFFFFFFF));
-
             if (file_offset == 0)
             {
                 System.Console.WriteLine("No DisplayList Segment");
@@ -457,104 +688,31 @@ namespace Binjo
                 // === 0x00 ===============================
                 cmd.command_byte = File_Handler.read_char(file_data, file_offset_cmd + 0x00, false);
                 cmd.command_name = Dicts.F3DEX_CMD_NAMES[cmd.command_byte];
+                cmd.infer_parameters();
 
                 uint tmp;
+                // and additionally, Im running over the command switch again, to simulate the descriptors
+                // to build up the parsed full-tri list
                 switch (cmd.command_name)
                 {
-                    case ("G_SETCOMBINE"): // why is really really messy... resort to only showing/using the raw data
-                        // FC 12 7F FF FF FF F8 38 : Standard usage for solid RGBA textures
-                        // FC 12 18 24 FF 33 FF FF : Standard usage for alpha RGBA textures
-                        break;
-
+                    case ("G_SETCOMBINE"):
                     case ("G_LOADBLOCK"):
-                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x00, false);
-                        // UL corner S coord
-                        cmd.parameters[0] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1111_1111__1111_0000_0000_0000);
-                        // UL corner T coord
-                        cmd.parameters[1] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_1111_1111_1111);
-                        // tile descriptor
-                        cmd.parameters[2] = File_Handler.read_char(file_data, file_offset_cmd + 0x04, false);
-
-                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
-                        // Texel count - 1
-                        cmd.parameters[3] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1111_1111__1111_0000_0000_0000);
-                        cmd.parameters[3] = (cmd.parameters[3] + 1);
-                        // DXT (this is a really messy one:
-                        // "dxt is an unsigned fixed-point 1.11 [11 digit mantissa] number"
-                        // "dxt is the RECIPROCAL of the number of 64-bit chunks it takes to get a row of texture"
-                        // an example: Take a 32x32 px Tex with 16b colors;
-                        // -> a row of that Tex takes 32x16b = 512b
-                        // -> so it needs (512b/64b) = 8 chunks of 64b to create a row
-                        // -> the reciprocal is 1/8, which in binary is 0.001_0000_0000 = 0x100
-                        cmd.parameters[4] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_1111_1111_1111);
-                        break;
-
                     case ("G_SETTILESIZE"):
-                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x00, false);
-                        // UL corner S coord
-                        cmd.parameters[0] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1111_1111__1111_0000_0000_0000);
-                        // UL corner T coord
-                        cmd.parameters[1] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_1111_1111_1111);
-                        // tile descriptor
-                        cmd.parameters[2] = File_Handler.read_char(file_data, file_offset_cmd + 0x04, false);
-
-                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
-                        // (Width - 1) * 4
-                        cmd.parameters[3] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1111_1111__1111_0000_0000_0000);
-                        cmd.parameters[3] = (cmd.parameters[3] / 4) + 1;
-                        // (Height - 1) * 4
-                        cmd.parameters[4] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_1111_1111_1111);
-                        cmd.parameters[4] = (cmd.parameters[4] / 4) + 1;
-                        break;
-
-                    // 0E 02 = set TLUT (texel lookup table) color format
-                    //       0000 0000 = no TLUT at all (tex formats RGBA16/32 + IA8)
-                    //       0000 8000 = TLUT type = RGBA16 (tex formats CI4/8)
                     case ("G_SetOtherMode_H"):
-                        // shift
-                        cmd.parameters[0] = File_Handler.read_char(file_data, file_offset_cmd + 0x02, false);
-                        // num affected bits
-                        cmd.parameters[1] = File_Handler.read_char(file_data, file_offset_cmd + 0x03, false);
-                        // new mode-bits
-                        cmd.parameters[2] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
-                        break;
-
                     case ("G_G_SETGEOMETRYMODE"):
-                        // RSP flags to enable
-                        cmd.parameters[0] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
-                        break;
                     case ("G_G_CLEARGEOMETRYMODE"):
-                        // RSP flags to disable
-                        cmd.parameters[0] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
-                        break;
-
                     case ("G_TEXTURE"):
-                        tmp = File_Handler.read_char(file_data, file_offset_cmd + 0x02, false);
-                        // maximum number of mipmaps
-                        cmd.parameters[0] = ((tmp & 0b00111000) >> 3);
-                        // affected tile descripter index
-                        cmd.parameters[1] = ((tmp & 0b00000111) >> 0);
-                        // enable tile descriptor
-                        cmd.parameters[2] = File_Handler.read_char(file_data, file_offset_cmd + 0x03, false);
-                        // S Axis scale factor (horizontal)
-                        cmd.parameters[3] = File_Handler.read_short(file_data, file_offset_cmd + 0x04, false);
-                        // T Axis scale factor (vertical)
-                        cmd.parameters[4] = File_Handler.read_short(file_data, file_offset_cmd + 0x06, false);
+                    case ("G_SETTILE"):
+                    case ("G_LOADTLUT"):
+                    case ("G_DL"):
+                    case ("G_ENDDL"):
+                    case ("G_RDPLOADSYNC"):
+                    case ("G_RDPPIPESYNC"):
+                    case ("G_RDPTILESYNC"):
+                    case ("G_RDPFULLSYNC"):
                         break;
 
                     case ("G_SETTIMG"):
-                        tmp = File_Handler.read_char(file_data, file_offset_cmd + 0x01, false);
-                        // color storage format
-                        cmd.parameters[0] = ((tmp & 0b11100000) >> 5);
-                        // color storage bit-size
-                        cmd.parameters[1] = ((tmp & 0b00011000) >> 3);
-                        // data segment num
-                        cmd.parameters[2] = File_Handler.read_char(file_data, file_offset_cmd + 0x04, false);
-                        // data offset (removing the leading byte, because thats caught in the param before)
-                        cmd.parameters[3] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false) & 0x00FFFFF;
-                        //================================
-                        ///// SIMULATE DESCRIPTORS ///////
-                        //================================
                         // find the tex that corresponds to this address (and only update the descriptor if it was actual data)
                         if (tex_seg.get_tex_ID_from_datasection_offset(cmd.parameters[3]) != 0xFFFF)
                         {
@@ -564,73 +722,7 @@ namespace Binjo
                         }
                         break;
 
-                    case ("G_SETTILE"):
-                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x00, false);
-                        // color storage format
-                        cmd.parameters[0] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1110_0000__0000_0000_0000_0000);
-                        // color storage bit-size
-                        cmd.parameters[1] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0001_1000__0000_0000_0000_0000);
-                        // num of 64bit vals per row
-                        cmd.parameters[2] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0011__1111_1110_0000_0000);
-                        // TMEM offset of texture
-                        cmd.parameters[3] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_0001_1111_1111);
-
-                        tmp = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false);
-                        // target tile descriptor
-                        cmd.parameters[4] = File_Handler.apply_bitmask(tmp, 0b_0000_0111_0000_0000__0000_0000_0000_0000);
-                        // corresponding palette
-                        cmd.parameters[5] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_1111_0000__0000_0000_0000_0000);
-                        // T clamp
-                        cmd.parameters[6] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_1000__0000_0000_0000_0000);
-                        // T mirror
-                        cmd.parameters[7] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0100__0000_0000_0000_0000);
-                        // T wrap (this one made me decide to split this command into 2 ints, rather than 4 shorts...)
-                        cmd.parameters[8] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0011__1100_0000_0000_0000);
-                        // T shift
-                        cmd.parameters[9] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0011_1100_0000_0000);
-                        // S clamp
-                        cmd.parameters[10] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_0010_0000_0000);
-                        // S mirror
-                        cmd.parameters[11] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_0001_0000_0000);
-                        // S wrap
-                        cmd.parameters[12] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_0000_1111_0000);
-                        // S shift
-                        cmd.parameters[13] = File_Handler.apply_bitmask(tmp, 0b_0000_0000_0000_0000__0000_0000_0000_1111);
-                        break;
-
-                    case ("G_LOADTLUT"):
-                        // affected tile descripter index
-                        cmd.parameters[0] = File_Handler.read_char(file_data, file_offset_cmd + 0x04, false);
-                        // quadrupled color count (-1)
-                        cmd.parameters[1] = (File_Handler.read_int(file_data, file_offset_cmd + 0x04, false) & 0x00FFF000) >> 0xC;
-                        cmd.parameters[1] = (cmd.parameters[1] / 4) + 1;
-                        break;
-
-                    case ("G_DL"):
-                        // remember return address (which identifies that this is not the end)
-                        cmd.parameters[0] = File_Handler.read_char(file_data, file_offset_cmd + 0x01, false);
-                        // data segment num
-                        cmd.parameters[1] = File_Handler.read_char(file_data, file_offset_cmd + 0x04, false);
-                        // data offset (removing the leading byte, because thats caught in the param before)
-                        cmd.parameters[2] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false) & 0x00FFFFF;
-                        break;
-
                     case ("G_VTX"):
-                        // vertex buffer target location (doubled)
-                        cmd.parameters[0] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x01, false) / 2);
-                        // vertex count to load + size of vertex data
-                        tmp = File_Handler.read_short(file_data, file_offset_cmd + 0x02, false);
-                        // vertex count
-                        cmd.parameters[1] = ((tmp & 0xFC00) >> 10);
-                        // vertex sotrage size
-                        cmd.parameters[2] = ((tmp & 0x03FF) >> 0);
-                        // data segment num
-                        cmd.parameters[3] = File_Handler.read_char(file_data, file_offset_cmd + 0x04, false);
-                        // data offset (removing the leading byte, because thats caught in the param before)
-                        cmd.parameters[4] = File_Handler.read_int(file_data, file_offset_cmd + 0x04, false) & 0x00FFFFF;
-                        //================================
-                        ///// SIMULATE DESCRIPTORS ///////
-                        //================================
                         uint vtx_cnt = cmd.parameters[1];
                         // since this is the actual offset, I'll calculate the vtx ID manually
                         uint offset = (cmd.parameters[4] / 0x10);
@@ -642,16 +734,6 @@ namespace Binjo
                         break;
 
                     case ("G_TRI1"):
-                        // vertex buffer tri_B_v1 location (doubled)
-                        cmd.parameters[0] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x05, false) / 2);
-                        // vertex buffer tri_B_v2 location (doubled)
-                        cmd.parameters[1] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x06, false) / 2);
-                        // vertex buffer tri_B_v3 location (doubled)
-                        cmd.parameters[2] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x07, false) / 2);
-
-                        //================================
-                        ///// SIMULATE DESCRIPTORS ///////
-                        //================================
                         // first, check if the tri also exists as a collision tri
                         full_tri = new FullTriangle();
                         full_tri.index_1 = (ushort) simulated_vtx_buffer[cmd.parameters[0]];
@@ -690,23 +772,6 @@ namespace Binjo
                         break;
 
                     case ("G_TRI2"):
-                        // vertex buffer tri_A_v1 location (doubled)
-                        cmd.parameters[0] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x01, false) / 2);
-                        // vertex buffer tri_A_v2 location (doubled)
-                        cmd.parameters[1] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x02, false) / 2);
-                        // vertex buffer tri_A_v3 location (doubled)
-                        cmd.parameters[2] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x03, false) / 2);
-                        //
-                        // vertex buffer tri_B_v1 location (doubled)
-                        cmd.parameters[3] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x05, false) / 2);
-                        // vertex buffer tri_B_v2 location (doubled)
-                        cmd.parameters[4] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x06, false) / 2);
-                        // vertex buffer tri_B_v3 location (doubled)
-                        cmd.parameters[5] = (uint)(File_Handler.read_char(file_data, file_offset_cmd + 0x07, false) / 2);
-
-                        //================================
-                        ///// SIMULATE DESCRIPTORS ///////
-                        //================================
                         // first, check if the tri also exists as a collision tri
                         full_tri = new FullTriangle();
                         full_tri.index_1 = (ushort) simulated_vtx_buffer[cmd.parameters[0]];
@@ -778,16 +843,7 @@ namespace Binjo
                             full_tri_list.Add(full_tri);
                         }
                         break;
-
-                    case ("G_ENDDL"):
-                    case ("G_RDPLOADSYNC"):
-                    case ("G_RDPPIPESYNC"):
-                    case ("G_RDPTILESYNC"):
-                    case ("G_RDPFULLSYNC"):
-                        // no additional params
-                        break;
                 }
-
                 this.command_list[i] = cmd;
             }
         }
@@ -996,6 +1052,11 @@ namespace Binjo
 
             return content;
         }
-
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0x1];
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes(0x00, 4), bytes, 0x00);
+            return bytes;
+        }
     }
 }

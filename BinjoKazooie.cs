@@ -700,8 +700,10 @@ namespace Binjo
 
             this.handler.build_tex_seg();
             this.handler.build_vtx_seg();
+            this.handler.build_DL_seg();
             File_Handler.print_bytes(this.handler.tex_seg.get_bytes());
             File_Handler.print_bytes(this.handler.vtx_seg.get_bytes());
+            File_Handler.print_bytes(this.handler.DL_seg.get_bytes());
         }
 
         private void label10_Click(object sender, EventArgs e)

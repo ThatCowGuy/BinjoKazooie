@@ -134,8 +134,9 @@ namespace Binjo
 
     public class GLTF_Handler
     {
-        public void parse_tris_from_primitive(List<FullTriangle> dest, GLTF_Primitive PRIM)
+        public List<FullTriangle> parse_tris_from_primitive(GLTF_Primitive PRIM)
         {
+            List<FullTriangle> tri_list = new List<FullTriangle>();
             GLTF_Accessor IDX = this.accessors[(int) PRIM.indices];
             GLTF_Accessor POS = this.accessors[(int) PRIM.attributes["POSITION"]];
             PRIM.collidable = true;
@@ -147,7 +148,7 @@ namespace Binjo
                 PRIM.visible = true;
             }
 
-            int tri_count = dest.Count;
+            int tri_count = tri_list.Count;
             // run through all the Indices
             for (int i = 0; i < IDX.count; i += 3)
             {
@@ -220,8 +221,9 @@ namespace Binjo
                 }
 
                 // and finally, add the new tri
-                dest.Add(tri);
+                tri_list.Add(tri);
             }
+            return tri_list;
         }
         public static Dictionary<String, uint> TARGET_TYPES = new Dictionary<String, uint>
         {

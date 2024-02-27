@@ -50,31 +50,37 @@ namespace Binjo
         public AnimTex_Segment animtex_seg = new AnimTex_Segment();
         public GeoLayout_Segment geo_seg = new GeoLayout_Segment();
 
-        public List<FullTriangle> full_tri_list = new List<FullTriangle>();
+        // this is a list of fulltri-lists, where each sublist is representing one kind of tri
+        // (split by material, so textures are sepperate, flags are sepperate etc)
+        public List<List<FullTriangle>> tri_list_tree = new List<List<FullTriangle>>();
+        // this is a list of fulltris, that will be ordered for the GLTF export; not neccessary
+        // (and kinda annoying) to split that into sublists...
+        public List<FullTriangle> consecutive_tri_list = new List<FullTriangle>();
         public GLTF_Handler GLTF = new GLTF_Handler();
 
         public void parse_BIN()
         {
             this.file_loaded = false;
-            this.full_tri_list = new List<FullTriangle>();
+            this.tri_list_tree = new List<List<FullTriangle>>();
 
             this.content = System.IO.File.ReadAllBytes(this.loaded_bin_path);
             bin_header.populate(this.content);
-            tex_seg.populate(this.content, (int)bin_header.tex_offset);
+            tex_seg.populate(this.content, (int) bin_header.tex_offset);
             vtx_seg.binheader_vtx_cnt = bin_header.vtx_cnt;
-            vtx_seg.populate(this.content, (int)bin_header.vtx_offset);
-            bone_seg.populate(this.content, (int)bin_header.bone_offset);
-            coll_seg.populate(this.content, (int)bin_header.coll_offset);
+            vtx_seg.populate(this.content, (int) bin_header.vtx_offset);
+            bone_seg.populate(this.content, (int) bin_header.bone_offset);
+            coll_seg.populate(this.content, (int) bin_header.coll_offset);
 
             // start of the full tri list by adding every collision tri
             // and inferring the correct associated vertices
-            this.full_tri_list = coll_seg.export_tris_as_full();
-            vtx_seg.infer_vtx_data_for_full_tris(this.full_tri_list);
+            this.consecutive_tri_list = coll_seg.export_tris_as_full();
+            vtx_seg.infer_vtx_data_for_full_tris(this.consecutive_tri_list);
 
-            DL_seg.populate(this.content, (int)bin_header.DL_offset, this.tex_seg, this.vtx_seg, this.full_tri_list); // this guy needs handles for several inferrations
-            FX_seg.populate(this.content, (int)bin_header.FX_offset);
-            FXEND_seg.populate(this.content, (int)bin_header.FX_END);
-            animtex_seg.populate(this.content, (int)bin_header.anim_tex_offset);
+            // this guy needs handles for several inferrations
+            DL_seg.populate(this.content, (int) bin_header.DL_offset, this.tex_seg, this.vtx_seg, this.consecutive_tri_list);
+            FX_seg.populate(this.content, (int) bin_header.FX_offset);
+            FXEND_seg.populate(this.content, (int) bin_header.FX_END);
+            animtex_seg.populate(this.content, (int) bin_header.anim_tex_offset);
             geo_seg.populate(this.content, (int) bin_header.geo_offset);
 
             this.file_loaded = true;
@@ -105,7 +111,7 @@ namespace Binjo
                 tex_seg.meta[i].datasection_offset_data = 0; // this one is a bit trickier, see later
 
                 if (i == 0)
-                {   
+                {
                     // the first data element offset is equal to the data-section offset
                     tex_seg.data[i].file_offset = tex_seg.file_offset_data;
                 }
@@ -126,6 +132,124 @@ namespace Binjo
             Console.WriteLine("Finished Tex Segment.");
         }
 
+        public void build_DL_seg()
+        {
+            this.DL_seg = new DisplayList_Segment();
+            Console.WriteLine("Building DL Segment...");
+
+            List<DisplayList_Command> command_list = new List<DisplayList_Command>();
+            foreach (List<FullTriangle> tri_list in this.tri_list_tree)
+            {
+                // each tri list is guaranteed to have at least 1 tri in it; Using that to determine what
+                // kind of DLs I need to setup pre VTX-TRI section:
+                FullTriangle rep_tri = tri_list.ElementAt(0);
+                // if its untextured, we dont need any DLs...
+                if (rep_tri.assigned_tex_ID == -1) continue;
+
+                Tex_Meta meta = rep_tri.assigned_tex_meta;
+
+                // general setup stuff
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_CLEARGEOMETRYMODE((uint) (
+                        Dicts.RSP_GEOMODE_FLAGS["G_SHADE"] |
+                        Dicts.RSP_GEOMODE_FLAGS["G_SHADING_SMOOTH"] |
+                        Dicts.RSP_GEOMODE_FLAGS["G_CULL_BOTH"] |
+                        Dicts.RSP_GEOMODE_FLAGS["G_FOG"] |
+                        Dicts.RSP_GEOMODE_FLAGS["G_LIGHTING"] |
+                        Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN"] |
+                        Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN_LINEAR"] |
+                        Dicts.RSP_GEOMODE_FLAGS["G_LOD"]
+                    ))
+                ));
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_SETGEOMETRYMODE((uint) (
+                        Dicts.RSP_GEOMODE_FLAGS["G_SHADE"] |
+                        Dicts.RSP_GEOMODE_FLAGS["G_SHADING_SMOOTH"] |
+                        Dicts.RSP_GEOMODE_FLAGS["G_CULL_BACK"] |
+                        Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN_LINEAR"]
+                    ))
+                ));
+
+                // palette setup stuff
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_TEXTURE(0, 0, true, 0x8000, 0x8000)
+                ));
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_SETTIMG("RGBA", 16, meta.section_offset_data)
+                ));
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_SETTILE("RGBA", 4, meta.width, 0x0100, 1, 0, false, false, 0, 0, false, false, 0, 0)
+                ));
+
+                // tex-data setup stuff
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_LOADTLUT(1, 16)
+                ));
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_SetOtherMode_H("TEXTLUT", 2, 0x00008000)
+                ));
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_SETTIMG("CI", 16, (meta.section_offset_data + 0x20)) // NOTE: +0x20 for CI4, +0x200 for CI8...
+                ));
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_SETTILE("CI", 16, 0, 0x0000, 7, 0, false, false, 4, 0, false, false, 0, 0)
+                ));
+
+                // more palette setup stuff
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_LOADBLOCK(0, 0, 7, meta.width, meta.height, "CI4")
+                ));
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_SETTILE("CI", 4, meta.width, 0x0000, 0, 0, false, false, 6, 0, false, false, 6, 0)
+                ));
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_SETTILESIZE(0, 0, 0, meta.width, meta.height)
+                ));
+
+                // more general setup stuff
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_RDPPIPESYNC()
+                ));
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_SETCOMBINE()
+                ));
+
+                FullTriangle[] tri_arr = tri_list.ToArray();
+                // NOTE: the descriptors VTX buffer can hold 32 vertices, but I will only give it 30 each time
+                //       because the (10 * 3) quantity is easier to keep track of...
+                //       Therefor, I only increment "chunk" by 10 tris here
+
+                // NOTE: the tri lists should be sorted by ID somehow, and grouped such that they share 30 IDs... wtf
+                for (int chunk = 0; chunk < tri_arr.Length; chunk += 10)
+                {
+                    command_list.Add(new DisplayList_Command(
+                        DisplayList_Command.G_VTX(0, 30, 0)
+                    ));
+                    for (int i = (chunk + 0); i < tri_arr.Length; i++)
+                    {
+
+                    }
+                }
+
+                foreach (FullTriangle tri in tri_list)
+                {
+                    vtx_seg.max_x = (short) MathHelpers.get_max(new int[] { vtx_seg.max_x, tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x });
+                    vtx_seg.max_y = (short) MathHelpers.get_max(new int[] { vtx_seg.max_y, tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y });
+                    vtx_seg.max_z = (short) MathHelpers.get_max(new int[] { vtx_seg.max_z, tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z });
+
+                    vtx_seg.min_x = (short) MathHelpers.get_min(new int[] { vtx_seg.min_x, tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x });
+                    vtx_seg.min_y = (short) MathHelpers.get_min(new int[] { vtx_seg.min_y, tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y });
+                    vtx_seg.min_z = (short) MathHelpers.get_min(new int[] { vtx_seg.min_z, tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z });
+
+                    // sneaky way of finding the count: Just find the highest referenced index ! 
+                    vtx_seg.vtx_count = (ushort) MathHelpers.get_max(new int[] { vtx_seg.vtx_count, tri.index_1, tri.index_2, tri.index_3 });
+                }
+
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_ENDDL()
+                ));
+            }
+        }
         public void build_vtx_seg()
         {
             this.vtx_seg = new Vertex_Segment();
@@ -139,18 +263,21 @@ namespace Binjo
             vtx_seg.min_z = short.MaxValue;
             vtx_seg.vtx_count = 0;
             // first loop is only used to determine the extrema aswell as figuring out how many vertices we have
-            foreach (FullTriangle tri in this.full_tri_list)
+            foreach (List<FullTriangle> tri_list in this.tri_list_tree)
             {
-                vtx_seg.max_x = (short) MathHelpers.get_max(new int[] { vtx_seg.max_x, tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x });
-                vtx_seg.max_y = (short) MathHelpers.get_max(new int[] { vtx_seg.max_y, tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y });
-                vtx_seg.max_z = (short) MathHelpers.get_max(new int[] { vtx_seg.max_z, tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z });
+                foreach (FullTriangle tri in tri_list)
+                {
+                    vtx_seg.max_x = (short) MathHelpers.get_max(new int[] { vtx_seg.max_x, tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x });
+                    vtx_seg.max_y = (short) MathHelpers.get_max(new int[] { vtx_seg.max_y, tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y });
+                    vtx_seg.max_z = (short) MathHelpers.get_max(new int[] { vtx_seg.max_z, tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z });
 
-                vtx_seg.min_x = (short) MathHelpers.get_min(new int[] { vtx_seg.min_x, tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x });
-                vtx_seg.min_y = (short) MathHelpers.get_min(new int[] { vtx_seg.min_y, tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y });
-                vtx_seg.min_z = (short) MathHelpers.get_min(new int[] { vtx_seg.min_z, tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z });
+                    vtx_seg.min_x = (short) MathHelpers.get_min(new int[] { vtx_seg.min_x, tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x });
+                    vtx_seg.min_y = (short) MathHelpers.get_min(new int[] { vtx_seg.min_y, tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y });
+                    vtx_seg.min_z = (short) MathHelpers.get_min(new int[] { vtx_seg.min_z, tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z });
 
-                // sneaky way of finding the count: Just find the highest referenced index ! 
-                vtx_seg.vtx_count = (ushort) MathHelpers.get_max(new int[] { vtx_seg.vtx_count, tri.index_1, tri.index_2, tri.index_3 });
+                    // sneaky way of finding the count: Just find the highest referenced index ! 
+                    vtx_seg.vtx_count = (ushort) MathHelpers.get_max(new int[] { vtx_seg.vtx_count, tri.index_1, tri.index_2, tri.index_3 });
+                }
             }
             // (and add one because 0-indexing)
             vtx_seg.vtx_count += 1;
@@ -166,52 +293,55 @@ namespace Binjo
             vtx_seg.global_norm = 0;
             short local_norm;
             short global_norm;
-            foreach (FullTriangle tri in this.full_tri_list)
+            foreach (List<FullTriangle> tri_list in this.tri_list_tree)
             {
-                // vtx_1
-                if (vtx_seg.vtx_list[tri.index_1] == null)
+                foreach (FullTriangle tri in tri_list)
                 {
-                    // check if the norms exceed the current extremes
-                    local_norm = (short) MathHelpers.L2_distance(
-                        tri.vtx_1.x, tri.vtx_1.y, tri.vtx_1.z, vtx_seg.center_x, vtx_seg.center_y, vtx_seg.center_z
-                    );
-                    global_norm = (short) MathHelpers.L2_distance(
-                        tri.vtx_1.x, tri.vtx_1.y, tri.vtx_1.z, 0, 0, 0
-                    );
-                    vtx_seg.local_norm = (local_norm > vtx_seg.local_norm) ? local_norm : vtx_seg.local_norm;
-                    vtx_seg.global_norm = (global_norm > vtx_seg.global_norm) ? global_norm : vtx_seg.global_norm;
-                    // and store it
-                    vtx_seg.vtx_list[tri.index_1] = (Vtx_Elem) tri.vtx_1.Clone();
-                }
-                // vtx_2
-                if (vtx_seg.vtx_list[tri.index_2] == null)
-                {
-                    // check if the norms exceed the current extremes
-                    local_norm = (short) MathHelpers.L2_distance(
-                        tri.vtx_2.x, tri.vtx_2.y, tri.vtx_2.z, vtx_seg.center_x, vtx_seg.center_y, vtx_seg.center_z
-                    );
-                    global_norm = (short) MathHelpers.L2_distance(
-                        tri.vtx_2.x, tri.vtx_2.y, tri.vtx_2.z, 0, 0, 0
-                    );
-                    vtx_seg.local_norm = (local_norm > vtx_seg.local_norm) ? local_norm : vtx_seg.local_norm;
-                    vtx_seg.global_norm = (global_norm > vtx_seg.global_norm) ? global_norm : vtx_seg.global_norm;
-                    // and store it
-                    vtx_seg.vtx_list[tri.index_2] = (Vtx_Elem) tri.vtx_2.Clone();
-                }
-                // vtx_3
-                if (vtx_seg.vtx_list[tri.index_3] == null)
-                {
-                    // check if the norms exceed the current extremes
-                    local_norm = (short) MathHelpers.L2_distance(
-                        tri.vtx_3.x, tri.vtx_3.y, tri.vtx_3.z, vtx_seg.center_x, vtx_seg.center_y, vtx_seg.center_z
-                    );
-                    global_norm = (short) MathHelpers.L2_distance(
-                        tri.vtx_3.x, tri.vtx_3.y, tri.vtx_3.z, 0, 0, 0
-                    );
-                    vtx_seg.local_norm = (local_norm > vtx_seg.local_norm) ? local_norm : vtx_seg.local_norm;
-                    vtx_seg.global_norm = (global_norm > vtx_seg.global_norm) ? global_norm : vtx_seg.global_norm;
-                    // and store it
-                    vtx_seg.vtx_list[tri.index_3] = (Vtx_Elem) tri.vtx_3.Clone();
+                    // vtx_1
+                    if (vtx_seg.vtx_list[tri.index_1] == null)
+                    {
+                        // check if the norms exceed the current extremes
+                        local_norm = (short) MathHelpers.L2_distance(
+                            tri.vtx_1.x, tri.vtx_1.y, tri.vtx_1.z, vtx_seg.center_x, vtx_seg.center_y, vtx_seg.center_z
+                        );
+                        global_norm = (short) MathHelpers.L2_distance(
+                            tri.vtx_1.x, tri.vtx_1.y, tri.vtx_1.z, 0, 0, 0
+                        );
+                        vtx_seg.local_norm = (local_norm > vtx_seg.local_norm) ? local_norm : vtx_seg.local_norm;
+                        vtx_seg.global_norm = (global_norm > vtx_seg.global_norm) ? global_norm : vtx_seg.global_norm;
+                        // and store it
+                        vtx_seg.vtx_list[tri.index_1] = (Vtx_Elem) tri.vtx_1.Clone();
+                    }
+                    // vtx_2
+                    if (vtx_seg.vtx_list[tri.index_2] == null)
+                    {
+                        // check if the norms exceed the current extremes
+                        local_norm = (short) MathHelpers.L2_distance(
+                            tri.vtx_2.x, tri.vtx_2.y, tri.vtx_2.z, vtx_seg.center_x, vtx_seg.center_y, vtx_seg.center_z
+                        );
+                        global_norm = (short) MathHelpers.L2_distance(
+                            tri.vtx_2.x, tri.vtx_2.y, tri.vtx_2.z, 0, 0, 0
+                        );
+                        vtx_seg.local_norm = (local_norm > vtx_seg.local_norm) ? local_norm : vtx_seg.local_norm;
+                        vtx_seg.global_norm = (global_norm > vtx_seg.global_norm) ? global_norm : vtx_seg.global_norm;
+                        // and store it
+                        vtx_seg.vtx_list[tri.index_2] = (Vtx_Elem) tri.vtx_2.Clone();
+                    }
+                    // vtx_3
+                    if (vtx_seg.vtx_list[tri.index_3] == null)
+                    {
+                        // check if the norms exceed the current extremes
+                        local_norm = (short) MathHelpers.L2_distance(
+                            tri.vtx_3.x, tri.vtx_3.y, tri.vtx_3.z, vtx_seg.center_x, vtx_seg.center_y, vtx_seg.center_z
+                        );
+                        global_norm = (short) MathHelpers.L2_distance(
+                            tri.vtx_3.x, tri.vtx_3.y, tri.vtx_3.z, 0, 0, 0
+                        );
+                        vtx_seg.local_norm = (local_norm > vtx_seg.local_norm) ? local_norm : vtx_seg.local_norm;
+                        vtx_seg.global_norm = (global_norm > vtx_seg.global_norm) ? global_norm : vtx_seg.global_norm;
+                        // and store it
+                        vtx_seg.vtx_list[tri.index_3] = (Vtx_Elem) tri.vtx_3.Clone();
+                    }
                 }
             }
             this.vtx_seg.valid = true;
@@ -402,29 +532,19 @@ namespace Binjo
             }
 
             // now I can go through the meshes and extract all the tris that are defined in there
-            this.full_tri_list = new List<FullTriangle>();
+            this.tri_list_tree = new List<List<FullTriangle>>();
             foreach (GLTF_Mesh mesh in this.GLTF.meshes)
             {
                 foreach (GLTF_Primitive primitive in mesh.primitives)
                 {
-                    this.GLTF.parse_tris_from_primitive(this.full_tri_list, primitive);
+                    this.tri_list_tree.Add(this.GLTF.parse_tris_from_primitive(primitive));
                 }
-            }
-
-            foreach (FullTriangle tri in this.full_tri_list)
-            {
-                /*
-                File_Handler.print_bytes(tri.get_bytes());
-                File_Handler.print_bytes(tri.vtx_1.get_bytes());
-                File_Handler.print_bytes(tri.vtx_2.get_bytes());
-                File_Handler.print_bytes(tri.vtx_3.get_bytes());
-                */
             }
         }
         public void write_gltf_model(String filepath)
         {
             // first of all, we have to sort the tri list
-            this.full_tri_list.Sort();
+            this.consecutive_tri_list.Sort();
 
             GLTF_Handler gltf = new GLTF_Handler();
 
@@ -446,9 +566,9 @@ namespace Binjo
             raw_data_vtx_xyz.Clear();
             raw_data_vtx_uv.Clear();
             raw_data_tri.Clear();
-            for (int i = 0; i < this.full_tri_list.Count; i++)
+            for (int i = 0; i < this.consecutive_tri_list.Count; i++)
             {
-                FullTriangle full_tri = this.full_tri_list[i];
+                FullTriangle full_tri = this.consecutive_tri_list[i];
 
                 raw_data_vtx_xyz.AddRange(BitConverter.GetBytes((Single) full_tri.vtx_1.x));
                 raw_data_vtx_xyz.AddRange(BitConverter.GetBytes((Single) full_tri.vtx_1.y));
@@ -475,7 +595,7 @@ namespace Binjo
                 // check if the next tri is different => export current collection
                 // also export collection if this was the last one
                 // (because we check if it is the last one, we dont need a safety check afterwards)
-                if ((i == full_tri_list.Count - 1) || (full_tri.CompareTo(this.full_tri_list[i + 1]) != 0))
+                if ((i == consecutive_tri_list.Count - 1) || (full_tri.CompareTo(this.consecutive_tri_list[i + 1]) != 0))
                 {
                     // building the VTX ID buffer + all correspondences
                     GLTF_BufferInternal buffer = new GLTF_BufferInternal();
