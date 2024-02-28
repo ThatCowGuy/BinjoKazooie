@@ -8,31 +8,32 @@ namespace Binjo
 {
     public class GeoLayout_Command
     {
-        // minimally, only 03 and 0D matter. 0C is pretty cool though.
-        Dictionary<int, string> GEO_NAMES = new Dictionary<int, string>
-        {
-            { 0x01, "SORT" },
-            { 0x02, "BONE" },
-            { 0x03, "LOAD DL" }, // just starts running a DL (offset is defined in int[2])
-            { 0x04, "UNKNOWN_04" },
-            { 0x05, "SKINNING" },
-            { 0x06, "BRANCH" },
-            { 0x07, "UNKNOWN_07" },
-            { 0x08, "LOD" },
-            { 0x09, "UNKNOWN_09" },
-            { 0x0A, "REFERENCE POINT" },
-            { 0x0B, "UNKNOWN_0B" },
-            { 0x0C, "SELECTOR" }, // for model-swapping: int[2] holds short[0] child_count, short[1] selector index, then list of children
-            // 0000000C 00000060 00040001 00000020 00000030 00000040 00000050 00000000 00000003...
-            //                   ^ 4 children
-            //                       ^ sel ID = 1
-            //                            ^ 1st child: offset 0x20 bytes to next geolayout command
-            { 0x0D, "DRAW DISTANCE" },
-            { 0x0E, "UNKNOWN_0E" },
-            { 0x0F, "UNKNOWN_0F" },
-        };
-
         public List<uint> content = new List<uint>();
+
+        public static GeoLayout_Command GEO_LOAD_DL(short xmin, short ymin, short zmin, short xmax, short ymax, short zmax)
+        {
+            GeoLayout_Command cmd = new GeoLayout_Command();
+            cmd.content.Add((uint) Dicts.GEO_CMD_NAMES_REV["DRAW_DISTANCE"]);
+            cmd.content.Add((uint) 0x00000028);
+            cmd.content.Add((uint) ((xmin << 16) + ymin));
+            cmd.content.Add((uint) ((zmin << 16) + xmax));
+            cmd.content.Add((uint) ((ymax << 16) + zmax));
+            cmd.content.Add((uint) 0x001808D3);
+            cmd.content.Add((uint) Dicts.GEO_CMD_NAMES_REV["LOAD_DL"]);
+            cmd.content.Add((uint) 0x00000000);
+            cmd.content.Add((uint) 0x00000000); // this contains the offset
+            cmd.content.Add((uint) 0x00000000); // just padding
+            return cmd;
+        }
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0];
+            foreach (uint val in this.content)
+            {
+                bytes = File_Handler.concat_arrays(bytes, File_Handler.uint_to_bytes(val, 4));
+            }
+            return bytes;
+        }
     }
 
     public class GeoLayout_Segment
@@ -45,6 +46,16 @@ namespace Binjo
         public uint file_offset;
 
         public List<GeoLayout_Command> commands = new List<GeoLayout_Command>();
+
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0];
+            foreach (GeoLayout_Command geo_cmd in this.commands)
+            {
+                bytes = File_Handler.concat_arrays(bytes, geo_cmd.get_bytes());
+            }
+            return bytes;
+        }
 
         public void populate(byte[] file_data, int file_offset)
         {

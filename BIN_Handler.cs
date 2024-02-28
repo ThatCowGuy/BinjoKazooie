@@ -108,18 +108,9 @@ namespace Binjo
 
                 tex_seg.meta[i].section_offset = (uint) (Texture_Segment.HEADER_SIZE + (Tex_Meta.ELEMENT_SIZE * i));
                 tex_seg.meta[i].file_offset = (uint) (tex_seg.file_offset + tex_seg.meta[i].section_offset);
-                tex_seg.meta[i].datasection_offset_data = 0; // this one is a bit trickier, see later
+                // tex_seg.meta[i].datasection_offset_data = 0;
 
-                if (i == 0)
-                {
-                    // the first data element offset is equal to the data-section offset
-                    tex_seg.data[i].file_offset = tex_seg.file_offset_data;
-                }
-                else
-                {
-                    // these are slightly more tricky, since their offsets depend on the variying sizes of the preceeding data chunks
-                    tex_seg.data[i].file_offset = (tex_seg.data[(i - 1)].file_offset + tex_seg.data[(i - 1)].data_size);
-                }
+                tex_seg.data[i].file_offset = tex_seg.file_offset_data + this.tex_seg.data_size;
                 tex_seg.data[i].section_offset = (uint) (tex_seg.data[i].file_offset - tex_seg.file_offset);
                 tex_seg.data[i].datasection_offset = (uint) (tex_seg.data[i].file_offset - tex_seg.file_offset_data);
 
@@ -130,6 +121,16 @@ namespace Binjo
             }
             this.tex_seg.valid = true;
             Console.WriteLine("Finished Tex Segment.");
+        }
+         
+        public void sort_tris_by_max_ID(List<FullTriangle> list)
+        {
+            foreach (FullTriangle tri in list)
+            {
+                tri.max_index = (ushort) MathHelpers.get_max(new int[]{ tri.index_1, tri.index_2, tri.index_3 });
+                tri.min_index = (ushort) MathHelpers.get_min(new int[] { tri.index_1, tri.index_2, tri.index_3 });
+            }
+            list = list.OrderBy(o => o.max_index).ToList();
         }
 
         public void build_DL_seg()
@@ -186,7 +187,7 @@ namespace Binjo
                     DisplayList_Command.G_LOADTLUT(1, 16)
                 ));
                 command_list.Add(new DisplayList_Command(
-                    DisplayList_Command.G_SetOtherMode_H("TEXTLUT", 2, 0x00008000)
+                    DisplayList_Command.G_SetOtherMode_H("G_MDSFT_TEXTLUT", 2, 0x00008000)
                 ));
                 command_list.Add(new DisplayList_Command(
                     DisplayList_Command.G_SETTIMG("CI", 16, (meta.section_offset_data + 0x20)) // NOTE: +0x20 for CI4, +0x200 for CI8...
@@ -215,40 +216,70 @@ namespace Binjo
                 ));
 
                 FullTriangle[] tri_arr = tri_list.ToArray();
-                // NOTE: the descriptors VTX buffer can hold 32 vertices, but I will only give it 30 each time
-                //       because the (10 * 3) quantity is easier to keep track of...
-                //       Therefor, I only increment "chunk" by 10 tris here
-
-                // NOTE: the tri lists should be sorted by ID somehow, and grouped such that they share 30 IDs... wtf
-                for (int chunk = 0; chunk < tri_arr.Length; chunk += 10)
+                // NOTE: the descriptors VTX buffer can hold 32 vertices
+                // NOTE: the tri lists should be sorted by maximum ID at this point
+                // NOTE: the tris should all contain 3 CONSECUTIVE vertex IDs
+                //       so I can load the verts of 10 tris at a time...
+                int chunk_step = 10;
+                int tri_ID = 0;
+                for (tri_ID = 0; tri_ID < (tri_arr.Length - chunk_step); tri_ID += chunk_step)
                 {
                     command_list.Add(new DisplayList_Command(
-                        DisplayList_Command.G_VTX(0, 30, 0)
+                        DisplayList_Command.G_VTX(0, 30, (uint) (tri_ID * 3))
                     ));
-                    for (int i = (chunk + 0); i < tri_arr.Length; i++)
+                    for (int i = (tri_ID + 0); i < (tri_ID + chunk_step); i += 2)
                     {
-
+                        // its guaranteed that I have an even number of tris at this point, because
+                        // I increment by 10 each time, and only if there are >10 left
+                        command_list.Add(new DisplayList_Command(
+                            DisplayList_Command.G_TRI2(
+                                (uint) (tri_arr[i + 0].index_1 - tri_ID),
+                                (uint) (tri_arr[i + 0].index_2 - tri_ID),
+                                (uint) (tri_arr[i + 0].index_3 - tri_ID),
+                                (uint) (tri_arr[i + 1].index_1 - tri_ID),
+                                (uint) (tri_arr[i + 1].index_2 - tri_ID),
+                                (uint) (tri_arr[i + 1].index_3 - tri_ID)
+                            )
+                        ));
                     }
                 }
-
-                foreach (FullTriangle tri in tri_list)
+                // now there are only 10 or less tris left
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_VTX(0, (uint) (3 * (tri_arr.Length - tri_ID)), (uint) (tri_ID * 3))
+                ));
+                for (int i = (tri_ID + 0); i < tri_arr.Length; i++)
                 {
-                    vtx_seg.max_x = (short) MathHelpers.get_max(new int[] { vtx_seg.max_x, tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x });
-                    vtx_seg.max_y = (short) MathHelpers.get_max(new int[] { vtx_seg.max_y, tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y });
-                    vtx_seg.max_z = (short) MathHelpers.get_max(new int[] { vtx_seg.max_z, tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z });
-
-                    vtx_seg.min_x = (short) MathHelpers.get_min(new int[] { vtx_seg.min_x, tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x });
-                    vtx_seg.min_y = (short) MathHelpers.get_min(new int[] { vtx_seg.min_y, tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y });
-                    vtx_seg.min_z = (short) MathHelpers.get_min(new int[] { vtx_seg.min_z, tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z });
-
-                    // sneaky way of finding the count: Just find the highest referenced index ! 
-                    vtx_seg.vtx_count = (ushort) MathHelpers.get_max(new int[] { vtx_seg.vtx_count, tri.index_1, tri.index_2, tri.index_3 });
+                    // playing it safe and only doing single tris for the last <=10 tris
+                    command_list.Add(new DisplayList_Command(
+                        DisplayList_Command.G_TRI1(
+                            (uint) (tri_arr[i + 0].index_1 - tri_ID),
+                            (uint) (tri_arr[i + 0].index_2 - tri_ID),
+                            (uint) (tri_arr[i + 0].index_3 - tri_ID)
+                        )
+                    ));
                 }
 
-                command_list.Add(new DisplayList_Command(
-                    DisplayList_Command.G_ENDDL()
-                ));
+                // and onto the next type of tri...
             }
+            // aaand sceeeneee... hopefully
+            command_list.Add(new DisplayList_Command(
+                DisplayList_Command.G_ENDDL()
+            ));
+
+            this.DL_seg.command_list = command_list.ToArray();
+            this.DL_seg.command_cnt = (uint) command_list.Count;
+            this.DL_seg.valid = true;
+            Console.WriteLine("Finished DL Segment.");
+        }
+        public void build_geo_seg()
+        {
+            this.geo_seg = new GeoLayout_Segment();
+            Console.WriteLine("Building GeoLayout Segment...");
+
+            this.geo_seg.commands.Add(GeoLayout_Command.GEO_LOAD_DL(-1000, -1000, -1000, +1000, +1000, +1000));
+
+            this.geo_seg.valid = true;
+            Console.WriteLine("Finished GeoLayout Segment.");
         }
         public void build_vtx_seg()
         {
@@ -537,7 +568,9 @@ namespace Binjo
             {
                 foreach (GLTF_Primitive primitive in mesh.primitives)
                 {
-                    this.tri_list_tree.Add(this.GLTF.parse_tris_from_primitive(primitive));
+                    List<FullTriangle> next_tri_list = this.GLTF.parse_tris_from_primitive(primitive);
+                    sort_tris_by_max_ID(next_tri_list);
+                    this.tri_list_tree.Add(next_tri_list);
                 }
             }
         }

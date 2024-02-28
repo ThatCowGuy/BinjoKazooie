@@ -238,5 +238,47 @@ namespace Binjo
             { "G_SETZIMG",           0xFE },
             { "G_SETCIMG",           0xFF }
         };
+
+        // minimally, only 03 and 0D matter. 0C is pretty cool though.
+        public static Dictionary<int, string> GEO_CMD_NAMES = new Dictionary<int, String>
+        {
+            { 0x01, "SORT" },
+            { 0x02, "BONE" },
+            { 0x03, "LOAD_DL" }, // just starts running a DL (offset is defined in int[2])
+            { 0x04, "UNKNOWN_04" },
+            { 0x05, "SKINNING" },
+            { 0x06, "BRANCH" },
+            { 0x07, "UNKNOWN_07" },
+            { 0x08, "LOD" },
+            { 0x09, "UNKNOWN_09" },
+            { 0x0A, "REFERENCE_POINT" },
+            { 0x0B, "UNKNOWN_0B" },
+            { 0x0C, "SELECTOR" }, // for model-swapping: int[2] holds short[0] child_count, short[1] selector index, then list of children
+            // 0000000C 00000060 00040001 00000020 00000030 00000040 00000050 00000000 00000003...
+            //                   ^ 4 children
+            //                       ^ sel ID = 1
+            //                            ^ 1st child: offset 0x20 bytes to next geolayout command
+            { 0x0D, "DRAW_DISTANCE" },
+            { 0x0E, "UNKNOWN_0E" },
+            { 0x0F, "UNKNOWN_0F" },
+        };
+        public static Dictionary<string, int> GEO_CMD_NAMES_REV = new Dictionary<String, int>
+        {
+            { "SORT",             0x01 },
+            { "BONE",             0x02 },
+            { "LOAD_DL",          0x03 },
+            { "UNKNOWN_04",       0x04 },
+            { "SKINNING",         0x05 },
+            { "BRANCH",           0x06 },
+            { "UNKNOWN_07",       0x07 },
+            { "LOD",              0x08 },
+            { "UNKNOWN_09",       0x09 },
+            { "REFERENCE_POINT",  0x0A },
+            { "UNKNOWN_0B",       0x0B },
+            { "SELECTOR",         0x0C },
+            { "DRAW_DISTANCE",    0x0D },
+            { "UNKNOWN_0E",       0x0E },
+            { "UNKNOWN_0F",       0x0F },
+        };
     }
 }

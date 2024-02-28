@@ -14,6 +14,8 @@ namespace Binjo
         public ushort index_1;
         public ushort index_2;
         public ushort index_3;
+        public ushort max_index;
+        public ushort min_index;
         public Vtx_Elem vtx_1;
         public Vtx_Elem vtx_2;
         public Vtx_Elem vtx_3;
@@ -157,6 +159,13 @@ namespace Binjo
 
         public uint[] raw_content = new uint[2];
 
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0x08];
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes(this.raw_content[0], 4), bytes, 0x00);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes(this.raw_content[1], 4), bytes, 0x04);
+            return bytes;
+        }
 
         public static ulong G_CLEARGEOMETRYMODE(uint flags)
         {
@@ -1054,8 +1063,14 @@ namespace Binjo
         }
         public byte[] get_bytes()
         {
-            byte[] bytes = new byte[0x1];
-            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes(0x00, 4), bytes, 0x00);
+            byte[] bytes = new byte[0x08];
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes(this.command_cnt, 4), bytes, 0x00);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes(0x0000000000, 4), bytes, 0x04);
+
+            foreach (DisplayList_Command cmd in this.command_list)
+            {
+                bytes = File_Handler.concat_arrays(bytes, cmd.get_bytes());
+            }
             return bytes;
         }
     }

@@ -695,15 +695,57 @@ namespace Binjo
         {
             // string output_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("testing.gltf"));
             // this.write_gltf_model(output_filename);
-            string input_filename = Path.Combine(File_Handler.get_basedir_or_assets(), String.Format("sorra3.gltf"));
+            string input_filename = Path.Combine(File_Handler.get_basedir_or_assets(), String.Format("untitled.gltf"));
             this.handler.parse_gltf_additional(input_filename);
 
             this.handler.build_tex_seg();
-            this.handler.build_vtx_seg();
+            this.handler.build_vtx_seg(); // its sort of important that I build this before I build the DLs
             this.handler.build_DL_seg();
-            File_Handler.print_bytes(this.handler.tex_seg.get_bytes());
-            File_Handler.print_bytes(this.handler.vtx_seg.get_bytes());
-            File_Handler.print_bytes(this.handler.DL_seg.get_bytes());
+            this.handler.build_geo_seg();
+
+            byte[] parsed_content = new byte[0];
+
+            // append empty header (will be overwritten at the end again)
+            this.handler.bin_header = new BIN_Header();
+            this.handler.bin_header.vtx_cnt = this.handler.vtx_seg.vtx_count;
+            int tri_cnt = 0;
+            foreach (List<FullTriangle> tri_list in this.handler.tri_list_tree)
+                tri_cnt += tri_list.Count();
+            this.handler.bin_header.tri_cnt = (ushort) tri_cnt;
+            parsed_content = File_Handler.concat_arrays(parsed_content, this.handler.bin_header.get_bytes());
+
+            // append tex segment
+            this.handler.tex_seg.file_offset = (uint) parsed_content.Length;
+            this.handler.bin_header.tex_offset = (ushort) this.handler.tex_seg.file_offset;
+            parsed_content = File_Handler.concat_arrays(parsed_content, this.handler.tex_seg.get_bytes());
+
+            // append DL segment
+            this.handler.DL_seg.file_offset = (uint) parsed_content.Length;
+            this.handler.bin_header.DL_offset = (uint) this.handler.DL_seg.file_offset;
+            parsed_content = File_Handler.concat_arrays(parsed_content, this.handler.DL_seg.get_bytes());
+
+            // append VTX segment
+            this.handler.vtx_seg.file_offset = (uint) parsed_content.Length;
+            this.handler.bin_header.vtx_offset = (uint) this.handler.vtx_seg.file_offset;
+            parsed_content = File_Handler.concat_arrays(parsed_content, this.handler.vtx_seg.get_bytes());
+
+            // append Geo segment
+            this.handler.geo_seg.file_offset = (uint) parsed_content.Length;
+            this.handler.bin_header.geo_offset = (ushort) this.handler.geo_seg.file_offset;
+            parsed_content = File_Handler.concat_arrays(parsed_content, this.handler.geo_seg.get_bytes());
+
+            // and finally, overwrite the header with the updated offsets
+            File_Handler.write_bytes_to_buffer(this.handler.bin_header.get_bytes(), parsed_content, 0x00);
+            this.handler.bin_header.valid = true;
+
+            File_Handler.print_bytes(parsed_content);
+
+            // ignoring these for now...
+            this.handler.bone_seg = new Bone_Segment();
+            this.handler.coll_seg = new Collision_Segment();
+            this.handler.FX_seg = new Effects_Segment();
+            this.handler.FXEND_seg = new FX_END_Segment();
+            this.handler.animtex_seg = new AnimTex_Segment();
         }
 
         private void label10_Click(object sender, EventArgs e)

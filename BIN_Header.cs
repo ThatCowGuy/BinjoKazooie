@@ -32,6 +32,36 @@ namespace Binjo
         public ushort vtx_cnt;
         public uint unk_3;
 
+        public BIN_Header()
+        {
+            this.start_identifier = 0x0000000B;
+            this.geo_type = 0x02; // tri-linear
+        }
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0x38];
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.start_identifier, 4), bytes, 0x00);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.geo_offset, 4), bytes, 0x04);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.tex_offset, 2), bytes, 0x08);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.geo_type, 2), bytes, 0x0A);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.DL_offset, 4), bytes, 0x0C);
+            //
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.vtx_offset, 4), bytes, 0x10);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.unk_1, 4), bytes, 0x14);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.bone_offset, 4), bytes, 0x18);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.coll_offset, 4), bytes, 0x1C);
+            //
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.FX_END, 4), bytes, 0x20);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.FX_offset, 4), bytes, 0x24);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.unk_2, 4), bytes, 0x28);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.anim_tex_offset, 4), bytes, 0x2C);
+            //
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.tri_cnt, 2), bytes, 0x30);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.vtx_cnt, 2), bytes, 0x32);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.unk_3, 4), bytes, 0x34);
+            return bytes;
+        }
+
         public void populate(byte[] file_data)
         {
             this.valid = true;
