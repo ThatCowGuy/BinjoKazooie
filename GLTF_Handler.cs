@@ -134,7 +134,8 @@ namespace Binjo
 
     public class GLTF_Handler
     {
-        public List<FullTriangle> parse_tris_from_primitive(GLTF_Primitive PRIM)
+        // tri_cnt_offset is meant to control how far ahead the tri indices should be by now
+        public List<FullTriangle> parse_tris_from_primitive(GLTF_Primitive PRIM, int tri_cnt_offset)
         {
             List<FullTriangle> tri_list = new List<FullTriangle>();
             GLTF_Accessor IDX = this.accessors[(int) PRIM.indices];
@@ -148,7 +149,7 @@ namespace Binjo
                 PRIM.visible = true;
             }
 
-            int tri_count = tri_list.Count;
+            int tri_count = tri_cnt_offset;
             // run through all the Indices
             for (int i = 0; i < IDX.count; i += 3)
             {

@@ -106,19 +106,23 @@ namespace Binjo
                 tex_seg.meta[i] = this.GLTF.images[i].tex_meta;
                 tex_seg.data[i] = this.GLTF.images[i].tex_data;
 
-                tex_seg.meta[i].section_offset = (uint) (Texture_Segment.HEADER_SIZE + (Tex_Meta.ELEMENT_SIZE * i));
-                tex_seg.meta[i].file_offset = (uint) (tex_seg.file_offset + tex_seg.meta[i].section_offset);
                 // tex_seg.meta[i].datasection_offset_data = 0;
 
                 tex_seg.data[i].file_offset = tex_seg.file_offset_data + this.tex_seg.data_size;
                 tex_seg.data[i].section_offset = (uint) (tex_seg.data[i].file_offset - tex_seg.file_offset);
                 tex_seg.data[i].datasection_offset = (uint) (tex_seg.data[i].file_offset - tex_seg.file_offset_data);
 
-                // Reminder that this param actually has to be written to BIN
+                tex_seg.meta[i].section_offset = (uint) (Texture_Segment.HEADER_SIZE + (Tex_Meta.ELEMENT_SIZE * i));
+                tex_seg.meta[i].file_offset = (uint) (tex_seg.file_offset + tex_seg.meta[i].section_offset);
+                // internal, referring to the corresponding data
+                tex_seg.meta[i].section_offset_data = tex_seg.data[i].section_offset;
                 tex_seg.meta[i].datasection_offset_data = tex_seg.data[i].datasection_offset;
 
                 tex_seg.data_size += tex_seg.data[i].data_size;
             }
+            // and finally add the size of the meta elements and the header !
+            tex_seg.data_size += (uint) (Texture_Segment.HEADER_SIZE + (Tex_Meta.ELEMENT_SIZE * tex_seg.tex_cnt));
+
             this.tex_seg.valid = true;
             Console.WriteLine("Finished Tex Segment.");
         }
@@ -176,7 +180,7 @@ namespace Binjo
                     DisplayList_Command.G_TEXTURE(0, 0, true, 0x8000, 0x8000)
                 ));
                 command_list.Add(new DisplayList_Command(
-                    DisplayList_Command.G_SETTIMG("RGBA", 16, meta.section_offset_data)
+                    DisplayList_Command.G_SETTIMG("RGBA", 16, meta.datasection_offset_data)
                 ));
                 command_list.Add(new DisplayList_Command(
                     DisplayList_Command.G_SETTILE("RGBA", 4, meta.width, 0x0100, 1, 0, false, false, 0, 0, false, false, 0, 0)
@@ -190,7 +194,7 @@ namespace Binjo
                     DisplayList_Command.G_SetOtherMode_H("G_MDSFT_TEXTLUT", 2, 0x00008000)
                 ));
                 command_list.Add(new DisplayList_Command(
-                    DisplayList_Command.G_SETTIMG("CI", 16, (meta.section_offset_data + 0x20)) // NOTE: +0x20 for CI4, +0x200 for CI8...
+                    DisplayList_Command.G_SETTIMG("CI", 16, (meta.datasection_offset_data + 0x20)) // NOTE: +0x20 for CI4, +0x200 for CI8...
                 ));
                 command_list.Add(new DisplayList_Command(
                     DisplayList_Command.G_SETTILE("CI", 16, 0, 0x0000, 7, 0, false, false, 4, 0, false, false, 0, 0)
@@ -224,8 +228,13 @@ namespace Binjo
                 int tri_ID = 0;
                 for (tri_ID = 0; tri_ID < (tri_arr.Length - chunk_step); tri_ID += chunk_step)
                 {
+                    // find the smallest vtx index, to figure out where to start reading from
+                    // NOTE: this sucks
+                    FullTriangle earliest_tri = tri_list.ElementAt(tri_ID);
+                    uint smallest_index = (uint) MathHelpers.get_min(new int[] { earliest_tri.index_1, earliest_tri.index_2, earliest_tri.index_3 });
+
                     command_list.Add(new DisplayList_Command(
-                        DisplayList_Command.G_VTX(0, 30, (uint) (tri_ID * 3))
+                        DisplayList_Command.G_VTX(0, 30, smallest_index)
                     ));
                     for (int i = (tri_ID + 0); i < (tri_ID + chunk_step); i += 2)
                     {
@@ -233,30 +242,38 @@ namespace Binjo
                         // I increment by 10 each time, and only if there are >10 left
                         command_list.Add(new DisplayList_Command(
                             DisplayList_Command.G_TRI2(
-                                (uint) (tri_arr[i + 0].index_1 - tri_ID),
-                                (uint) (tri_arr[i + 0].index_2 - tri_ID),
-                                (uint) (tri_arr[i + 0].index_3 - tri_ID),
-                                (uint) (tri_arr[i + 1].index_1 - tri_ID),
-                                (uint) (tri_arr[i + 1].index_2 - tri_ID),
-                                (uint) (tri_arr[i + 1].index_3 - tri_ID)
+                                (uint) (tri_arr[i + 0].index_1 - smallest_index),
+                                (uint) (tri_arr[i + 0].index_2 - smallest_index),
+                                (uint) (tri_arr[i + 0].index_3 - smallest_index),
+                                (uint) (tri_arr[i + 1].index_1 - smallest_index),
+                                (uint) (tri_arr[i + 1].index_2 - smallest_index),
+                                (uint) (tri_arr[i + 1].index_3 - smallest_index)
                             )
                         ));
                     }
                 }
-                // now there are only 10 or less tris left
-                command_list.Add(new DisplayList_Command(
-                    DisplayList_Command.G_VTX(0, (uint) (3 * (tri_arr.Length - tri_ID)), (uint) (tri_ID * 3))
-                ));
-                for (int i = (tri_ID + 0); i < tri_arr.Length; i++)
+                if (tri_ID < tri_arr.Length)
                 {
-                    // playing it safe and only doing single tris for the last <=10 tris
+                    // find the smallest vtx index, to figure out where to start reading from
+                    // NOTE: this sucks
+                    FullTriangle earliest_tri = tri_list.ElementAt(tri_ID);
+                    uint smallest_index = (uint) MathHelpers.get_min(new int[] { earliest_tri.index_1, earliest_tri.index_2, earliest_tri.index_3 });
+
+                    // now there are only 10 or less tris left
                     command_list.Add(new DisplayList_Command(
-                        DisplayList_Command.G_TRI1(
-                            (uint) (tri_arr[i + 0].index_1 - tri_ID),
-                            (uint) (tri_arr[i + 0].index_2 - tri_ID),
-                            (uint) (tri_arr[i + 0].index_3 - tri_ID)
-                        )
+                        DisplayList_Command.G_VTX(0, (uint) (3 * (tri_arr.Length - tri_ID)), smallest_index)
                     ));
+                    for (int i = (tri_ID + 0); i < tri_arr.Length; i++)
+                    {
+                        // playing it safe and only doing single tris for the last <=10 tris
+                        command_list.Add(new DisplayList_Command(
+                            DisplayList_Command.G_TRI1(
+                                (uint) (tri_arr[i + 0].index_1 - smallest_index),
+                                (uint) (tri_arr[i + 0].index_2 - smallest_index),
+                                (uint) (tri_arr[i + 0].index_3 - smallest_index)
+                            )
+                        ));
+                    }
                 }
 
                 // and onto the next type of tri...
@@ -465,6 +482,8 @@ namespace Binjo
 
             // extract all the image data
             List<Tex_Data> tex_list = new List<Tex_Data>();
+            uint integrated_data_size = 0;
+            uint parsed_textures = 0;
             foreach (GLTF_Texture tex in this.GLTF.textures)
             {
                 GLTF_Image img = this.GLTF.images[(int) tex.source];
@@ -542,8 +561,8 @@ namespace Binjo
                 */
                 {
                     // CI4
-                    if (wm_ratio >= 1.0) { scale_w = 32; scale_h = (int) (32 / wm_ratio); }
-                    if (wm_ratio <= 1.0) { scale_w = (int) (32 * wm_ratio); scale_h = 32; }
+                    if (wm_ratio >= 1.0) { scale_w = 64; scale_h = (int) (64 / wm_ratio); }
+                    if (wm_ratio <= 1.0) { scale_w = (int) (64 * wm_ratio); scale_h = 64; }
                     img.tex_data.img_rep = Texture_Segment.convert_to_fit(img.tex_data.img_rep, scale_w, scale_h, Texture_Segment.TEX_TYPES["CI4"], 2);
                     img.tex_meta.tex_type = (ushort) Texture_Segment.TEX_TYPES["CI4"];
                     img.tex_meta.width = (byte) scale_w;
@@ -557,6 +576,7 @@ namespace Binjo
                 // and finally calculate some additional information
                 img.tex_data.data = MathHelpers.convert_bitmap_to_bytes(img.tex_data.img_rep, img.tex_meta.tex_type);
                 img.tex_data.data_size = (uint) img.tex_data.data.Length;
+
                 img.tex_meta.pixel_total = (uint) (scale_w * scale_h);
 
                 Console.WriteLine(String.Format("Parsed Tex: {0}x{1} px, Type={2}", img.tex_meta.width, img.tex_meta.height, img.tex_meta.tex_type));
@@ -564,11 +584,13 @@ namespace Binjo
 
             // now I can go through the meshes and extract all the tris that are defined in there
             this.tri_list_tree = new List<List<FullTriangle>>();
+            int tri_cnt = 0;
             foreach (GLTF_Mesh mesh in this.GLTF.meshes)
             {
                 foreach (GLTF_Primitive primitive in mesh.primitives)
                 {
-                    List<FullTriangle> next_tri_list = this.GLTF.parse_tris_from_primitive(primitive);
+                    List<FullTriangle> next_tri_list = this.GLTF.parse_tris_from_primitive(primitive, tri_cnt);
+                    tri_cnt += next_tri_list.Count();
                     sort_tris_by_max_ID(next_tri_list);
                     this.tri_list_tree.Add(next_tri_list);
                 }
@@ -868,6 +890,93 @@ namespace Binjo
                 File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
                 System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
                 write_displaylist_text(chosen_filename);
+                return;
+            }
+            System.Console.WriteLine("Cancelled");
+            return;
+        }
+        public void export_bin_from_gltf()
+        {
+            // choose the GLTF file that you want to convert
+            OpenFileDialog OFD = new OpenFileDialog();
+            OFD.InitialDirectory = File_Handler.get_basedir_or_assets();
+            OFD.Filter = "GLTF model Files (*.gltf)|*.GLTF|All Files (*.*)|*.*";
+            if (OFD.ShowDialog() == DialogResult.OK)
+            {
+                File_Handler.remembered_assets_path = Path.GetDirectoryName(OFD.FileName);
+                System.Console.WriteLine(String.Format("Loading File {0}...", OFD.FileName));
+            }
+            else
+            {
+                System.Console.WriteLine(String.Format("Cancelled."));
+                return;
+            }
+
+            // parsing the chosen GLTF file
+            this.parse_gltf_additional(OFD.FileName);
+
+            this.build_tex_seg();
+            this.build_vtx_seg(); // its sort of important that I build this before I build the DLs
+            this.build_DL_seg();
+            this.build_geo_seg();
+
+            byte[] parsed_content = new byte[0];
+
+            // append empty header (will be overwritten at the end again)
+            this.bin_header = new BIN_Header();
+            this.bin_header.vtx_cnt = this.vtx_seg.vtx_count;
+            int tri_cnt = 0;
+            foreach (List<FullTriangle> tri_list in this.tri_list_tree)
+                tri_cnt += tri_list.Count();
+            this.bin_header.tri_cnt = (ushort) tri_cnt;
+            parsed_content = File_Handler.concat_arrays(parsed_content, this.bin_header.get_bytes());
+
+            // append tex segment
+            this.tex_seg.file_offset = (uint) parsed_content.Length;
+            this.bin_header.tex_offset = (ushort) this.tex_seg.file_offset;
+            parsed_content = File_Handler.concat_arrays(parsed_content, this.tex_seg.get_bytes());
+
+            // append DL segment
+            this.DL_seg.file_offset = (uint) parsed_content.Length;
+            this.bin_header.DL_offset = (uint) this.DL_seg.file_offset;
+            parsed_content = File_Handler.concat_arrays(parsed_content, this.DL_seg.get_bytes());
+
+            // append VTX segment
+            this.vtx_seg.file_offset = (uint) parsed_content.Length;
+            this.bin_header.vtx_offset = (uint) this.vtx_seg.file_offset;
+            parsed_content = File_Handler.concat_arrays(parsed_content, this.vtx_seg.get_bytes());
+
+            // append Geo segment
+            this.geo_seg.file_offset = (uint) parsed_content.Length;
+            this.bin_header.geo_offset = (ushort) this.geo_seg.file_offset;
+            parsed_content = File_Handler.concat_arrays(parsed_content, this.geo_seg.get_bytes());
+
+            // ignoring these for now...
+            this.bone_seg = new Bone_Segment();
+            this.coll_seg = new Collision_Segment();
+            this.FX_seg = new Effects_Segment();
+            this.FXEND_seg = new FX_END_Segment();
+            this.animtex_seg = new AnimTex_Segment();
+
+            // and finally, overwrite the header with the updated offsets
+            File_Handler.write_bytes_to_buffer(this.bin_header.get_bytes(), parsed_content, 0x00);
+            this.bin_header.valid = true;
+
+            // choose the bin file name to export to
+            // Default: cut off the ".gltf" and replace "assets" by "exports" if applicable
+            this.loaded_bin_name = OFD.FileName.Substring(0, (OFD.FileName.Length - 5)).Replace("assets", "exports"); 
+            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}.bin", this.loaded_bin_name));
+
+            SaveFileDialog SFD = new SaveFileDialog();
+            SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
+            SFD.FileName = chosen_filename;
+            if (SFD.ShowDialog() == DialogResult.OK)
+            {
+                chosen_filename = SFD.FileName;
+                File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
+                System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
+                // and write to BIN
+                File.WriteAllBytes(chosen_filename, parsed_content);
                 return;
             }
             System.Console.WriteLine("Cancelled");

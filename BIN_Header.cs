@@ -25,7 +25,7 @@ namespace Binjo
         // === 0x20 ===============================
         public uint FX_END;
         public uint FX_offset;
-        public uint unk_2; // this is similarly valued as unk_1
+        public uint unk_2;
         public uint anim_tex_offset;
         // === 0x30 ===============================
         public ushort tri_cnt;
@@ -36,6 +36,8 @@ namespace Binjo
         {
             this.start_identifier = 0x0000000B;
             this.geo_type = 0x02; // tri-linear
+
+            this.unk_3 = 0x42C80000; // 100.0f
         }
         public byte[] get_bytes()
         {
@@ -187,7 +189,7 @@ namespace Binjo
             content.Add(new string[] {
                 "???",
                 File_Handler.uint_to_string(this.unk_3, 0xFFFFFFFF),
-                this.unk_3.ToString()
+                File_Handler.convert_to_float((int) this.unk_3).ToString()
             });
             return content;
         }

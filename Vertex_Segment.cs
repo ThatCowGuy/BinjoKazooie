@@ -20,6 +20,18 @@ namespace Binjo
         public byte g;
         public byte b;
         public byte a;
+
+        public Vtx_Elem()
+        {
+            this.x = 0;
+            this.y = 0;
+            this.z = 0;
+            this.r = 0xFF;
+            this.g = 0xFF;
+            this.b = 0xFF;
+            this.a = 0xFF;
+        }
+
         public void calc_transformed_UVs(Tile_Descriptor tiledes)
         {
             if (tiledes.assigned_tex_meta == null || tiledes.assigned_tex_data == null)
