@@ -20,6 +20,17 @@ namespace Binjo
         public ushort assigned_tex_ID;
         public Tex_Data assigned_tex;
         public FX_Elem assigned_FX;
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0x0C];
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.index_1, 2), bytes, 0x00);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.index_2, 2), bytes, 0x02);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.index_3, 2), bytes, 0x04);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.unk_1, 2), bytes, 0x06);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.floor_type, 2), bytes, 0x08);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.sound_type, 2), bytes, 0x0A);
+            return bytes;
+        }
 
         /*/=====================================================
          * Thanks to Unalive for documenting these Flags
@@ -62,11 +73,49 @@ namespace Binjo
             { 0xE, "" },
             { 0xF, "~ global footstep sfx" }
         };
+
+        public Tri_Elem(FullTriangle full_tri)
+        {
+            this.index_1 = full_tri.index_1;
+            this.index_2 = full_tri.index_2;
+            this.index_3 = full_tri.index_3;
+            this.unk_1 = full_tri.unk_1;
+            this.floor_type = full_tri.floor_type;
+            this.sound_type = full_tri.sound_type;
+        }
+        public Tri_Elem()
+        {
+            this.index_1 = 0;
+            this.index_2 = 0;
+            this.index_3 = 0;
+            this.unk_1 = 0;
+            this.floor_type = 0;
+            this.sound_type = 0;
+        }
     }
-    public class Unk_Coll_Elem
+    public class Geo_Cube_Elem
     {
-        public ushort unk_1;
-        public ushort unk_2;
+        public static int MEM_SIZE = 0x04;
+
+        public ushort starting_tri_ID;
+        public ushort tri_cnt;
+
+        public List<Tri_Elem> coll_tri_list = new List<Tri_Elem>();
+
+        public Geo_Cube_Elem()
+        {
+            this.starting_tri_ID = 0;
+            this.tri_cnt = 0;
+            this.coll_tri_list = new List<Tri_Elem>();
+        }
+
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0x04];
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.starting_tri_ID, 2), bytes, 0x00);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.tri_cnt, 2), bytes, 0x02);
+            return bytes;
+        }
     }
     public class Collision_Segment
     {
@@ -74,18 +123,54 @@ namespace Binjo
 
         // parsed properties
         // === 0x00 ===============================
-        public int unk_1;
-        public int unk_2;
-        public int unk_3;
-        public int unk_4;
+        public short min_geo_cube_x;
+        public short min_geo_cube_y;
+        public short min_geo_cube_z;
+        public short max_geo_cube_x;
+        public short max_geo_cube_y;
+        public short max_geo_cube_z;
+        public short stride_y;
+        public short stride_z;
         // === 0x10 ===============================
-        public ushort unk_cnt; // *4 to get dynamic header size
-        public ushort unk_5;
+        public ushort geo_cube_cnt;
+        public ushort geo_cube_scale;
         public ushort tri_cnt;
-        public ushort unk_6;
+        public ushort padding;
 
-        public Unk_Coll_Elem[] unk_list;
+        public Geo_Cube_Elem[] geo_cube_list;
         public Tri_Elem[] tri_list;
+        public byte[] get_bytes()
+        {
+            byte[] bytes = new byte[0x18];
+            // === 0x00 ===============================
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.min_geo_cube_x, 2), bytes, 0x00);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.min_geo_cube_y, 2), bytes, 0x02);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.min_geo_cube_z, 2), bytes, 0x04);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.max_geo_cube_x, 2), bytes, 0x06);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.max_geo_cube_y, 2), bytes, 0x08);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.max_geo_cube_z, 2), bytes, 0x0A);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.stride_y, 2), bytes, 0x0C);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.stride_z, 2), bytes, 0x0E);
+            // === 0x10 ===============================
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.geo_cube_cnt, 2), bytes, 0x10);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.geo_cube_scale, 2), bytes, 0x12);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.tri_cnt, 2), bytes, 0x14);
+            File_Handler.write_bytes_to_buffer(File_Handler.uint_to_bytes((uint) this.padding, 2), bytes, 0x16);
+
+            // then we append all the geocubes as byte arrays
+            for (int id = 0; id < this.geo_cube_cnt; id++)
+            {
+                Geo_Cube_Elem cube = this.geo_cube_list[id];
+                bytes = File_Handler.concat_arrays(bytes, cube.get_bytes());
+            }
+            // and all the collision tris
+            for (int id = 0; id < this.tri_cnt; id++)
+            {
+                Tri_Elem tri = this.tri_list[id];
+                bytes = File_Handler.concat_arrays(bytes, tri.get_bytes());
+            }
+            return bytes;
+        }
 
         // locators
         public uint file_offset;
@@ -122,31 +207,35 @@ namespace Binjo
 
             // parsing properties
             // === 0x00 ===============================
-            this.unk_1 = (int)File_Handler.read_int(file_data, file_offset + 0x00, false);
-            this.unk_2 = (int)File_Handler.read_int(file_data, file_offset + 0x04, false);
-            this.unk_3 = (int)File_Handler.read_int(file_data, file_offset + 0x08, false);
-            this.unk_4 = (int)File_Handler.read_int(file_data, file_offset + 0x0C, false);
+            this.min_geo_cube_x = (short) File_Handler.read_short(file_data, file_offset + 0x00, false);
+            this.min_geo_cube_y = (short) File_Handler.read_short(file_data, file_offset + 0x02, false);
+            this.min_geo_cube_z = (short) File_Handler.read_short(file_data, file_offset + 0x04, false);
+            this.max_geo_cube_x = (short) File_Handler.read_short(file_data, file_offset + 0x06, false);
+            this.max_geo_cube_y = (short) File_Handler.read_short(file_data, file_offset + 0x08, false);
+            this.max_geo_cube_z = (short) File_Handler.read_short(file_data, file_offset + 0x0A, false);
+            this.stride_y = (short) File_Handler.read_short(file_data, file_offset + 0x0C, false);
+            this.stride_z = (short) File_Handler.read_short(file_data, file_offset + 0x0E, false);
             // === 0x10 ===============================
-            this.unk_cnt = File_Handler.read_short(file_data, file_offset + 0x10, false);
-            this.unk_5 = File_Handler.read_short(file_data, file_offset + 0x12, false);
+            this.geo_cube_cnt = File_Handler.read_short(file_data, file_offset + 0x10, false);
+            this.geo_cube_scale = File_Handler.read_short(file_data, file_offset + 0x12, false);
             this.tri_cnt = File_Handler.read_short(file_data, file_offset + 0x14, false);
-            this.unk_6 = File_Handler.read_short(file_data, file_offset + 0x16, false);
+            this.padding = File_Handler.read_short(file_data, file_offset + 0x16, false);
 
             // calculated properties
-            this.file_offset_data = (uint)(file_offset + 0x18 + (this.unk_cnt * 0x04));
+            this.file_offset_data = (uint)(file_offset + 0x18 + (this.geo_cube_cnt * Geo_Cube_Elem.MEM_SIZE));
 
-            this.unk_list = new Unk_Coll_Elem[this.unk_cnt];
-            for (int i = 0; i < this.unk_cnt; i++)
+            this.geo_cube_list = new Geo_Cube_Elem[this.geo_cube_cnt];
+            for (int i = 0; i < this.geo_cube_cnt; i++)
             {
-                Unk_Coll_Elem unk = new Unk_Coll_Elem();
-                int file_offset_unk = (int)(this.file_offset + 0x18 + (i * 0x04));
+                Geo_Cube_Elem geo_cube = new Geo_Cube_Elem();
+                int file_offset_geo_cube = (int)(this.file_offset + 0x18 + (i * Geo_Cube_Elem.MEM_SIZE));
 
                 // parsing properties
                 // === 0x00 ===============================
-                unk.unk_1 = File_Handler.read_short(file_data, file_offset_unk + 0x00, false);
-                unk.unk_2 = File_Handler.read_short(file_data, file_offset_unk + 0x02, false);
+                geo_cube.starting_tri_ID = File_Handler.read_short(file_data, file_offset_geo_cube + 0x00, false);
+                geo_cube.tri_cnt = File_Handler.read_short(file_data, file_offset_geo_cube + 0x02, false);
 
-                this.unk_list[i] = unk;
+                this.geo_cube_list[i] = geo_cube;
             }
 
             this.tri_list = new Tri_Elem[this.tri_cnt];
@@ -220,52 +309,70 @@ namespace Binjo
                 ""
             });
             content.Add(new string[] {
-                "???",
-                File_Handler.uint_to_string(this.unk_1, 0xFFFF),
-                File_Handler.uint_to_string(this.unk_1, 10),
+                "Geo Cube Minima",
+                String.Format("{0}, {1}, {2}", 
+                    File_Handler.uint_to_string(this.min_geo_cube_x, 0xFFFF),
+                    File_Handler.uint_to_string(this.min_geo_cube_y, 0xFFFF),
+                    File_Handler.uint_to_string(this.min_geo_cube_z, 0xFFFF)
+                ),
+                String.Format("{0}, {1}, {2}",
+                    File_Handler.uint_to_string(this.min_geo_cube_x, 10),
+                    File_Handler.uint_to_string(this.min_geo_cube_y, 10),
+                    File_Handler.uint_to_string(this.min_geo_cube_z, 10)
+                ),
+                "inclusive range"
+            });
+            content.Add(new string[] {
+                "Geo Cube Maxima",
+                String.Format("{0}, {1}, {2}",
+                    File_Handler.uint_to_string(this.max_geo_cube_x, 0xFFFF),
+                    File_Handler.uint_to_string(this.max_geo_cube_y, 0xFFFF),
+                    File_Handler.uint_to_string(this.max_geo_cube_z, 0xFFFF)
+                ),
+                String.Format("{0}, {1}, {2}",
+                    File_Handler.uint_to_string(this.max_geo_cube_x, 10),
+                    File_Handler.uint_to_string(this.max_geo_cube_y, 10),
+                    File_Handler.uint_to_string(this.max_geo_cube_z, 10)
+                ),
+                "inclusive range"
+            });
+            content.Add(new string[] {
+                "Y Stride",
+                String.Format("{0}",
+                    File_Handler.uint_to_string(this.stride_y, 0xFFFF)
+                ),
+                String.Format("{0}",
+                    File_Handler.uint_to_string(this.stride_y, 10)
+                ),
+                "Amount of GeoCubes per X-Row"
+            });
+            content.Add(new string[] {
+                "Z Stride",
+                String.Format("{0}",
+                    File_Handler.uint_to_string(this.stride_z, 0xFFFF)
+                ),
+                String.Format("{0}",
+                    File_Handler.uint_to_string(this.stride_z, 10)
+                ),
+                "Amount of GeoCubes per XY-Layer"
+            });
+            content.Add(new string[] {
+                "Geo Cube Count",
+                File_Handler.uint_to_string(this.geo_cube_cnt, 0xFFFF),
+                File_Handler.uint_to_string(this.geo_cube_cnt, 10),
+                "Full amount of GeoCubes"
+            });
+            content.Add(new string[] {
+                "Geo Cube Scale",
+                File_Handler.uint_to_string(this.geo_cube_scale, 0xFFFF),
+                File_Handler.uint_to_string(this.geo_cube_scale, 10),
                 ""
             });
             content.Add(new string[] {
-                "???",
-                File_Handler.uint_to_string(this.unk_2, 0xFFFF),
-                File_Handler.uint_to_string(this.unk_2, 10),
-                ""
-            });
-            content.Add(new string[] {
-                "???",
-                File_Handler.uint_to_string(this.unk_3, 0xFFFF),
-                File_Handler.uint_to_string(this.unk_3, 10),
-                ""
-            });
-            content.Add(new string[] {
-                "???",
-                File_Handler.uint_to_string(this.unk_4, 0xFFFF),
-                File_Handler.uint_to_string(this.unk_4, 10),
-                ""
-            });
-            content.Add(new string[] {
-                "??? Count",
-                File_Handler.uint_to_string(this.unk_cnt, 0xFFFF),
-                File_Handler.uint_to_string(this.unk_cnt, 10),
-                ""
-            });
-            content.Add(new string[] {
-                "???",
-                File_Handler.uint_to_string(this.unk_5, 0xFFFF),
-                File_Handler.uint_to_string(this.unk_5, 10),
-                ""
-            });
-            content.Add(new string[] {
-                "Tri Count",
+                "Coll Tri Count",
                 File_Handler.uint_to_string(this.tri_cnt, 0xFFFF),
                 File_Handler.uint_to_string(this.tri_cnt, 10),
-                ""
-            });
-            content.Add(new string[] {
-                "???",
-                File_Handler.uint_to_string(this.unk_6, 0xFFFF),
-                File_Handler.uint_to_string(this.unk_6, 10),
-                ""
+                "may contain duplicates"
             });
 
             return content;

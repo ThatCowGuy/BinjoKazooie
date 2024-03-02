@@ -136,6 +136,95 @@ namespace Binjo
             }
             list = list.OrderBy(o => o.max_index).ToList();
         }
+        public void build_coll_seg()
+        {
+            this.coll_seg = new Collision_Segment();
+            Console.WriteLine("Building Coll Segment...");
+
+            this.coll_seg.geo_cube_scale = 1000;
+            // NOTE: using Math.Floor to enforce rounding-down
+            this.coll_seg.min_geo_cube_x = (short) Math.Floor((double) this.vtx_seg.min_x / this.coll_seg.geo_cube_scale);
+            this.coll_seg.min_geo_cube_y = (short) Math.Floor((double) this.vtx_seg.min_y / this.coll_seg.geo_cube_scale);
+            this.coll_seg.min_geo_cube_z = (short) Math.Floor((double) this.vtx_seg.min_z / this.coll_seg.geo_cube_scale);
+            this.coll_seg.max_geo_cube_x = (short) Math.Floor((double) this.vtx_seg.max_x / this.coll_seg.geo_cube_scale);
+            this.coll_seg.max_geo_cube_y = (short) Math.Floor((double) this.vtx_seg.max_y / this.coll_seg.geo_cube_scale);
+            this.coll_seg.max_geo_cube_z = (short) Math.Floor((double) this.vtx_seg.max_z / this.coll_seg.geo_cube_scale);
+            // NOTE: +1 because if min == max, its still 1 geo cube
+            int x_extent = (this.coll_seg.max_geo_cube_x - this.coll_seg.min_geo_cube_x) + 1;
+            int y_extent = (this.coll_seg.max_geo_cube_y - this.coll_seg.min_geo_cube_y) + 1;
+            int z_extent = (this.coll_seg.max_geo_cube_z - this.coll_seg.min_geo_cube_z) + 1;
+            this.coll_seg.stride_y     = (short)  (x_extent);
+            this.coll_seg.stride_z     = (short)  (x_extent * y_extent);
+            this.coll_seg.geo_cube_cnt = (ushort) (x_extent * y_extent * z_extent);
+
+            // I dont really understand why I have to instantiate these per-element... but oh well
+            this.coll_seg.geo_cube_list = new Geo_Cube_Elem[this.coll_seg.geo_cube_cnt];
+            for (int i = 0; i < this.coll_seg.geo_cube_cnt; i++)
+                this.coll_seg.geo_cube_list[i] = new Geo_Cube_Elem();
+
+            // this needs to be integrated dynamically in the following loop
+            this.coll_seg.tri_cnt = 0;
+
+            foreach (List<FullTriangle> tri_list in this.tri_list_tree)
+            {
+                // each tri list is guaranteed to have at least 1 tri in it
+                // Using that to determine what kind of flags I need to attribute
+                FullTriangle rep_tri = tri_list.ElementAt(0);
+                // if its uncollidable, we dont need this list...
+                if (rep_tri.collidable == false) continue;
+
+                foreach (FullTriangle tri in tri_list)
+                {
+                    // find the bounding cube IDs for the tri
+                    int min_geo_cube_x = (short) Math.Floor((double) MathHelpers.get_min(new int[] { tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x }) / this.coll_seg.geo_cube_scale);
+                    int min_geo_cube_y = (short) Math.Floor((double) MathHelpers.get_min(new int[] { tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y }) / this.coll_seg.geo_cube_scale);
+                    int min_geo_cube_z = (short) Math.Floor((double) MathHelpers.get_min(new int[] { tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z }) / this.coll_seg.geo_cube_scale);
+                    int max_geo_cube_x = (short) Math.Floor((double) MathHelpers.get_max(new int[] { tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x }) / this.coll_seg.geo_cube_scale);
+                    int max_geo_cube_y = (short) Math.Floor((double) MathHelpers.get_max(new int[] { tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y }) / this.coll_seg.geo_cube_scale);
+                    int max_geo_cube_z = (short) Math.Floor((double) MathHelpers.get_max(new int[] { tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z }) / this.coll_seg.geo_cube_scale);
+
+                    // NOTE: this is very crude and assumes the tri is touching every cube within the bounding box
+                    //       thats created from the extrema of its vertices... but at least its fast and has no
+                    //       true negatives, and the amount of false positives is small-ish for small triangles
+                    // NOTE: this is explicitly using <=, because the max ID should be inclusive !
+                    for (int x = min_geo_cube_x; x <= max_geo_cube_x; x++)
+                    {
+                        int x_ID = (x - min_geo_cube_x);
+                        for (int y = min_geo_cube_y; y <= max_geo_cube_y; y++)
+                        {
+                            int y_ID = (y - min_geo_cube_y);
+                            for (int z = min_geo_cube_z; z <= max_geo_cube_z; z++)
+                            {
+                                int z_ID = (z - min_geo_cube_z);
+
+                                int cube_ID = (x_ID + (y_ID * this.coll_seg.stride_y) + (z_ID * this.coll_seg.stride_z));
+                                this.coll_seg.geo_cube_list[cube_ID].coll_tri_list.Add(new Tri_Elem(tri));
+                                this.coll_seg.geo_cube_list[cube_ID].tri_cnt += 1;
+
+                                this.coll_seg.tri_cnt += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            // now all the tris are signed in to their respective lists;
+            // next, write all the tris into a long list (with duplicates) to index into, and set the starting indices
+            this.coll_seg.tri_list = new Tri_Elem[this.coll_seg.tri_cnt];
+            int written_tris = 0;
+            for (int cube = 0; cube < this.coll_seg.geo_cube_cnt; cube++)
+            {
+                // set starting ID to current count
+                this.coll_seg.geo_cube_list[cube].starting_tri_ID = (ushort) written_tris;
+
+                for (int id = 0; id < this.coll_seg.geo_cube_list[cube].tri_cnt; id++)
+                    this.coll_seg.tri_list[written_tris + id] = this.coll_seg.geo_cube_list[cube].coll_tri_list[id];
+
+                written_tris += this.coll_seg.geo_cube_list[cube].tri_cnt;
+            }
+
+            this.coll_seg.valid = true;
+            Console.WriteLine("Finished building Coll Segment.");
+        }
 
         public void build_DL_seg()
         {
@@ -911,13 +1000,17 @@ namespace Binjo
                 System.Console.WriteLine(String.Format("Cancelled."));
                 return;
             }
+            this.file_loaded = false;
 
             // parsing the chosen GLTF file
             this.parse_gltf_additional(OFD.FileName);
 
+            // Im building all the segments before appending them to the byte-stream,
+            // because their dependencies are a little whacky
             this.build_tex_seg();
             this.build_vtx_seg(); // its sort of important that I build this before I build the DLs
             this.build_DL_seg();
+            this.build_coll_seg();
             this.build_geo_seg();
 
             byte[] parsed_content = new byte[0];
@@ -946,6 +1039,11 @@ namespace Binjo
             this.bin_header.vtx_offset = (uint) this.vtx_seg.file_offset;
             parsed_content = File_Handler.concat_arrays(parsed_content, this.vtx_seg.get_bytes());
 
+            // append Collision Segment
+            this.coll_seg.file_offset = (uint) parsed_content.Length;
+            this.bin_header.coll_offset = (uint) this.coll_seg.file_offset;
+            parsed_content = File_Handler.concat_arrays(parsed_content, this.coll_seg.get_bytes());
+
             // append Geo segment
             this.geo_seg.file_offset = (uint) parsed_content.Length;
             this.bin_header.geo_offset = (ushort) this.geo_seg.file_offset;
@@ -953,7 +1051,6 @@ namespace Binjo
 
             // ignoring these for now...
             this.bone_seg = new Bone_Segment();
-            this.coll_seg = new Collision_Segment();
             this.FX_seg = new Effects_Segment();
             this.FXEND_seg = new FX_END_Segment();
             this.animtex_seg = new AnimTex_Segment();
@@ -961,6 +1058,7 @@ namespace Binjo
             // and finally, overwrite the header with the updated offsets
             File_Handler.write_bytes_to_buffer(this.bin_header.get_bytes(), parsed_content, 0x00);
             this.bin_header.valid = true;
+            this.file_loaded = true;
 
             // choose the bin file name to export to
             // Default: cut off the ".gltf" and replace "assets" by "exports" if applicable

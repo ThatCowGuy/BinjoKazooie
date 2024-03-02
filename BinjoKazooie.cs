@@ -207,6 +207,10 @@ namespace Binjo
                     this.panel5.Visible = true;
                     this.panel5.Location = get_bottom_of_DGV_1();
 
+                    // some extra resizing for the hex vals here
+                    dataGridView1.Columns[1].Width = 110;
+                    dataGridView1.Columns[2].Width = 70;
+
                     // add descriptors to grid 5
                     dataGridView5.Columns.Add("0", "TRI-ID");
                     dataGridView5.Columns[0].DividerWidth = 3;
