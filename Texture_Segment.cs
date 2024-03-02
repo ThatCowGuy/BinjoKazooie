@@ -184,7 +184,7 @@ namespace Binjo
                     return null;
             }
         }
-        public Bitmap parse_img_data(byte[] data, uint tex_type, uint w, uint h)
+        public static Bitmap parse_img_data(byte[] data, uint tex_type, uint w, uint h)
         {
             Bitmap parsed_img = null;
             switch (tex_type)
@@ -438,7 +438,7 @@ namespace Binjo
                     d.data[b] = file_data[d.file_offset + b];
                 }
                 // and finally, parse the image data
-                d.img_rep = parse_img_data(d.data, m.tex_type, m.width, m.height);
+                d.img_rep = Texture_Segment.parse_img_data(d.data, m.tex_type, m.width, m.height);
             }
         }
 

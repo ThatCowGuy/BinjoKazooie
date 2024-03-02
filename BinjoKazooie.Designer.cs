@@ -29,14 +29,11 @@ namespace Binjo
         /// </summary>
         private void InitializeComponent()
         {
-            this.button1 = new System.Windows.Forms.Button();
+            this.load_BIN_button = new System.Windows.Forms.Button();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.comboBox1 = new System.Windows.Forms.ComboBox();
+            this.segName_comboBox = new System.Windows.Forms.ComboBox();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
-            this.numericUpDown1 = new System.Windows.Forms.NumericUpDown();
-            this.label2 = new System.Windows.Forms.Label();
-            this.label1 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.panel2 = new System.Windows.Forms.Panel();
             this.button9 = new System.Windows.Forms.Button();
@@ -64,22 +61,23 @@ namespace Binjo
             this.button7 = new System.Windows.Forms.Button();
             this.button8 = new System.Windows.Forms.Button();
             this.panel5 = new System.Windows.Forms.Panel();
-            this.button10 = new System.Windows.Forms.Button();
+            this.export_Coll_OBJ_button = new System.Windows.Forms.Button();
             this.label11 = new System.Windows.Forms.Label();
             this.dataGridView5 = new System.Windows.Forms.DataGridView();
             this.panel6 = new System.Windows.Forms.Panel();
-            this.button11 = new System.Windows.Forms.Button();
+            this.export_DL_TXT_button = new System.Windows.Forms.Button();
             this.checkBox3 = new System.Windows.Forms.CheckBox();
             this.label12 = new System.Windows.Forms.Label();
             this.dataGridView6 = new System.Windows.Forms.DataGridView();
-            this.button12 = new System.Windows.Forms.Button();
+            this.load_GLTF_button = new System.Windows.Forms.Button();
             this.panel7 = new System.Windows.Forms.Panel();
             this.label10 = new System.Windows.Forms.Label();
             this.dataGridView7 = new System.Windows.Forms.DataGridView();
-            this.button13 = new System.Windows.Forms.Button();
+            this.export_BIN_button = new System.Windows.Forms.Button();
+            this.export_GLTF_button = new System.Windows.Forms.Button();
+            this.label1 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
             this.panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown3)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView2)).BeginInit();
@@ -98,15 +96,17 @@ namespace Binjo
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView7)).BeginInit();
             this.SuspendLayout();
             // 
-            // button1
+            // load_BIN_button
             // 
-            this.button1.Location = new System.Drawing.Point(12, 12);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(113, 23);
-            this.button1.TabIndex = 0;
-            this.button1.Text = "Load BIN";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.load_BIN_button.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(224)))), ((int)(((byte)(192)))));
+            this.load_BIN_button.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.load_BIN_button.Location = new System.Drawing.Point(12, 12);
+            this.load_BIN_button.Name = "load_BIN_button";
+            this.load_BIN_button.Size = new System.Drawing.Size(113, 23);
+            this.load_BIN_button.TabIndex = 0;
+            this.load_BIN_button.Text = "Load BIN";
+            this.load_BIN_button.UseVisualStyleBackColor = false;
+            this.load_BIN_button.Click += new System.EventHandler(this.load_bin_button_Click);
             // 
             // dataGridView1
             // 
@@ -126,39 +126,38 @@ namespace Binjo
             // panel1
             // 
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panel1.Controls.Add(this.comboBox1);
+            this.panel1.Controls.Add(this.segName_comboBox);
             this.panel1.Controls.Add(this.checkBox1);
-            this.panel1.Controls.Add(this.numericUpDown1);
-            this.panel1.Controls.Add(this.label2);
             this.panel1.Controls.Add(this.label1);
             this.panel1.Controls.Add(this.dataGridView1);
-            this.panel1.Location = new System.Drawing.Point(12, 70);
+            this.panel1.Location = new System.Drawing.Point(12, 110);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(541, 158);
             this.panel1.TabIndex = 3;
             this.panel1.Paint += new System.Windows.Forms.PaintEventHandler(this.panel1_Paint);
             // 
-            // comboBox1
+            // segName_comboBox
             // 
-            this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Items.AddRange(new object[] {
+            this.segName_comboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.segName_comboBox.FormattingEnabled = true;
+            this.segName_comboBox.Items.AddRange(new object[] {
             "BIN Header",
-            "00 - Texture Segment",
-            "01 - DisplayList Segment",
-            "02 - ",
-            "03 - Vertex Segment",
-            "04 - ???",
-            "05 - Animation Segment",
-            "06 - Collision Segment",
-            "07 - Effects Segment",
-            "08 - Effects-End Segment",
-            "09 - ???",
-            "0A - Animated Texture Segment",
-            "0B - GeoLayout Segment"});
-            this.comboBox1.Location = new System.Drawing.Point(107, 6);
-            this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(121, 21);
-            this.comboBox1.TabIndex = 7;
+            "Texture Segment",
+            "DisplayList Segment",
+            "Vertex Segment",
+            "? ? ?",
+            "Bone Segment",
+            "Collision Segment",
+            "Effects Segment",
+            "Effects-End Segment",
+            "? ? ?",
+            "Animated Texture Segment",
+            "GeoLayout Segment"});
+            this.segName_comboBox.Location = new System.Drawing.Point(59, 6);
+            this.segName_comboBox.Name = "segName_comboBox";
+            this.segName_comboBox.Size = new System.Drawing.Size(176, 21);
+            this.segName_comboBox.TabIndex = 7;
+            this.segName_comboBox.SelectedIndexChanged += new System.EventHandler(this.segName_comboBox_SelectedIndexChanged);
             // 
             // checkBox1
             // 
@@ -172,49 +171,12 @@ namespace Binjo
             this.checkBox1.UseVisualStyleBackColor = true;
             this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
             // 
-            // numericUpDown1
-            // 
-            this.numericUpDown1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(224)))), ((int)(((byte)(192)))));
-            this.numericUpDown1.Location = new System.Drawing.Point(59, 7);
-            this.numericUpDown1.Maximum = new decimal(new int[] {
-            9,
-            0,
-            0,
-            0});
-            this.numericUpDown1.Name = "numericUpDown1";
-            this.numericUpDown1.Size = new System.Drawing.Size(42, 20);
-            this.numericUpDown1.TabIndex = 5;
-            this.numericUpDown1.ValueChanged += new System.EventHandler(this.numericUpDown1_ValueChanged);
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.ForeColor = System.Drawing.Color.White;
-            this.label2.Location = new System.Drawing.Point(243, 11);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(80, 13);
-            this.label2.TabIndex = 4;
-            this.label2.Text = "Segment Name";
-            this.label2.Click += new System.EventHandler(this.label2_Click);
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.ForeColor = System.Drawing.SystemColors.ButtonFace;
-            this.label1.Location = new System.Drawing.Point(4, 11);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(49, 13);
-            this.label1.TabIndex = 3;
-            this.label1.Text = "Segment";
-            this.label1.Click += new System.EventHandler(this.label1_Click);
-            // 
             // label3
             // 
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label3.ForeColor = System.Drawing.SystemColors.ButtonFace;
-            this.label3.Location = new System.Drawing.Point(16, 42);
+            this.label3.Location = new System.Drawing.Point(17, 81);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(77, 13);
             this.label3.TabIndex = 6;
@@ -263,11 +225,11 @@ namespace Binjo
             this.button6.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
             this.button6.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
             this.button6.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
-            this.button6.Location = new System.Drawing.Point(9, 259);
+            this.button6.Location = new System.Drawing.Point(7, 259);
             this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(94, 23);
+            this.button6.Size = new System.Drawing.Size(96, 23);
             this.button6.TabIndex = 20;
-            this.button6.Text = "Export";
+            this.button6.Text = "Export Image";
             this.button6.UseVisualStyleBackColor = true;
             this.button6.Click += new System.EventHandler(this.button6_Click);
             // 
@@ -327,7 +289,7 @@ namespace Binjo
             this.button3.Name = "button3";
             this.button3.Size = new System.Drawing.Size(94, 23);
             this.button3.TabIndex = 15;
-            this.button3.Text = "Load";
+            this.button3.Text = "Load Image";
             this.button3.UseVisualStyleBackColor = true;
             this.button3.Click += new System.EventHandler(this.button3_Click_1);
             // 
@@ -351,7 +313,7 @@ namespace Binjo
             this.button4.Name = "button4";
             this.button4.Size = new System.Drawing.Size(94, 23);
             this.button4.TabIndex = 14;
-            this.button4.Text = "Replace";
+            this.button4.Text = "Replace Tex";
             this.button4.UseVisualStyleBackColor = true;
             this.button4.Click += new System.EventHandler(this.button4_Click);
             // 
@@ -374,7 +336,7 @@ namespace Binjo
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(94, 23);
             this.button2.TabIndex = 8;
-            this.button2.Text = "Export";
+            this.button2.Text = "Export Texture";
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
@@ -414,9 +376,9 @@ namespace Binjo
             // 
             // button5
             // 
-            this.button5.Location = new System.Drawing.Point(473, 12);
+            this.button5.Location = new System.Drawing.Point(461, 12);
             this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(80, 23);
+            this.button5.Size = new System.Drawing.Size(92, 23);
             this.button5.TabIndex = 15;
             this.button5.Text = "Refresh";
             this.button5.UseVisualStyleBackColor = true;
@@ -512,10 +474,10 @@ namespace Binjo
             // 
             // button7
             // 
-            this.button7.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
-            this.button7.Location = new System.Drawing.Point(388, 41);
+            this.button7.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.button7.Location = new System.Drawing.Point(355, 12);
             this.button7.Name = "button7";
-            this.button7.Size = new System.Drawing.Size(67, 23);
+            this.button7.Size = new System.Drawing.Size(100, 23);
             this.button7.TabIndex = 16;
             this.button7.Text = "Hack64";
             this.button7.UseVisualStyleBackColor = false;
@@ -523,10 +485,10 @@ namespace Binjo
             // 
             // button8
             // 
-            this.button8.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
-            this.button8.Location = new System.Drawing.Point(461, 41);
+            this.button8.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.button8.Location = new System.Drawing.Point(355, 41);
             this.button8.Name = "button8";
-            this.button8.Size = new System.Drawing.Size(92, 23);
+            this.button8.Size = new System.Drawing.Size(100, 23);
             this.button8.TabIndex = 17;
             this.button8.Text = "Bottles Molehill";
             this.button8.UseVisualStyleBackColor = false;
@@ -535,7 +497,7 @@ namespace Binjo
             // panel5
             // 
             this.panel5.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panel5.Controls.Add(this.button10);
+            this.panel5.Controls.Add(this.export_Coll_OBJ_button);
             this.panel5.Controls.Add(this.label11);
             this.panel5.Controls.Add(this.dataGridView5);
             this.panel5.Location = new System.Drawing.Point(12, 328);
@@ -543,18 +505,18 @@ namespace Binjo
             this.panel5.Size = new System.Drawing.Size(541, 92);
             this.panel5.TabIndex = 7;
             // 
-            // button10
+            // export_Coll_OBJ_button
             // 
-            this.button10.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
-            this.button10.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
-            this.button10.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
-            this.button10.Location = new System.Drawing.Point(433, 6);
-            this.button10.Name = "button10";
-            this.button10.Size = new System.Drawing.Size(94, 23);
-            this.button10.TabIndex = 22;
-            this.button10.Text = "Export Collision";
-            this.button10.UseVisualStyleBackColor = true;
-            this.button10.Click += new System.EventHandler(this.button10_Click);
+            this.export_Coll_OBJ_button.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
+            this.export_Coll_OBJ_button.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
+            this.export_Coll_OBJ_button.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
+            this.export_Coll_OBJ_button.Location = new System.Drawing.Point(126, 6);
+            this.export_Coll_OBJ_button.Name = "export_Coll_OBJ_button";
+            this.export_Coll_OBJ_button.Size = new System.Drawing.Size(109, 23);
+            this.export_Coll_OBJ_button.TabIndex = 22;
+            this.export_Coll_OBJ_button.Text = "Export Coll as OBJ";
+            this.export_Coll_OBJ_button.UseVisualStyleBackColor = true;
+            this.export_Coll_OBJ_button.Click += new System.EventHandler(this.export_Coll_OBJ_button_Click);
             // 
             // label11
             // 
@@ -585,8 +547,7 @@ namespace Binjo
             // panel6
             // 
             this.panel6.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panel6.Controls.Add(this.button13);
-            this.panel6.Controls.Add(this.button11);
+            this.panel6.Controls.Add(this.export_DL_TXT_button);
             this.panel6.Controls.Add(this.checkBox3);
             this.panel6.Controls.Add(this.label12);
             this.panel6.Controls.Add(this.dataGridView6);
@@ -595,18 +556,18 @@ namespace Binjo
             this.panel6.Size = new System.Drawing.Size(541, 92);
             this.panel6.TabIndex = 7;
             // 
-            // button11
+            // export_DL_TXT_button
             // 
-            this.button11.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
-            this.button11.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
-            this.button11.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
-            this.button11.Location = new System.Drawing.Point(122, 6);
-            this.button11.Name = "button11";
-            this.button11.Size = new System.Drawing.Size(94, 23);
-            this.button11.TabIndex = 23;
-            this.button11.Text = "Export DL Model";
-            this.button11.UseVisualStyleBackColor = true;
-            this.button11.Click += new System.EventHandler(this.button11_Click);
+            this.export_DL_TXT_button.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
+            this.export_DL_TXT_button.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
+            this.export_DL_TXT_button.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
+            this.export_DL_TXT_button.Location = new System.Drawing.Point(126, 6);
+            this.export_DL_TXT_button.Name = "export_DL_TXT_button";
+            this.export_DL_TXT_button.Size = new System.Drawing.Size(109, 23);
+            this.export_DL_TXT_button.TabIndex = 24;
+            this.export_DL_TXT_button.Text = "Export DL as TXT";
+            this.export_DL_TXT_button.UseVisualStyleBackColor = true;
+            this.export_DL_TXT_button.Click += new System.EventHandler(this.export_DL_TXT_button_Click);
             // 
             // checkBox3
             // 
@@ -646,15 +607,16 @@ namespace Binjo
             this.dataGridView6.Size = new System.Drawing.Size(524, 49);
             this.dataGridView6.TabIndex = 2;
             // 
-            // button12
+            // load_GLTF_button
             // 
-            this.button12.Location = new System.Drawing.Point(135, 12);
-            this.button12.Name = "button12";
-            this.button12.Size = new System.Drawing.Size(113, 23);
-            this.button12.TabIndex = 19;
-            this.button12.Text = "Import GLTF";
-            this.button12.UseVisualStyleBackColor = true;
-            this.button12.Click += new System.EventHandler(this.button12_Click);
+            this.load_GLTF_button.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.load_GLTF_button.Location = new System.Drawing.Point(135, 12);
+            this.load_GLTF_button.Name = "load_GLTF_button";
+            this.load_GLTF_button.Size = new System.Drawing.Size(113, 23);
+            this.load_GLTF_button.TabIndex = 19;
+            this.load_GLTF_button.Text = "Load GLTF";
+            this.load_GLTF_button.UseVisualStyleBackColor = false;
+            this.load_GLTF_button.Click += new System.EventHandler(this.load_GLTF_button_Click);
             // 
             // panel7
             // 
@@ -693,27 +655,50 @@ namespace Binjo
             this.dataGridView7.Size = new System.Drawing.Size(524, 49);
             this.dataGridView7.TabIndex = 2;
             // 
-            // button13
+            // export_BIN_button
             // 
-            this.button13.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
-            this.button13.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
-            this.button13.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
-            this.button13.Location = new System.Drawing.Point(222, 6);
-            this.button13.Name = "button13";
-            this.button13.Size = new System.Drawing.Size(94, 23);
-            this.button13.TabIndex = 24;
-            this.button13.Text = "Export DL Text";
-            this.button13.UseVisualStyleBackColor = true;
-            this.button13.Click += new System.EventHandler(this.button13_Click);
+            this.export_BIN_button.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(224)))), ((int)(((byte)(192)))));
+            this.export_BIN_button.Location = new System.Drawing.Point(12, 41);
+            this.export_BIN_button.Name = "export_BIN_button";
+            this.export_BIN_button.Size = new System.Drawing.Size(113, 23);
+            this.export_BIN_button.TabIndex = 20;
+            this.export_BIN_button.Text = "Export as BIN";
+            this.export_BIN_button.UseVisualStyleBackColor = false;
+            this.export_BIN_button.Click += new System.EventHandler(this.export_BIN_button_Click);
+            // 
+            // export_GLTF_button
+            // 
+            this.export_GLTF_button.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.export_GLTF_button.Location = new System.Drawing.Point(135, 41);
+            this.export_GLTF_button.Name = "export_GLTF_button";
+            this.export_GLTF_button.Size = new System.Drawing.Size(113, 23);
+            this.export_GLTF_button.TabIndex = 21;
+            this.export_GLTF_button.Text = "Export as GLTF";
+            this.export_GLTF_button.UseVisualStyleBackColor = false;
+            this.export_GLTF_button.Click += new System.EventHandler(this.export_GLTF_button_Click);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.ForeColor = System.Drawing.SystemColors.ButtonFace;
+            this.label1.Location = new System.Drawing.Point(4, 11);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(49, 13);
+            this.label1.TabIndex = 3;
+            this.label1.Text = "Segment";
+            this.label1.Click += new System.EventHandler(this.label1_Click);
             // 
             // BinjoKazooie
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(44)))), ((int)(((byte)(44)))), ((int)(((byte)(44)))));
-            this.ClientSize = new System.Drawing.Size(1169, 605);
+            this.ClientSize = new System.Drawing.Size(1121, 605);
+            this.Controls.Add(this.export_GLTF_button);
+            this.Controls.Add(this.export_BIN_button);
             this.Controls.Add(this.panel7);
-            this.Controls.Add(this.button12);
+            this.Controls.Add(this.load_GLTF_button);
             this.Controls.Add(this.panel6);
             this.Controls.Add(this.panel5);
             this.Controls.Add(this.button8);
@@ -724,7 +709,7 @@ namespace Binjo
             this.Controls.Add(this.panel2);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.panel1);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.load_BIN_button);
             this.DoubleBuffered = true;
             this.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Fixed3D;
@@ -734,7 +719,6 @@ namespace Binjo
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).EndInit();
             this.panel2.ResumeLayout(false);
             this.panel2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown3)).EndInit();
@@ -764,12 +748,9 @@ namespace Binjo
 
         #endregion
 
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button load_BIN_button;
         private System.Windows.Forms.DataGridView dataGridView1;
         private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.NumericUpDown numericUpDown1;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Panel panel2;
         private System.Windows.Forms.DataGridView dataGridView2;
@@ -800,18 +781,20 @@ namespace Binjo
         private System.Windows.Forms.Panel panel5;
         private System.Windows.Forms.Label label11;
         private System.Windows.Forms.DataGridView dataGridView5;
-        private System.Windows.Forms.Button button10;
+        private System.Windows.Forms.Button export_Coll_OBJ_button;
         private System.Windows.Forms.Panel panel6;
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.DataGridView dataGridView6;
         private System.Windows.Forms.CheckBox checkBox3;
-        private System.Windows.Forms.Button button11;
-        private System.Windows.Forms.Button button12;
-        private System.Windows.Forms.ComboBox comboBox1;
+        private System.Windows.Forms.Button load_GLTF_button;
+        private System.Windows.Forms.ComboBox segName_comboBox;
         private System.Windows.Forms.Panel panel7;
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.DataGridView dataGridView7;
-        private System.Windows.Forms.Button button13;
+        private System.Windows.Forms.Button export_DL_TXT_button;
+        private System.Windows.Forms.Button export_BIN_button;
+        private System.Windows.Forms.Button export_GLTF_button;
+        private System.Windows.Forms.Label label1;
     }
 }
 

@@ -189,7 +189,7 @@ namespace Binjo
             content.Add(new string[] {
                 "???",
                 File_Handler.uint_to_string(this.unk_3, 0xFFFFFFFF),
-                File_Handler.convert_to_float((int) this.unk_3).ToString()
+                File_Handler.convert_to_float((int) this.unk_3).ToString("F4")
             });
             return content;
         }
