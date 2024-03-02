@@ -189,13 +189,13 @@ namespace Binjo
                     // NOTE: this is explicitly using <=, because the max ID should be inclusive !
                     for (int x = min_geo_cube_x; x <= max_geo_cube_x; x++)
                     {
-                        int x_ID = (x - min_geo_cube_x);
+                        int x_ID = (x - this.coll_seg.min_geo_cube_x);
                         for (int y = min_geo_cube_y; y <= max_geo_cube_y; y++)
                         {
-                            int y_ID = (y - min_geo_cube_y);
+                            int y_ID = (y - this.coll_seg.min_geo_cube_y);
                             for (int z = min_geo_cube_z; z <= max_geo_cube_z; z++)
                             {
-                                int z_ID = (z - min_geo_cube_z);
+                                int z_ID = (z - this.coll_seg.min_geo_cube_z);
 
                                 int cube_ID = (x_ID + (y_ID * this.coll_seg.stride_y) + (z_ID * this.coll_seg.stride_z));
                                 this.coll_seg.geo_cube_list[cube_ID].coll_tri_list.Add(new Tri_Elem(tri));
@@ -285,17 +285,53 @@ namespace Binjo
                 command_list.Add(new DisplayList_Command(
                     DisplayList_Command.G_SETTIMG("CI", 16, (meta.datasection_offset_data + 0x20)) // NOTE: +0x20 for CI4, +0x200 for CI8...
                 ));
-                command_list.Add(new DisplayList_Command(
-                    DisplayList_Command.G_SETTILE("CI", 16, 0, 0x0000, 7, 0, false, false, 4, 0, false, false, 0, 0)
-                ));
+                int texel_cnt = (meta.width * meta.height);
+                int texel_bitsize = 4;
+                // we have to outplay the TMEM restriction of loading a max of 0x400 texels at a time
+                if (texel_cnt > 0x400)
+                {
+                    // this should use the texel bitsize of the format instead of 4
+                    int fakeout_bitsize = 16;
+                    int fakeout_factor = (fakeout_bitsize / texel_bitsize);
 
-                // more palette setup stuff
-                command_list.Add(new DisplayList_Command(
-                    DisplayList_Command.G_LOADBLOCK(0, 0, 7, meta.width, meta.height, "CI4")
-                ));
-                command_list.Add(new DisplayList_Command(
-                    DisplayList_Command.G_SETTILE("CI", 4, meta.width, 0x0000, 0, 0, false, false, 6, 0, false, false, 6, 0)
-                ));
+                    // this command is a really really hacky way of outplaying the TMEM restrictions...
+                    // normally, G_LOADBLOCK can only load a maximum of 0x400 texels at a time, but if we set the bitsize to 16
+                    // here before loading "0x400 texels", we juke the processor into actually loading 0x1000 texels of size 4b...
+                    // BUT, we have to reset this hack with an additional G_SETTILE after the G_LOADBLOCK, that fixes the fake bitsize.
+                    // That's also why this command works on descriptor-7 I guess.
+                    command_list.Add(new DisplayList_Command(
+                        DisplayList_Command.G_SETTILE("CI", fakeout_bitsize, 0, 0x0000, 7, 0, false, false, 6, 0, false, false, 6, 0)
+                    ));
+                    // Note that we are providing some tempered-with params here
+                    command_list.Add(new DisplayList_Command(
+                        DisplayList_Command.G_LOADBLOCK(
+                            0, 0, 7,
+                            (uint) (meta.width / fakeout_factor),
+                            meta.height,
+                            (uint) fakeout_bitsize
+                        )
+                    ));
+                    // restore the correct texel bitsize afterwards
+                    command_list.Add(new DisplayList_Command(
+                        DisplayList_Command.G_SETTILE("CI", texel_bitsize, meta.width, 0x0000, 0, 0, false, false, 6, 0, false, false, 6, 0)
+                    ));
+                }
+                // otherwise we can directly load to TMEM (and immediatly use descriptor-0)
+                else
+                {
+                    command_list.Add(new DisplayList_Command(
+                        DisplayList_Command.G_SETTILE("CI", texel_bitsize, 0, 0x0000, 0, 0, false, false, 6, 0, false, false, 6, 0)
+                    ));
+                    // set up the faked LOADBLOCK; note that we reduce the percieved width by the fakeout factor
+                    command_list.Add(new DisplayList_Command(
+                        DisplayList_Command.G_LOADBLOCK(
+                            0, 0, 0,
+                            meta.width, 
+                            meta.height,
+                            (uint) Dicts.TEXEL_FMT_BITSIZE["CI4"]
+                        )
+                    ));
+                }
                 command_list.Add(new DisplayList_Command(
                     DisplayList_Command.G_SETTILESIZE(0, 0, 0, meta.width, meta.height)
                 ));
@@ -306,6 +342,9 @@ namespace Binjo
                 ));
                 command_list.Add(new DisplayList_Command(
                     DisplayList_Command.G_SETCOMBINE()
+                ));
+                command_list.Add(new DisplayList_Command(
+                    DisplayList_Command.G_DL(false, "Mode", 0x20)
                 ));
 
                 FullTriangle[] tri_arr = tri_list.ToArray();
@@ -483,25 +522,6 @@ namespace Binjo
             }
             this.vtx_seg.valid = true;
             Console.WriteLine("Finished VTX Segment.");
-        }
-        public void export_gltf_model()
-        {
-            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}.gltf", this.loaded_bin_name));
-
-            SaveFileDialog SFD = new SaveFileDialog();
-            SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
-            SFD.FileName = chosen_filename;
-            if (SFD.ShowDialog() == DialogResult.OK)
-            {
-                chosen_filename = SFD.FileName;
-                File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
-                System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
-
-                write_gltf_model(chosen_filename);
-                return;
-            }
-            System.Console.WriteLine("Cancelled");
-            return;
         }
         public void parse_gltf_additional(String filepath)
         {
@@ -685,21 +705,21 @@ namespace Binjo
                 }
             }
         }
-        public void write_gltf_model(String filepath)
+        public void write_gltf_model()
         {
             // first of all, we have to sort the tri list
             this.consecutive_tri_list.Sort();
 
-            GLTF_Handler gltf = new GLTF_Handler();
+            this.GLTF = new GLTF_Handler();
 
             GLTF_Mesh tmp_mesh = new GLTF_Mesh();
             tmp_mesh.name = String.Format("Mesh Full");
-            gltf.meshes.Add(tmp_mesh);
+            this.GLTF.meshes.Add(tmp_mesh);
 
             GLTF_Node tmp_node = new GLTF_Node();
             tmp_node.name = String.Format("Node Full");
             tmp_node.mesh = 0;
-            gltf.nodes.Add(tmp_node);
+            this.GLTF.nodes.Add(tmp_node);
 
             List<Byte> raw_data_vtx_xyz = new List<Byte>();
             List<Byte> raw_data_vtx_uv = new List<Byte>();
@@ -747,25 +767,25 @@ namespace Binjo
                     buffer.content = raw_data_tri.ToArray();
                     buffer.byteLength = (uint) buffer.content.Length;
                     buffer.uri = GLTF_Handler.URI_PREFIX + Convert.ToBase64String(buffer.content);
-                    gltf.buffers.Add(buffer);
+                    this.GLTF.buffers.Add(buffer);
 
                     GLTF_BufferView tmp_view = new GLTF_BufferView();
                     tmp_view.name = String.Format("VTX-ID BufferView #{0}", parsed_tri_types);
-                    tmp_view.buffer = (uint) (gltf.buffers.Count - 1);
+                    tmp_view.buffer = (uint) (this.GLTF.buffers.Count - 1);
                     tmp_view.byteOffset = 0;
                     tmp_view.byteLength = buffer.byteLength;
                     tmp_view.target = GLTF_Handler.TARGET_TYPES["INDEX"];
-                    gltf.bufferViews.Add(tmp_view);
+                    this.GLTF.bufferViews.Add(tmp_view);
 
                     GLTF_Accessor tmp_accessor = new GLTF_Accessor();
                     tmp_accessor.name = String.Format("VTX-ID Accessor #{0}", parsed_tri_types);
-                    uint vtx_ids_accessor_ID = (uint) (gltf.bufferViews.Count - 1);
+                    uint vtx_ids_accessor_ID = (uint) (this.GLTF.bufferViews.Count - 1);
                     tmp_accessor.bufferView = vtx_ids_accessor_ID;
                     tmp_accessor.byteOffset = 0;
                     tmp_accessor.componentType = GLTF_Handler.COMPONENT_TYPES["USHORT"];
                     tmp_accessor.count = written_verts;
                     tmp_accessor.type = "SCALAR";
-                    gltf.accessors.Add(tmp_accessor);
+                    this.GLTF.accessors.Add(tmp_accessor);
 
                     // building the VTX Coords buffer + all correspondences
                     buffer = new GLTF_BufferInternal();
@@ -773,25 +793,25 @@ namespace Binjo
                     buffer.content = raw_data_vtx_xyz.ToArray();
                     buffer.byteLength = (uint) buffer.content.Length;
                     buffer.uri = GLTF_Handler.URI_PREFIX + Convert.ToBase64String(buffer.content);
-                    gltf.buffers.Add(buffer);
+                    this.GLTF.buffers.Add(buffer);
 
                     tmp_view = new GLTF_BufferView();
                     tmp_view.name = String.Format("VTX-Coords BufferView #{0}", parsed_tri_types);
-                    tmp_view.buffer = (uint) (gltf.buffers.Count - 1);
+                    tmp_view.buffer = (uint) (this.GLTF.buffers.Count - 1);
                     tmp_view.byteOffset = 0;
                     tmp_view.byteLength = buffer.byteLength;
                     tmp_view.target = GLTF_Handler.TARGET_TYPES["VERTEX"];
-                    gltf.bufferViews.Add(tmp_view);
+                    this.GLTF.bufferViews.Add(tmp_view);
 
                     tmp_accessor = new GLTF_Accessor();
                     tmp_accessor.name = String.Format("VTX-Coords Accessor #{0}", parsed_tri_types);
-                    uint vtx_coords_accessor_ID = (uint) (gltf.bufferViews.Count - 1);
+                    uint vtx_coords_accessor_ID = (uint) (this.GLTF.bufferViews.Count - 1);
                     tmp_accessor.bufferView = vtx_coords_accessor_ID;
                     tmp_accessor.byteOffset = 0;
                     tmp_accessor.componentType = GLTF_Handler.COMPONENT_TYPES["FLOAT"];
                     tmp_accessor.count = written_verts; // 1 VEC3 per vert
                     tmp_accessor.type = "VEC3";
-                    gltf.accessors.Add(tmp_accessor);
+                    this.GLTF.accessors.Add(tmp_accessor);
 
                     // only for textured materials
                     uint vtx_uv_accessor_ID = 0;
@@ -803,25 +823,25 @@ namespace Binjo
                         buffer.content = raw_data_vtx_uv.ToArray();
                         buffer.byteLength = (uint) buffer.content.Length;
                         buffer.uri = GLTF_Handler.URI_PREFIX + Convert.ToBase64String(buffer.content);
-                        gltf.buffers.Add(buffer);
+                        this.GLTF.buffers.Add(buffer);
 
                         tmp_view = new GLTF_BufferView();
                         tmp_view.name = String.Format("VTX-UV BufferView #{0}", parsed_tri_types);
-                        tmp_view.buffer = (uint) (gltf.buffers.Count - 1);
+                        tmp_view.buffer = (uint) (this.GLTF.buffers.Count - 1);
                         tmp_view.byteOffset = 0;
                         tmp_view.byteLength = buffer.byteLength;
                         tmp_view.target = GLTF_Handler.TARGET_TYPES["VERTEX"];
-                        gltf.bufferViews.Add(tmp_view);
+                        this.GLTF.bufferViews.Add(tmp_view);
 
                         tmp_accessor = new GLTF_Accessor();
                         tmp_accessor.name = String.Format("VTX-UV Accessor #{0}", parsed_tri_types);
-                        vtx_uv_accessor_ID = (uint) (gltf.bufferViews.Count - 1);
+                        vtx_uv_accessor_ID = (uint) (this.GLTF.bufferViews.Count - 1);
                         tmp_accessor.bufferView = vtx_uv_accessor_ID;
                         tmp_accessor.byteOffset = 0;
                         tmp_accessor.componentType = GLTF_Handler.COMPONENT_TYPES["FLOAT"];
                         tmp_accessor.count = written_verts; // 1 VEC2 per vert
                         tmp_accessor.type = "VEC2";
-                        gltf.accessors.Add(tmp_accessor);
+                        this.GLTF.accessors.Add(tmp_accessor);
                     }
 
                     GLTF_Primitive tmp_prim = new GLTF_Primitive();
@@ -833,30 +853,30 @@ namespace Binjo
                     {
                         GLTF_Image tmp_img = new GLTF_Image();
                         tmp_img.uri = this.get_default_texture_name(full_tri.assigned_tex_ID);
-                        gltf.images.Add(tmp_img);
+                        this.GLTF.images.Add(tmp_img);
 
                         GLTF_Texture tmp_tex = new GLTF_Texture();
-                        tmp_tex.source = (uint) (gltf.materials.Count);
-                        gltf.textures.Add(tmp_tex);
+                        tmp_tex.source = (uint) (this.GLTF.materials.Count);
+                        this.GLTF.textures.Add(tmp_tex);
 
                         GLTF_baseColorTexture tmp_bCT = new GLTF_baseColorTexture();
-                        tmp_bCT.index = (uint) (gltf.materials.Count);
+                        tmp_bCT.index = (uint) (this.GLTF.materials.Count);
                         GLTF_pbrMetallicRoughness tmp_pbr = new GLTF_pbrMetallicRoughness();
                         tmp_pbr.baseColorTexture = tmp_bCT;
                         GLTF_Material tmp_mat = new GLTF_Material();
                         tmp_mat.name = String.Format("mat_t{0}_c{1}_s{2}",
-                            (uint) (gltf.materials.Count),
+                            (uint) (this.GLTF.materials.Count),
                             File_Handler.uint_to_string(full_tri.floor_type, 0xFFFF),
                             File_Handler.uint_to_string(full_tri.sound_type, 0xFFFF)
                         );
                         tmp_mat.pbrMetallicRoughness = tmp_pbr;
-                        gltf.materials.Add(tmp_mat);
+                        this.GLTF.materials.Add(tmp_mat);
 ;                       
                         // both of these are nullable
                         tmp_prim.attributes.Add("TEXCOORD_0", vtx_uv_accessor_ID);
-                        tmp_prim.material = (gltf.materials.Count - 1);
+                        tmp_prim.material = (this.GLTF.materials.Count - 1);
                     }
-                    gltf.meshes[0].primitives.Add(tmp_prim);
+                    this.GLTF.meshes[0].primitives.Add(tmp_prim);
 
                     parsed_tri_types += 1;
                     // and start over !
@@ -866,16 +886,37 @@ namespace Binjo
                     raw_data_tri.Clear();
                 }
             }
+        }
+        public void save_GLTF()
+        {
+            // create the GLTF structs that rep the loaded data
+            this.write_gltf_model();
 
-            using (StreamWriter output_gltf = new StreamWriter(filepath))
+            // choose the bin file name to export to
+            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}.gltf", this.loaded_bin_name));
+
+            SaveFileDialog SFD = new SaveFileDialog();
+            SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
+            SFD.FileName = chosen_filename;
+            if (SFD.ShowDialog() == DialogResult.OK)
             {
-                var options = new System.Text.Json.JsonSerializerOptions
+                chosen_filename = SFD.FileName;
+                File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
+                System.Console.WriteLine(String.Format("Saving GLTF File {0}...", chosen_filename));
+                // and write to GLTF
+                using (StreamWriter output_gltf = new StreamWriter(chosen_filename))
                 {
-                    WriteIndented = true,
-                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-                };
-                output_gltf.WriteLine(JsonSerializer.Serialize(gltf, options));
+                    var options = new System.Text.Json.JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                    };
+                    output_gltf.WriteLine(JsonSerializer.Serialize(this.GLTF, options));
+                }
+                return;
             }
+            System.Console.WriteLine("Cancelled");
+            return;
         }
 
         public void overwrite_img_data(int index, byte[] replacement)
@@ -883,17 +924,7 @@ namespace Binjo
             Tex_Data d = this.tex_seg.data[index];
             File_Handler.write_data(this.content, (int)d.file_offset, replacement);
         }
-        public void save_BIN()
-        {
-            if (this.loaded_bin_path.Contains("_copy") == false)
-            {
-                this.loaded_bin_path = this.loaded_bin_path.Replace(".bin", "_copy.bin");
-            }
-            System.IO.File.WriteAllBytes(this.loaded_bin_path, this.content);
-            System.Console.WriteLine(String.Format("Overwriting File {0}...", this.loaded_bin_path));
-            return;
-        }
-        public void select_BIN()
+        public void load_BIN()
         {
             OpenFileDialog OFD = new OpenFileDialog();
             OFD.InitialDirectory = File_Handler.get_basedir_or_assets();
@@ -915,42 +946,10 @@ namespace Binjo
             this.loaded_bin_name = this.loaded_bin_path.Substring((last_slash + 1), (file_ext - last_slash - 1));
             this.parse_BIN();
         }
-
-        public String get_default_texture_name(int index)
+        public void save_BIN()
         {
-            return String.Format("{0}_{1:0000}.png", this.loaded_bin_name, index);
-        }
-
-        public void export_image_of_element(int index, bool choose_name)
-        {
-            if (index < 0 || index >= tex_seg.tex_cnt)
-            {
-                Console.WriteLine("Received invalid index for Image Export.");
-                return;
-            }
-            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), get_default_texture_name(index));
-            if (choose_name == true)
-            {
-                SaveFileDialog SFD = new SaveFileDialog();
-                SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
-                SFD.FileName = chosen_filename;
-                if (SFD.ShowDialog() == DialogResult.OK)
-                {
-                    chosen_filename = SFD.FileName;
-                    File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
-                    System.Console.WriteLine(String.Format("Saving Image File {0}...", chosen_filename));
-                    tex_seg.data[index].img_rep.Save(chosen_filename);
-                    return;
-                }
-                System.Console.WriteLine("Cancelled");
-                return;
-            }
-            System.Console.WriteLine(String.Format("Saving Image File {0}...", chosen_filename));
-            tex_seg.data[index].img_rep.Save(chosen_filename);
-        }
-        public void export_displaylist_model()
-        {
-            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}_DL.obj", this.loaded_bin_name));
+            // choose the bin file name to export to
+            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}.bin", this.loaded_bin_name));
 
             SaveFileDialog SFD = new SaveFileDialog();
             SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
@@ -959,32 +958,22 @@ namespace Binjo
             {
                 chosen_filename = SFD.FileName;
                 File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
-                System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
-                write_displaylist_model(chosen_filename);
+                System.Console.WriteLine(String.Format("Saving BIN File {0}...", chosen_filename));
+                // and write to BIN
+                File.WriteAllBytes(chosen_filename, this.content);
                 return;
             }
             System.Console.WriteLine("Cancelled");
             return;
-        }
-        public void export_displaylist_text()
-        {
-            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}_DL.txt", this.loaded_bin_name));
 
-            SaveFileDialog SFD = new SaveFileDialog();
-            SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
-            SFD.FileName = chosen_filename;
-            if (SFD.ShowDialog() == DialogResult.OK)
+            /*
+            if (this.loaded_bin_path.Contains("_copy") == false)
             {
-                chosen_filename = SFD.FileName;
-                File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
-                System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
-                write_displaylist_text(chosen_filename);
-                return;
+                this.loaded_bin_path = this.loaded_bin_path.Replace(".bin", "_copy.bin");
             }
-            System.Console.WriteLine("Cancelled");
-            return;
+            */
         }
-        public void export_bin_from_gltf()
+        public void load_GLTF()
         {
             // choose the GLTF file that you want to convert
             OpenFileDialog OFD = new OpenFileDialog();
@@ -1058,12 +1047,59 @@ namespace Binjo
             // and finally, overwrite the header with the updated offsets
             File_Handler.write_bytes_to_buffer(this.bin_header.get_bytes(), parsed_content, 0x00);
             this.bin_header.valid = true;
-            this.file_loaded = true;
 
-            // choose the bin file name to export to
+            // and set the content
+            this.content = parsed_content;
+
             // Default: cut off the ".gltf" and replace "assets" by "exports" if applicable
-            this.loaded_bin_name = OFD.FileName.Substring(0, (OFD.FileName.Length - 5)).Replace("assets", "exports"); 
-            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}.bin", this.loaded_bin_name));
+            this.loaded_bin_path = OFD.FileName;
+            int last_slash = this.loaded_bin_path.LastIndexOf("\\");
+            int file_ext = this.loaded_bin_path.LastIndexOf(".");
+            this.loaded_bin_name = this.loaded_bin_path.Substring((last_slash + 1), (file_ext - last_slash - 1));
+
+            this.file_loaded = true;
+        }
+
+
+
+
+
+
+        public String get_default_texture_name(int index)
+        {
+            return String.Format("{0}_{1:0000}.png", this.loaded_bin_name, index);
+        }
+
+        public void export_image_of_element(int index, bool choose_name)
+        {
+            if (index < 0 || index >= tex_seg.tex_cnt)
+            {
+                Console.WriteLine("Received invalid index for Image Export.");
+                return;
+            }
+            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), get_default_texture_name(index));
+            if (choose_name == true)
+            {
+                SaveFileDialog SFD = new SaveFileDialog();
+                SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
+                SFD.FileName = chosen_filename;
+                if (SFD.ShowDialog() == DialogResult.OK)
+                {
+                    chosen_filename = SFD.FileName;
+                    File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
+                    System.Console.WriteLine(String.Format("Saving Image File {0}...", chosen_filename));
+                    tex_seg.data[index].img_rep.Save(chosen_filename);
+                    return;
+                }
+                System.Console.WriteLine("Cancelled");
+                return;
+            }
+            System.Console.WriteLine(String.Format("Saving Image File {0}...", chosen_filename));
+            tex_seg.data[index].img_rep.Save(chosen_filename);
+        }
+        public void export_displaylist_model()
+        {
+            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}_DL.obj", this.loaded_bin_name));
 
             SaveFileDialog SFD = new SaveFileDialog();
             SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
@@ -1073,8 +1109,25 @@ namespace Binjo
                 chosen_filename = SFD.FileName;
                 File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
                 System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
-                // and write to BIN
-                File.WriteAllBytes(chosen_filename, parsed_content);
+                write_displaylist_model(chosen_filename);
+                return;
+            }
+            System.Console.WriteLine("Cancelled");
+            return;
+        }
+        public void export_displaylist_text()
+        {
+            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}_DL.txt", this.loaded_bin_name));
+
+            SaveFileDialog SFD = new SaveFileDialog();
+            SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
+            SFD.FileName = chosen_filename;
+            if (SFD.ShowDialog() == DialogResult.OK)
+            {
+                chosen_filename = SFD.FileName;
+                File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
+                System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
+                write_displaylist_text(chosen_filename);
                 return;
             }
             System.Console.WriteLine("Cancelled");

@@ -32,47 +32,14 @@ namespace Binjo
             return bytes;
         }
 
-        /*/=====================================================
-         * Thanks to Unalive for documenting these Flags
-        =====================================================/*/
-        public Dictionary<int, string> COLLISION_FLAGS = new Dictionary<int, string>
+        public static ushort DEFAULT_COLL()
         {
-            { 0x0, "" },
-            { 0x1, "" },
-            { 0x2, "" },
-            { 0x3, "Water" },
-            { 0x4, "Trottable" },
-            { 0x5, "Disc-Rim" },
-            { 0x6, "Un-Trottable" },
-            { 0x7, "" },
-            { 0x8, "~ footstep sfx" },
-            { 0x9, "~ footstep sfx" },
-            { 0xA, "~ footstep sfx" },
-            { 0xB, "~ footstep sfx" },
-            { 0xC, "~ footstep sfx" },
-            { 0xD, "Damage Floor" },
-            { 0xE, "~ Damage func" },
-            { 0xF, "~ Damage func" },
-        };
-        public Dictionary<int, string> SOUND_FLAGS = new Dictionary<int, string>
+            return (ushort) MathHelpers.set_bits(0x00, 16, new int[] { Dicts.COLLISION_FLAGS["UNK_00"], Dicts.COLLISION_FLAGS["Trottable"], });
+        }
+        public static ushort DEFAULT_SOUND()
         {
-            { 0x0, "GV Tree Leaves" },
-            { 0x1, "" },
-            { 0x2, "" },
-            { 0x3, "" },
-            { 0x4, "" },
-            { 0x5, "" },
-            { 0x6, "" },
-            { 0x7, "" },
-            { 0x8, "Tall Grass" },
-            { 0x9, "" },
-            { 0xA, "" },
-            { 0xB, "Metallic" },
-            { 0xC, "" },
-            { 0xD, "" },
-            { 0xE, "" },
-            { 0xF, "~ global footstep sfx" }
-        };
+            return (ushort) MathHelpers.set_bits(0x00, 16, new int[] { Dicts.SOUND_FLAGS["~ global footstep sfx"] });
+        }
 
         public Tri_Elem(FullTriangle full_tri)
         {
@@ -89,7 +56,8 @@ namespace Binjo
             this.index_2 = 0;
             this.index_3 = 0;
             this.unk_1 = 0;
-            this.floor_type = 0;
+            // these flags seem weird, but it also seems to be some sort of default ?
+            this.floor_type = Tri_Elem.DEFAULT_COLL();
             this.sound_type = 0;
         }
     }

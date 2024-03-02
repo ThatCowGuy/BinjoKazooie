@@ -8,8 +8,90 @@ namespace Binjo
 {
     public class Dicts
     {
+        /*/=====================================================
+         * Thanks to Unalive for documenting these Flags
+        =====================================================/*/
+        public static Dictionary<int, string> COLLISION_FLAGS_REV = new Dictionary<int, string>
+        {
+            { 0x00, "UNK_00" },
+            { 0x01, "UNK_01" },
+            { 0x02, "UNK_02" },
+            { 0x03, "Water" },
+            { 0x04, "Trottable" },
+            { 0x05, "Disc-Rim" },
+            { 0x06, "Un-Trottable" },
+            { 0x07, "UNK_07" },
+            { 0x08, "UNK_08" }, // ~ footstep sfx" },
+            { 0x09, "UNK_09" }, // ~ footstep sfx" },
+            { 0x0A, "UNK_0A" }, // ~ footstep sfx" },
+            { 0x0B, "UNK_0B" }, // ~ footstep sfx" },
+            { 0x0C, "UNK_0C" }, // ~ footstep sfx" },
+            { 0x0D, "Damage" },
+            { 0x0E, "UNK_0E" }, // ~ Damage func" },
+            { 0x0F, "UNK_0F" }, // ~ Damage func" },
+        };
+        public static Dictionary<string, int> COLLISION_FLAGS = new Dictionary<string, int>
+        {
+            { "UNK_00",       0x00 },
+            { "UNK_01",       0x01 },
+            { "UNK_02",       0x02 },
+            { "Water",        0x03 },
+            { "Trottable",    0x04 },
+            { "Disc-Rim",     0x05 },
+            { "Un-Trottable", 0x06 },
+            { "UNK_07",       0x07 },
+            { "UNK_08",       0x08 }, // ~ footstep sfx" },
+            { "UNK_09",       0x09 }, // ~ footstep sfx" },
+            { "UNK_0A",       0x0A }, // ~ footstep sfx" },
+            { "UNK_0B",       0x0B }, // ~ footstep sfx" },
+            { "UNK_0C",       0x0C }, // ~ footstep sfx" },
+            { "Damage",       0x0D },
+            { "UNK_0E",       0x0E }, // ~ Damage func" },
+            { "UNK_0F",       0x0F }, // ~ Damage func" },
+        };
+
+        public static Dictionary<int, string> SOUND_FLAGS_REV = new Dictionary<int, string>
+        {
+            { 0x0, "GV Tree Leaves" },
+            { 0x1, "" },
+            { 0x2, "" },
+            { 0x3, "" },
+            { 0x4, "" },
+            { 0x5, "" },
+            { 0x6, "" },
+            { 0x7, "" },
+            { 0x8, "Tall Grass" },
+            { 0x9, "" },
+            { 0xA, "" },
+            { 0xB, "Metallic" },
+            { 0xC, "" },
+            { 0xD, "" },
+            { 0xE, "" },
+            { 0xF, "~ global footstep sfx" }
+        };
+        public static Dictionary<string, int> SOUND_FLAGS = new Dictionary<string, int>
+        {
+            { "GV Tree Leaves", 0x0 },
+            { "UNK_01", 0x1 },
+            { "UNK_02", 0x2 },
+            { "UNK_03", 0x3 },
+            { "UNK_04", 0x4 },
+            { "UNK_05", 0x5 },
+            { "UNK_06", 0x6 },
+            { "UNK_07", 0x7 },
+            { "Tall Grass", 0x8 },
+            { "UNK_09", 0x9 },
+            { "UNK_0A", 0xA },
+            { "Metallic", 0xB },
+            { "UNK_0C", 0xC },
+            { "UNK_0D", 0xD },
+            { "UNK_0E", 0xE },
+            { "~ global footstep sfx", 0xF }
+        };
+
         public static Dictionary<int, String> INTERNAL_SEG_NAMES = new Dictionary<int, string>
         {
+            { 0, "MISSING" },
             { 1, "VTX" },
             { 2, "Tex" },
             { 3, "Mode" }, // static data that defines the possible rendermodes (core2/modelRender.c#L204)

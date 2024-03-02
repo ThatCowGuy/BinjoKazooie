@@ -148,6 +148,8 @@ namespace Binjo
                 (uint) ((encoding >> 32) & 0xFFFFFFFF),
                 (uint) ((encoding >> 0)  & 0xFFFFFFFF)
             };
+            if (encoding != 0x00)
+                this.infer_parameters();
         }
         // this is C#'s shorthand for a constructor that calls another constructor...
         public DisplayList_Command() : this(0x00) { }
@@ -269,16 +271,19 @@ namespace Binjo
             cmd |= MathHelpers.shift_cut((ulong) modebits, 0, 32);
             return cmd;
         }
-        public static ulong G_LOADBLOCK(uint ULx, uint ULy, int descr, uint width, uint height, String format)
+        public static ulong G_LOADBLOCK(uint ULx, uint ULy, int descr, uint width, uint height, uint texel_bitsize)
         {
             ulong cmd = 0x00;
             cmd |= MathHelpers.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_LOADBLOCK"], 56, 8);
             cmd |= MathHelpers.shift_cut((ulong) ULx, 44, 12); // 3 nibbles
             cmd |= MathHelpers.shift_cut((ulong) ULy, 32, 12); // 3 nibbles
             cmd |= MathHelpers.shift_cut((ulong) descr, 24, 8);
-            ulong texel_cnt = (ulong) (width * height);
+            // NOTE: dont forget to substract -1; idk if this has a technical reason, but interestingly
+            //       the resolution 64/64 is 0x40/0x40 which has 0x1000 texels, but the texel_cnt slot
+            //       in this command can only take 12 bits, or 3 nibbles (0x???). So maybe this -1 is meant
+            //       to get 64/64 resolutions to work with 12 bits, as 0x1000 - 1 = 0xFFF...
+            ulong texel_cnt = (ulong) ((width * height) - 1);
             cmd |= MathHelpers.shift_cut(texel_cnt, 12, 12); // 3 nibbles
-            uint texel_bitsize = (uint) Dicts.TEXEL_FMT_BITSIZE[format];
             ulong DXT = MathHelpers.calc_DXT(width, texel_bitsize);
             cmd |= MathHelpers.shift_cut(DXT, 0, 12); // 3 nibbles
             return cmd;

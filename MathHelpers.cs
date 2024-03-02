@@ -12,6 +12,23 @@ namespace Binjo
 {
     public static class MathHelpers
     {
+        // these 3 methods are counting bits from the left
+        public static Boolean get_bit(uint bitfield, int bitfield_len, int bit_ID)
+        {
+            return ((bitfield & (uint) (0b1 << (bitfield_len - 1 - bit_ID))) > 0);
+        }
+        public static uint set_bit(uint bitfield, int bitfield_len, int bit_ID)
+        {
+            return (bitfield |= (uint) (0b1 << (bitfield_len - 1 - bit_ID)));
+        }
+        public static uint set_bits(uint bitfield, int bitfield_len, int[] bit_ID_arr)
+        {
+            for (int i = 0; i < bit_ID_arr.Length; i++)
+                bitfield = set_bit(bitfield, bitfield_len, bit_ID_arr[i]);
+            return bitfield;
+        }
+
+
         // INPUT is first cut off at BITLEN (leftsided),
         // then shifted left by BITOFFSET (so 0s on the right)
         // to make building commands easier
@@ -44,6 +61,8 @@ namespace Binjo
             // in the correct binary encoding with that knowledge:
             int set_bit = (int) Math.Log(chunks_per_row, 2);
             ulong DXT = (ulong) (0b1 << (11 - set_bit));
+            // Console.WriteLine(String.Format("{0}", File_Handler.uint_to_string((uint) set_bit, 0b1)));
+            // Console.WriteLine(String.Format("{0}, {1}, {2}", width, bitsize, File_Handler.uint_to_string((uint) DXT, 0b1)));
             return DXT;
         }
 

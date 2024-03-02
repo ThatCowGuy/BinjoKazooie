@@ -203,11 +203,14 @@ namespace Binjo
 
                     // tx_cXXXX_sXXXX_fx...
                     String mat_name = material.name;
-                    mat_name = "c0000_s0000";
                     String coll_encoding = System.Text.RegularExpressions.Regex.Match(mat_name, @"(?<=c)[0-9a-fA-F]{4}").Value;
                     String sound_encoding = System.Text.RegularExpressions.Regex.Match(mat_name, @"(?<=s)[0-9a-fA-F]{4}").Value;
-                    tri.floor_type = (ushort) Convert.ToInt32(coll_encoding, 16);
-                    tri.sound_type = (ushort) Convert.ToInt32(sound_encoding, 16);
+
+                    Console.WriteLine(mat_name);
+                    Console.WriteLine(coll_encoding);
+
+                    tri.floor_type = (ushort) ((coll_encoding.Length > 0) ? Convert.ToInt32(coll_encoding, 16) : Tri_Elem.DEFAULT_COLL());
+                    tri.sound_type = (ushort) ((sound_encoding.Length > 0) ? Convert.ToInt32(sound_encoding, 16) : Tri_Elem.DEFAULT_SOUND());
                     tri.collidable = true;
 
                     // note that this is the tex ID as listed by the parsed textures from the GLTF
