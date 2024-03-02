@@ -526,6 +526,7 @@ namespace Binjo
         public void parse_gltf_additional(String filepath)
         {
             String input_name = filepath;
+            String associated_folder = filepath.Substring(0, filepath.LastIndexOf('\\')) + '\\';
             String json_content = File.ReadAllText(input_name);
             this.GLTF = JsonSerializer.Deserialize<GLTF_Handler>(json_content);
 
@@ -600,7 +601,13 @@ namespace Binjo
                 if (img.uri != null)
                 {
                     img.tex_data = new Tex_Data();
-                    img.tex_data.img_rep = new Bitmap(img.uri);
+                    String tex_filepath = associated_folder + img.uri;
+                    if (File.Exists(tex_filepath) == false)
+                    {
+                        Console.WriteLine(String.Format("[ERROR] File {0} specified in uri element does not exist!", tex_filepath));
+                        continue;
+                    }
+                    img.tex_data.img_rep = new Bitmap(tex_filepath);
                 }
                 // image references internal source
                 else if (img.bufferView != null)
@@ -615,7 +622,7 @@ namespace Binjo
                 }
                 else
                 {
-                    Console.WriteLine("Unexpected GLTF_Image encountered; Neither uri nor bufferView present!");
+                    Console.WriteLine("[ERROR] Unexpected GLTF_Image encountered; Neither uri nor bufferView present!");
                     continue;
                 }
                 img.tex_data.img_rep.RotateFlip(RotateFlipType.RotateNoneFlipY);
