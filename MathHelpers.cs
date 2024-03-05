@@ -10,8 +10,193 @@ using System.Runtime.InteropServices;
 
 namespace Binjo
 {
+    public class Vec3
+    {
+        public double x, y, z;
+
+        public Vec3(double x, double y, double z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        public static Vec3 cross_prod(Vec3 A, Vec3 B)
+        {
+            return new Vec3(
+                ((A.y * B.z) - (A.z * B.y)),
+                ((A.z * B.x) - (A.x * B.z)),
+                ((A.x * B.y) - (A.y * B.x))
+            );
+        }
+        public static double dot_prod(Vec3 A, Vec3 B)
+        {
+            return (
+                (A.x * B.x) +
+                (A.y * B.y) +
+                (A.z * B.z)
+            );
+        }
+        public static Vec3 substract(Vec3 A, Vec3 B)
+        {
+            return new Vec3(
+                (A.x - B.x),
+                (A.y - B.y),
+                (A.z - B.z)
+            );
+        }
+        public void normalize()
+        {
+            double sum = vec_len(this);
+            this.x /= sum;
+            this.x /= sum;
+            this.x /= sum;
+        }
+        public static double vec_len(Vec3 A)
+        {
+            return Math.Sqrt(
+                (A.x * A.x) +
+                (A.y * A.y) +
+                (A.z * A.z)
+            );
+        }
+        public static double vec_len_added_coords(Vec3 A)
+        {
+            return (Math.Abs(A.x) + Math.Abs(A.y) + Math.Abs(A.z));
+        }
+    }
+
+    public class GeoTriangle
+    {
+        public Vec3 A, B, C;
+        public Vec3 a, b, c;
+        public Vec3 n;
+
+        public GeoTriangle(Vec3 A, Vec3 B, Vec3 C)
+        {
+            this.A = A;
+            this.B = B;
+            this.C = C;
+            this.a = Vec3.substract(B, C);
+            this.b = Vec3.substract(C, A);
+            this.c = Vec3.substract(A, B);
+            this.n = Vec3.cross_prod(a, b);
+            this.n.normalize();
+        }
+    }
+
+    // always axis aligned
+    public class GeoCube
+    {
+        public Vec3 C;
+        public double L;
+
+        public GeoCube(Vec3 C, double L)
+        {
+            this.C = C;
+            this.L = L;
+        }
+
+        // rasterized on a grid where the first cube stretches from (0,0,0) to (L,L,L)
+        // and all the others are appended to that one
+        public GeoCube(int x_idx, int y_idx, int z_idx, double L)
+        {
+            this.C = new Vec3(
+                (x_idx * L),
+                (y_idx * L),
+                (z_idx * L)
+            );
+            this.L = L;
+        }
+    }
+
     public static class MathHelpers
     {
+        // globalizing these within MathHelpders for speed
+        public static Vec3[] cube_normals = new Vec3[3]{
+            new Vec3(1, 0, 0),
+            new Vec3(0, 1, 0),
+            new Vec3(0, 0, 1)
+        };
+        // calculating if a cube (axis aligned and rasterized, so computable by indices) is intersected by a tri
+        public static Boolean tri_intersects_cube(GeoTriangle tri, int cube_x_idx, int cube_y_idx, int cube_z_idx, int cube_L)
+        {
+            // first, find the actual center of the unshifted cube
+            Vec3 cube_cen = new Vec3(
+                (int) (cube_L * (cube_x_idx + 0.5)),
+                (int) (cube_L * (cube_y_idx + 0.5)),
+                (int) (cube_L * (cube_z_idx + 0.5))
+            );
+
+            // then, shift both bodies so that the cube's center sits at origin
+            // (the cube doesnt actually need to be shifted, bc its relative)
+            tri.A = Vec3.substract(tri.A, cube_cen);
+            tri.B = Vec3.substract(tri.B, cube_cen);
+            tri.C = Vec3.substract(tri.C, cube_cen);
+            // obviously dont need to recalc a,b,c,n because those are all relative to A,B,C
+
+            // now we can check all 13 SA's; Starting with the 3 cube normals, because those are the softest computationally
+            for (int i = 0; i < 3; i++)
+            {
+                double pA = Vec3.dot_prod(tri.A, MathHelpers.cube_normals[i]);
+                double pB = Vec3.dot_prod(tri.B, MathHelpers.cube_normals[i]);
+                double pC = Vec3.dot_prod(tri.C, MathHelpers.cube_normals[i]);
+                // the projected extent of the cube is always L if projected along a cube normal
+                // double cube_extent = cube_L;
+
+                // this is pain.. but I dont see a nicer way of formatting this yet
+                if (Math.Max(-MathHelpers.get_max(new double[] { pA, pB, pC }), +MathHelpers.get_min(new double[] { pA, pB, pC })) > cube_L)
+                    return false;
+            }
+
+            // next we do the tri normal nT axis
+            {
+                double pA = Vec3.dot_prod(tri.A, tri.n);
+                double pB = Vec3.dot_prod(tri.B, tri.n);
+                double pC = Vec3.dot_prod(tri.C, tri.n);
+                // the projected extent of the cube can be simplified a lot too
+                double cube_extent = cube_L * Vec3.vec_len_added_coords(tri.n);
+
+                // this is pain.. but I dont see a nicer way of formatting this yet
+                if (Math.Max(-MathHelpers.get_max(new double[] { pA, pB, pC }), +MathHelpers.get_min(new double[] { pA, pB, pC })) > cube_extent)
+                    return false;
+            }
+
+            // and finally, find the 9 cross-product sepperation-axees and check those
+            Vec3[] alpha_cross = new Vec3[9];
+            // I can skip calculating these properly, because I know nx,ny,nz of the cube apriori
+            // nx, ny, nz cross tri line a
+            alpha_cross[0] = new Vec3(0, -tri.a.z, +tri.a.y);
+            alpha_cross[1] = new Vec3(+tri.a.z, 0, -tri.a.x);
+            alpha_cross[2] = new Vec3(-tri.a.y, +tri.a.x, 0);
+            // nx, ny, nz cross tri line b
+            alpha_cross[3] = new Vec3(0, -tri.b.z, +tri.b.y);
+            alpha_cross[4] = new Vec3(+tri.b.z, 0, -tri.b.x);
+            alpha_cross[5] = new Vec3(-tri.b.y, +tri.b.x, 0);
+            // nx, ny, nz cross tri line c
+            alpha_cross[6] = new Vec3(0, -tri.c.z, +tri.c.y);
+            alpha_cross[7] = new Vec3(+tri.c.z, 0, -tri.c.x);
+            alpha_cross[8] = new Vec3(-tri.c.y, +tri.c.x, 0);
+
+            // now project the vertices A,B,C of the tri onto the SAs, and compare to the projected cube extent
+            for (int i = 0; i < 9; i++)
+            {
+                double pA = Vec3.dot_prod(tri.A, alpha_cross[i]);
+                double pB = Vec3.dot_prod(tri.B, alpha_cross[i]);
+                double pC = Vec3.dot_prod(tri.C, alpha_cross[i]);
+                // the projected extent of the cube can be simplified a lot too
+                double cube_extent = cube_L * Vec3.vec_len_added_coords(alpha_cross[i]);
+
+                // this is pain.. but I dont see a nicer way of formatting this yet
+                if (Math.Max(-MathHelpers.get_max(new double[] { pA, pB, pC }), +MathHelpers.get_min(new double[] { pA, pB, pC })) > cube_extent)
+                    return false;
+            }
+
+            // if none of the 13 SA's triggered, the bodies dont overlap on any of the SA's, and according to the SAT, they dont intersect
+            return true;
+        }
+
+
         // these 3 methods are counting bits from the left
         public static Boolean get_bit(uint bitfield, int bitfield_len, int bit_ID)
         {
@@ -71,6 +256,14 @@ namespace Binjo
             return arr.Max();
         }
         public static int get_min(int[] arr)
+        {
+            return arr.Min();
+        }
+        public static double get_max(double[] arr)
+        {
+            return arr.Max();
+        }
+        public static double get_min(double[] arr)
         {
             return arr.Min();
         }

@@ -91,7 +91,7 @@ namespace Binjo
             Console.WriteLine("Building Tex Segment...");
 
             tex_seg.data_size = 0; // summed up in the following loop
-            tex_seg.tex_cnt = (ushort) this.GLTF.textures.Count;
+            tex_seg.tex_cnt = (ushort) this.GLTF.images.Count;
             tex_seg.meta = new Tex_Meta[tex_seg.tex_cnt];
             tex_seg.data = new Tex_Data[tex_seg.tex_cnt];
 
@@ -183,10 +183,13 @@ namespace Binjo
                     int max_geo_cube_y = (short) Math.Floor((double) MathHelpers.get_max(new int[] { tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y }) / this.coll_seg.geo_cube_scale);
                     int max_geo_cube_z = (short) Math.Floor((double) MathHelpers.get_max(new int[] { tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z }) / this.coll_seg.geo_cube_scale);
 
-                    // NOTE: this is very crude and assumes the tri is touching every cube within the bounding box
-                    //       thats created from the extrema of its vertices... but at least its fast and has no
-                    //       true negatives, and the amount of false positives is small-ish for small triangles
+                    // NOTE: using the bounding box of the tri to determine which cubes to even consider
                     // NOTE: this is explicitly using <=, because the max ID should be inclusive !
+                    GeoTriangle test_tri = new GeoTriangle(
+                        new Vec3(tri.vtx_1.x, tri.vtx_1.y, tri.vtx_1.z),
+                        new Vec3(tri.vtx_2.x, tri.vtx_2.y, tri.vtx_2.z),
+                        new Vec3(tri.vtx_3.x, tri.vtx_3.y, tri.vtx_3.z)
+                    );
                     for (int x = min_geo_cube_x; x <= max_geo_cube_x; x++)
                     {
                         int x_ID = (x - this.coll_seg.min_geo_cube_x);
@@ -197,11 +200,15 @@ namespace Binjo
                             {
                                 int z_ID = (z - this.coll_seg.min_geo_cube_z);
 
-                                int cube_ID = (x_ID + (y_ID * this.coll_seg.stride_y) + (z_ID * this.coll_seg.stride_z));
-                                this.coll_seg.geo_cube_list[cube_ID].coll_tri_list.Add(new Tri_Elem(tri));
-                                this.coll_seg.geo_cube_list[cube_ID].tri_cnt += 1;
+                                if (MathHelpers.tri_intersects_cube(test_tri, x, y, z, this.coll_seg.geo_cube_scale) == true)
+                                {
+                                    int cube_ID = (x_ID + (y_ID * this.coll_seg.stride_y) + (z_ID * this.coll_seg.stride_z));
+                                    this.coll_seg.geo_cube_list[cube_ID].coll_tri_list.Add(new Tri_Elem(tri));
+                                    this.coll_seg.geo_cube_list[cube_ID].tri_cnt += 1;
 
-                                this.coll_seg.tri_cnt += 1;
+                                    this.coll_seg.tri_cnt += 1;
+                                }
+
                             }
                         }
                     }
@@ -421,7 +428,7 @@ namespace Binjo
             this.geo_seg = new GeoLayout_Segment();
             Console.WriteLine("Building GeoLayout Segment...");
 
-            this.geo_seg.commands.Add(GeoLayout_Command.GEO_LOAD_DL(-1000, -1000, -1000, +1000, +1000, +1000));
+            this.geo_seg.commands.Add(GeoLayout_Command.GEO_LOAD_DL(-1000, -1000, -2000, +1000, +1000, +1000));
 
             this.geo_seg.valid = true;
             Console.WriteLine("Finished GeoLayout Segment.");
@@ -591,9 +598,6 @@ namespace Binjo
             }
 
             // extract all the image data
-            List<Tex_Data> tex_list = new List<Tex_Data>();
-            uint integrated_data_size = 0;
-            uint parsed_textures = 0;
             foreach (GLTF_Texture tex in this.GLTF.textures)
             {
                 GLTF_Image img = this.GLTF.images[(int) tex.source];
@@ -863,11 +867,12 @@ namespace Binjo
                         this.GLTF.images.Add(tmp_img);
 
                         GLTF_Texture tmp_tex = new GLTF_Texture();
-                        tmp_tex.source = (uint) (this.GLTF.materials.Count);
+                        // using the JUST added image as the index here
+                        tmp_tex.source = (uint) (this.GLTF.images.Count - 1);
                         this.GLTF.textures.Add(tmp_tex);
 
                         GLTF_baseColorTexture tmp_bCT = new GLTF_baseColorTexture();
-                        tmp_bCT.index = (uint) (this.GLTF.materials.Count);
+                        tmp_bCT.index = (uint) (this.GLTF.textures.Count - 1);
                         GLTF_pbrMetallicRoughness tmp_pbr = new GLTF_pbrMetallicRoughness();
                         tmp_pbr.baseColorTexture = tmp_bCT;
                         GLTF_Material tmp_mat = new GLTF_Material();
@@ -881,6 +886,18 @@ namespace Binjo
 ;                       
                         // both of these are nullable
                         tmp_prim.attributes.Add("TEXCOORD_0", vtx_uv_accessor_ID);
+                        tmp_prim.material = (this.GLTF.materials.Count - 1);
+                    }
+                    else
+                    {
+                        GLTF_Material tmp_mat = new GLTF_Material();
+                        tmp_mat.name = String.Format("mat_invis_c{1}_s{2}",
+                            (uint) (this.GLTF.materials.Count),
+                            File_Handler.uint_to_string(full_tri.floor_type, 0xFFFF),
+                            File_Handler.uint_to_string(full_tri.sound_type, 0xFFFF)
+                        );
+                        this.GLTF.materials.Add(tmp_mat);
+
                         tmp_prim.material = (this.GLTF.materials.Count - 1);
                     }
                     this.GLTF.meshes[0].primitives.Add(tmp_prim);
@@ -1064,6 +1081,7 @@ namespace Binjo
             int file_ext = this.loaded_bin_path.LastIndexOf(".");
             this.loaded_bin_name = this.loaded_bin_path.Substring((last_slash + 1), (file_ext - last_slash - 1));
 
+            System.Console.WriteLine(String.Format("Finished Loading File {0}...", OFD.FileName));
             this.file_loaded = true;
         }
 

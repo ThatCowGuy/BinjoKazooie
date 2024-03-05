@@ -137,14 +137,37 @@ namespace Binjo
         // tri_cnt_offset is meant to control how far ahead the tri indices should be by now
         public List<FullTriangle> parse_tris_from_primitive(GLTF_Primitive PRIM, int tri_cnt_offset)
         {
+            Console.WriteLine("Parsing PRIM...");
+
             List<FullTriangle> tri_list = new List<FullTriangle>();
             GLTF_Accessor IDX = this.accessors[(int) PRIM.indices];
             GLTF_Accessor POS = this.accessors[(int) PRIM.attributes["POSITION"]];
-            PRIM.collidable = true;
-
             GLTF_Accessor UV = null;
-            if (PRIM.attributes.ContainsKey("TEXCOORD_0") == true)
+
+            uint tmp_floor_type = 0;
+            uint tmp_sound_type = 0;
+            uint tmp_gltf_tex_index = 0;
+            uint tmp_gltf_source_index = 0;
+            GLTF_Material tmp_material = this.materials[(int) PRIM.material];
+
+            // NOTE: non-collidable, visual only mats should have something like NO_COLL in their name to encode that
+            if (true)
             {
+                // tx_cXXXX_sXXXX_fx...
+                String mat_name = tmp_material.name;
+                String coll_encoding = System.Text.RegularExpressions.Regex.Match(mat_name, @"(?<=c)[0-9a-fA-F]{4}").Value;
+                String sound_encoding = System.Text.RegularExpressions.Regex.Match(mat_name, @"(?<=s)[0-9a-fA-F]{4}").Value;
+
+                tmp_floor_type = (ushort) ((coll_encoding.Length > 0) ? Convert.ToInt32(coll_encoding, 16) : Tri_Elem.DEFAULT_COLL());
+                tmp_sound_type = (ushort) ((sound_encoding.Length > 0) ? Convert.ToInt32(sound_encoding, 16) : Tri_Elem.DEFAULT_SOUND());
+                PRIM.collidable = true;
+            }
+
+            // check if the associated baseColorTexture exists to determine if this mat is visible
+            if (this.materials[(int) PRIM.material].pbrMetallicRoughness.baseColorTexture != null)
+            {
+                tmp_gltf_tex_index = tmp_material.pbrMetallicRoughness.baseColorTexture.index;
+                tmp_gltf_source_index = this.textures[(int) tmp_gltf_tex_index].source;
                 UV = this.accessors[(int) PRIM.attributes["TEXCOORD_0"]];
                 PRIM.visible = true;
             }
@@ -197,24 +220,16 @@ namespace Binjo
                 tri.vtx_3 = vtx_3;
 
                 // NOTE: non-collidable, visual only mats should have something like NO_COLL in their name to encode that
-                if (PRIM.material != null)
+                if (PRIM.collidable == true)
                 {
-                    GLTF_Material material = this.materials[(int) PRIM.material];
-
-                    // tx_cXXXX_sXXXX_fx...
-                    String mat_name = material.name;
-                    String coll_encoding = System.Text.RegularExpressions.Regex.Match(mat_name, @"(?<=c)[0-9a-fA-F]{4}").Value;
-                    String sound_encoding = System.Text.RegularExpressions.Regex.Match(mat_name, @"(?<=s)[0-9a-fA-F]{4}").Value;
-
-                    Console.WriteLine(mat_name);
-                    Console.WriteLine(coll_encoding);
-
-                    tri.floor_type = (ushort) ((coll_encoding.Length > 0) ? Convert.ToInt32(coll_encoding, 16) : Tri_Elem.DEFAULT_COLL());
-                    tri.sound_type = (ushort) ((sound_encoding.Length > 0) ? Convert.ToInt32(sound_encoding, 16) : Tri_Elem.DEFAULT_SOUND());
+                    tri.floor_type = (ushort) tmp_floor_type;
+                    tri.sound_type = (ushort) tmp_sound_type;
                     tri.collidable = true;
-
+                }
+                if (PRIM.visible == true)
+                {
                     // note that this is the tex ID as listed by the parsed textures from the GLTF
-                    tri.assigned_tex_ID = (short) material.pbrMetallicRoughness.baseColorTexture.index;
+                    tri.assigned_tex_ID = (short) tmp_gltf_source_index;
                     tri.assigned_tex_meta = this.images[tri.assigned_tex_ID].tex_meta;
                     tri.assigned_tex_data = this.images[tri.assigned_tex_ID].tex_data;
 
