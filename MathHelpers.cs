@@ -136,32 +136,25 @@ namespace Binjo
             // obviously dont need to recalc a,b,c,n because those are all relative to A,B,C
 
             // now we can check all 13 SA's; Starting with the 3 cube normals, because those are the softest computationally
-            for (int i = 0; i < 3; i++)
-            {
-                double pA = Vec3.dot_prod(tri.A, MathHelpers.cube_normals[i]);
-                double pB = Vec3.dot_prod(tri.B, MathHelpers.cube_normals[i]);
-                double pC = Vec3.dot_prod(tri.C, MathHelpers.cube_normals[i]);
-                // the projected extent of the cube is always L if projected along a cube normal
-                // double cube_extent = cube_L;
+            // NOTE: because the cube normals are always the unit vectors, I now the results here apriori, so Im unrolling
+            // example for cube nx:
+            // double pA = Vec3.dot_prod(tri.A, cube_nx) = tri.A.x
+            // double pB = Vec3.dot_prod(tri.B, cube_nx) = tri.B.x
+            // double pC = Vec3.dot_prod(tri.C, cube_nx) = tri.C.x
+            //
+            // NOTE: the projected extent of the cube is always L if projected along a cube normal
+            //        --> double cube_extent = cube_L;
 
-                // this is pain.. but I dont see a nicer way of formatting this yet
-                if (Math.Max(-MathHelpers.get_max(new double[] { pA, pB, pC }), +MathHelpers.get_min(new double[] { pA, pB, pC })) > cube_L)
+            // this is pain.. but I dont see a nicer way of formatting this yet
+            if (Math.Max(-MathHelpers.get_max(new double[] { tri.A.x, tri.B.x, tri.C.x }), +MathHelpers.get_min(new double[] { tri.A.x, tri.B.x, tri.C.x })) > cube_L)
                     return false;
-            }
-
-            // next we do the tri normal nT axis
-            {
-                double pA = Vec3.dot_prod(tri.A, tri.n);
-                double pB = Vec3.dot_prod(tri.B, tri.n);
-                double pC = Vec3.dot_prod(tri.C, tri.n);
-                // the projected extent of the cube can be simplified a lot too
-                double cube_extent = cube_L * Vec3.vec_len_added_coords(tri.n);
-
-                // this is pain.. but I dont see a nicer way of formatting this yet
-                if (Math.Max(-MathHelpers.get_max(new double[] { pA, pB, pC }), +MathHelpers.get_min(new double[] { pA, pB, pC })) > cube_extent)
-                    return false;
-            }
-
+            // ny
+            if (Math.Max(-MathHelpers.get_max(new double[] { tri.A.y, tri.B.y, tri.C.y }), +MathHelpers.get_min(new double[] { tri.A.y, tri.B.y, tri.C.y })) > cube_L)
+                return false;
+            // nz
+            if (Math.Max(-MathHelpers.get_max(new double[] { tri.A.z, tri.B.z, tri.C.z }), +MathHelpers.get_min(new double[] { tri.A.z, tri.B.z, tri.C.z })) > cube_L)
+                return false;
+            
             // and finally, find the 9 cross-product sepperation-axees and check those
             Vec3[] alpha_cross = new Vec3[9];
             // I can skip calculating these properly, because I know nx,ny,nz of the cube apriori
