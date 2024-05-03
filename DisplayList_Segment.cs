@@ -34,6 +34,11 @@ namespace Binjo
 
         public bool Equals(FullTriangle other)
         {
+            // compare some simpler attributes first
+            if (this.floor_type != other.floor_type) return false;
+            if (this.sound_type != other.sound_type) return false;
+            if (this.assigned_tex_ID != other.assigned_tex_ID) return false;
+
             // for my intents and purpose, every cyclic permutation of vtx orders
             // is also making up the same tri, so I need to check them all
             if ( // 123 - 123

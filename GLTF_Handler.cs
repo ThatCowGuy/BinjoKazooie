@@ -144,8 +144,8 @@ namespace Binjo
             GLTF_Accessor POS = this.accessors[(int) PRIM.attributes["POSITION"]];
             GLTF_Accessor UV = null;
 
-            uint tmp_floor_type = 0;
-            uint tmp_sound_type = 0;
+            uint tmp_floor_type = Tri_Elem.DEFAULT_COLL();
+            uint tmp_sound_type = Tri_Elem.DEFAULT_SOUND();
             uint tmp_gltf_tex_index = 0;
             uint tmp_gltf_source_index = 0;
             GLTF_Material tmp_material = this.materials[(int) PRIM.material];
@@ -158,13 +158,24 @@ namespace Binjo
                 String coll_encoding = System.Text.RegularExpressions.Regex.Match(mat_name, @"(?<=c)[0-9a-fA-F]{4}").Value;
                 String sound_encoding = System.Text.RegularExpressions.Regex.Match(mat_name, @"(?<=s)[0-9a-fA-F]{4}").Value;
 
-                tmp_floor_type = (ushort) ((coll_encoding.Length > 0) ? Convert.ToInt32(coll_encoding, 16) : Tri_Elem.DEFAULT_COLL());
-                tmp_sound_type = (ushort) ((sound_encoding.Length > 0) ? Convert.ToInt32(sound_encoding, 16) : Tri_Elem.DEFAULT_SOUND());
-                PRIM.collidable = true;
+                if (coll_encoding.Length > 0 && sound_encoding.Length > 0)
+                {
+                    tmp_floor_type = (ushort) Convert.ToInt32(coll_encoding, 16);
+                    tmp_sound_type = (ushort) Convert.ToInt32(sound_encoding, 16);
+                    PRIM.collidable = true;
+                }
+                else
+                {
+                    PRIM.collidable = false;
+                }
+                // NOTE: placeholder for now, should be replaced by like NO_COLL
+                if (mat_name.Contains("_t") == true)
+                    PRIM.collidable = false;
             }
 
             // check if the associated baseColorTexture exists to determine if this mat is visible
-            if (this.materials[(int) PRIM.material].pbrMetallicRoughness.baseColorTexture != null)
+            if (this.materials[(int) PRIM.material].pbrMetallicRoughness != null &&
+                this.materials[(int) PRIM.material].pbrMetallicRoughness.baseColorTexture != null)
             {
                 tmp_gltf_tex_index = tmp_material.pbrMetallicRoughness.baseColorTexture.index;
                 tmp_gltf_source_index = this.textures[(int) tmp_gltf_tex_index].source;
