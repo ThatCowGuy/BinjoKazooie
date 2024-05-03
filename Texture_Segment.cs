@@ -114,11 +114,11 @@ namespace Binjo
 
         public static Dictionary<string, int> TEX_TYPES = new Dictionary<string, int>
         {
-            { "CI4", 0x01 },    { "CI4 (5551)", 0x01 },
-            { "CI8", 0x02 },    { "CI8 (5551)", 0x02 },
-            { "RGBA16", 0x04 }, { "RGBA16 (5551)", 0x04 },
+            { "IA8", 0x10 },    { "IA8 (44)", 0x10 },
             { "RGBA32", 0x08 }, { "RGBA32 (8888)", 0x08 },
-            { "IA8", 0x10 },    { "IA8 (44)", 0x10 }
+            { "RGBA16", 0x04 }, { "RGBA16 (5551)", 0x04 },
+            { "CI8", 0x02 },    { "CI8 (5551)", 0x02 },
+            { "CI4", 0x01 },    { "CI4 (5551)", 0x01 },
         };
 
         public uint get_tex_ID_from_datasection_offset(uint datasection_offset)
@@ -132,6 +132,26 @@ namespace Binjo
             // no match
             // Console.WriteLine("No Tex Match found for file_offset: " + file_offset);
             return 0xFFFF;
+        }
+
+        // get the datasize of an image (w x h) of format "format" (no mipmapping)
+        public static uint get_datasize(uint w, uint h, string format)
+        {
+            uint texel_cnt = (w * h);
+            uint texel_size = (uint) Dicts.TEXEL_FMT_BITSIZE[format];
+
+            uint palette_size = 0;
+            if (format.Contains("CI8") == true)
+                // CI8 contains 2^8 colors of 16 bits (5551) each
+                // 2^8 * 16 = 256 * 16 = 0x100 * 0x10 = 0x1000
+                palette_size = 0x1000;
+            if (format.Contains("CI4") == true)
+                // CI8 contains 2^4 colors of 16 bits (5551) each
+                // 2^4 * 16 = 16 * 16 = 0x10 * 0x10 = 0x100
+                palette_size = 0x100;
+
+            // return divided by 8 for bits -> byte conversion
+            return (palette_size + (texel_cnt * texel_size)) / 8;
         }
 
         // converts an input image to a WxH sized image of the given type. color diversity is used for CI palette optimization

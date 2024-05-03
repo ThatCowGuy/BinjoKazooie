@@ -90,6 +90,7 @@ namespace Binjo
             this.Converter_Load_Btn = new System.Windows.Forms.Button();
             this.Converter_Output_ImgBox = new System.Windows.Forms.PictureBox();
             this.Converter_Input_ImgBox = new System.Windows.Forms.PictureBox();
+            this.Converter_TexDataSize_Label = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
@@ -712,6 +713,7 @@ namespace Binjo
             // 
             this.panel8.BackColor = System.Drawing.Color.Transparent;
             this.panel8.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel8.Controls.Add(this.Converter_TexDataSize_Label);
             this.panel8.Controls.Add(this.label18);
             this.panel8.Controls.Add(this.Converter_Format_ComBox);
             this.panel8.Controls.Add(this.Converter_Height_ComBox);
@@ -756,13 +758,18 @@ namespace Binjo
             this.Converter_Format_ComBox.Name = "Converter_Format_ComBox";
             this.Converter_Format_ComBox.Size = new System.Drawing.Size(118, 21);
             this.Converter_Format_ComBox.TabIndex = 26;
+            this.Converter_Format_ComBox.SelectedIndexChanged += new System.EventHandler(this.Converter_Format_ComBox_SelectedIndexChanged);
             // 
             // Converter_Height_ComBox
             // 
             this.Converter_Height_ComBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.Converter_Height_ComBox.FormattingEnabled = true;
             this.Converter_Height_ComBox.Items.AddRange(new object[] {
+            "256",
+            "128",
+            "96",
             "64",
+            "48",
             "32",
             "16",
             "8",
@@ -771,6 +778,7 @@ namespace Binjo
             this.Converter_Height_ComBox.Name = "Converter_Height_ComBox";
             this.Converter_Height_ComBox.Size = new System.Drawing.Size(55, 21);
             this.Converter_Height_ComBox.TabIndex = 24;
+            this.Converter_Height_ComBox.SelectedIndexChanged += new System.EventHandler(this.Converter_Height_ComBox_SelectedIndexChanged);
             // 
             // label16
             // 
@@ -788,7 +796,11 @@ namespace Binjo
             this.Converter_Width_ComBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.Converter_Width_ComBox.FormattingEnabled = true;
             this.Converter_Width_ComBox.Items.AddRange(new object[] {
+            "256",
+            "128",
+            "96",
             "64",
+            "48",
             "32",
             "16",
             "8",
@@ -797,7 +809,7 @@ namespace Binjo
             this.Converter_Width_ComBox.Name = "Converter_Width_ComBox";
             this.Converter_Width_ComBox.Size = new System.Drawing.Size(55, 21);
             this.Converter_Width_ComBox.TabIndex = 8;
-            this.Converter_Width_ComBox.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
+            this.Converter_Width_ComBox.SelectedIndexChanged += new System.EventHandler(this.Converter_Width_ComBox_SelectedIndexChanged);
             // 
             // label13
             // 
@@ -861,6 +873,7 @@ namespace Binjo
             0,
             0,
             0});
+            this.Converter_Diversity_NumUpDown.ValueChanged += new System.EventHandler(this.Converter_Diversity_NumUpDown_ValueChanged);
             // 
             // Converter_Load_Btn
             // 
@@ -891,6 +904,16 @@ namespace Binjo
             this.Converter_Input_ImgBox.TabIndex = 7;
             this.Converter_Input_ImgBox.TabStop = false;
             this.Converter_Input_ImgBox.Click += new System.EventHandler(this.pictureBox4_Click);
+            // 
+            // Converter_TexDataSize_Label
+            // 
+            this.Converter_TexDataSize_Label.AutoSize = true;
+            this.Converter_TexDataSize_Label.ForeColor = System.Drawing.Color.White;
+            this.Converter_TexDataSize_Label.Location = new System.Drawing.Point(263, 168);
+            this.Converter_TexDataSize_Label.Name = "Converter_TexDataSize_Label";
+            this.Converter_TexDataSize_Label.Size = new System.Drawing.Size(126, 13);
+            this.Converter_TexDataSize_Label.TabIndex = 28;
+            this.Converter_TexDataSize_Label.Text = "Converted Tex DataSize:";
             // 
             // BinjoKazooie
             // 
@@ -1018,6 +1041,7 @@ namespace Binjo
         private System.Windows.Forms.Label label13;
         private System.Windows.Forms.Label label18;
         private System.Windows.Forms.ComboBox Converter_Format_ComBox;
+        private System.Windows.Forms.Label Converter_TexDataSize_Label;
     }
 }
 

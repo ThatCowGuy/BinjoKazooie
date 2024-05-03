@@ -428,7 +428,7 @@ namespace Binjo
             this.geo_seg = new GeoLayout_Segment();
             Console.WriteLine("Building GeoLayout Segment...");
 
-            this.geo_seg.commands.Add(GeoLayout_Command.GEO_LOAD_DL(-1000, -1000, -2000, +1000, +1000, +1000));
+            this.geo_seg.commands.Add(GeoLayout_Command.GEO_LOAD_DL(-2000, -2000, -2000, +2000, +2000, +2000));
 
             this.geo_seg.valid = true;
             Console.WriteLine("Finished GeoLayout Segment.");
@@ -741,9 +741,20 @@ namespace Binjo
             raw_data_vtx_xyz.Clear();
             raw_data_vtx_uv.Clear();
             raw_data_tri.Clear();
+
+            // before we export the list, we should remove duplicates that came to be because they were
+            // registered to multiple GeoCubes in the Collision Segment. We can ask the User if they want
+            // to see the duplicates, but its probably never really useful
+            List<FullTriangle> unique_tri_list = new List<FullTriangle>();
             for (int i = 0; i < this.consecutive_tri_list.Count; i++)
             {
-                FullTriangle full_tri = this.consecutive_tri_list[i];
+                if (unique_tri_list.Contains(this.consecutive_tri_list[i]) == false)
+                    unique_tri_list.Add(this.consecutive_tri_list[i]);
+            }
+
+            for (int i = 0; i < unique_tri_list.Count; i++)
+            {
+                FullTriangle full_tri = unique_tri_list[i];
 
                 raw_data_vtx_xyz.AddRange(BitConverter.GetBytes((Single) full_tri.vtx_1.x));
                 raw_data_vtx_xyz.AddRange(BitConverter.GetBytes((Single) full_tri.vtx_1.y));
@@ -770,7 +781,7 @@ namespace Binjo
                 // check if the next tri is different => export current collection
                 // also export collection if this was the last one
                 // (because we check if it is the last one, we dont need a safety check afterwards)
-                if ((i == consecutive_tri_list.Count - 1) || (full_tri.CompareTo(this.consecutive_tri_list[i + 1]) != 0))
+                if ((i == unique_tri_list.Count - 1) || (full_tri.CompareTo(unique_tri_list[i + 1]) != 0))
                 {
                     // building the VTX ID buffer + all correspondences
                     GLTF_BufferInternal buffer = new GLTF_BufferInternal();

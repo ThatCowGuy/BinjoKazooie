@@ -16,7 +16,7 @@ namespace Binjo
     public partial class BinjoKazooie : Form
     {
         public BIN_Handler handler = new BIN_Handler();
-        public static String version = "v1.0.0";
+        public static String version = "v1.1.0";
 
         public Boolean texture_converter_active = false;
 
@@ -29,8 +29,8 @@ namespace Binjo
             this.Width = 585;
             this.segName_comboBox.SelectedIndex = 0;
             this.Converter_Format_ComBox.SelectedIndex = 0;
-            this.Converter_Width_ComBox.SelectedIndex = 0;
-            this.Converter_Height_ComBox.SelectedIndex = 0;
+            this.Converter_Width_ComBox.SelectedIndex = this.Converter_Width_ComBox.FindString("64");
+            this.Converter_Height_ComBox.SelectedIndex = this.Converter_Height_ComBox.FindString("64");
             update_display();
         }
         private void Form1_Load(object sender, EventArgs e)
@@ -155,12 +155,29 @@ namespace Binjo
         // writing this comment to find this function easier...
         public void update_display()
         {
+            // create both the replacement-suitable and custom-conversion IMGs + GUI updates
+            convert_replacement_to_fitting();
+            convert_converter_to_fitting();
+
+            if (this.converter_cvt != null)
+            {
+                uint cvt_w = (uint) Int32.Parse(this.Converter_Width_ComBox.Text);
+                uint cvt_h = (uint) Int32.Parse(this.Converter_Height_ComBox.Text);
+                string cvt_tex_type = this.Converter_Format_ComBox.Text;
+                uint cvt_data_size = Texture_Segment.get_datasize(cvt_w, cvt_h, cvt_tex_type);
+                Converter_TexDataSize_Label.Text = String.Format("Converted Tex DataSize: 0x{0}", File_Handler.uint_to_string(cvt_data_size, 0xFFFFFFFF));
+                Converter_TexDataSize_Label.Update();
+            }
+
             disable_button(button2);
             disable_button(button4);
 
             string seg_name = segName_comboBox.Text;
             label3.Text = String.Format("Loaded BIN = {0}", this.handler.loaded_bin_path);
             label3.Update();
+
+            // the default for panel1 is to be visible
+            this.panel1.Visible = true;
 
             this.panel2.Visible = false;
             this.panel3.Visible = false;
@@ -173,10 +190,12 @@ namespace Binjo
             if (this.texture_converter_active == true)
             {
                 this.panel8.Visible = true;
-                this.panel8.Location = get_bottom_of_DGV_1();
-            }
 
-            if (this.handler.file_loaded == true)
+                // effectively replace panel 1 with this one
+                this.panel1.Visible = false;
+                this.panel8.Location = this.panel1.Location;
+            }
+            else if (this.handler.file_loaded == true)
             {
                 convert_replacement_to_fitting();
 
@@ -199,11 +218,9 @@ namespace Binjo
 
                 if (seg_name == "BIN Header")
                 {
-                    if (this.checkBox1.Checked == false)
-                    {
-                        foreach (string[] element in handler.bin_header.get_content())
-                            dataGridView1.Rows.Add(element);
-                    }
+                    foreach (string[] element in handler.bin_header.get_content())
+                        dataGridView1.Rows.Add(element);
+
                     finish_up_DGV(dataGridView1);
                 }
                 if (seg_name == "Texture Segment")
@@ -546,6 +563,10 @@ namespace Binjo
         {
             export_image(this.replacement_cvt);
         }
+        private void Converter_Export_Btn_Click(object sender, EventArgs e)
+        {
+            export_image(this.converter_cvt);
+        }
 
         private void button1_Click(object sender, EventArgs e)
         {
@@ -595,10 +616,12 @@ namespace Binjo
         {
             this.update_display();
         }
+
+        // replacement_ori is the currently loaded IMG;
+        // replacement_cvt is the converted IMG suitable for tex replacement
+        // converter_cvt is the converted IMG within the tex-converter
         public Bitmap replacement_ori;
         public Bitmap replacement_cvt;
-
-        public Bitmap converter_ori;
         public Bitmap converter_cvt;
 
         public List<MathHelpers.ColorPixel> replacement_palette;
@@ -637,7 +660,7 @@ namespace Binjo
         }
         public void convert_converter_to_fitting()
         {
-            if (this.converter_ori == null)
+            if (this.replacement_ori == null)
             {
                 return;
             }
@@ -652,7 +675,7 @@ namespace Binjo
             if (wm_ratio > 1.0) display_h = (int) (display_h / wm_ratio);
             if (wm_ratio < 1.0) display_w = (int) (display_w * wm_ratio);
 
-            this.converter_cvt = Texture_Segment.convert_to_fit(this.converter_ori, new_w, new_h, new_tex_type, (int) this.Converter_Diversity_NumUpDown.Value);
+            this.converter_cvt = Texture_Segment.convert_to_fit(this.replacement_ori, new_w, new_h, new_tex_type, (int) this.Converter_Diversity_NumUpDown.Value);
 
             this.Converter_Output_ImgBox.Image = new Bitmap(this.converter_cvt, display_w, display_h);
             this.Converter_Output_ImgBox.Update();
@@ -694,22 +717,39 @@ namespace Binjo
             }
             using (var tmp_img = new Bitmap(OFD.FileName))
             {
-                this.converter_ori = new Bitmap(tmp_img);
+                this.replacement_ori = new Bitmap(tmp_img);
+                this.Converter_Input_ImgBox.Image = new Bitmap(this.replacement_ori, 128, 128);
+                this.Converter_Input_ImgBox.Update();
             }
-            // this.convert_replacement_to_fitting();
-            this.Converter_Input_ImgBox.Image = new Bitmap(this.converter_ori);
-            this.Converter_Input_ImgBox.Update();
-            this.update_display();
-        }
-        private void Converter_Export_Btn_Click(object sender, EventArgs e)
-        {
             convert_converter_to_fitting();
             this.update_display();
         }
 
         private void numericUpDown3_ValueChanged(object sender, EventArgs e)
         {
-            convert_replacement_to_fitting();
+            convert_converter_to_fitting();
+            this.update_display();
+        }
+
+        private void Converter_Format_ComBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            convert_converter_to_fitting();
+            this.update_display();
+        }
+        private void Converter_Width_ComBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            convert_converter_to_fitting();
+            this.update_display();
+        }
+        private void Converter_Height_ComBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            convert_converter_to_fitting();
+            this.update_display();
+        }
+
+        private void Converter_Diversity_NumUpDown_ValueChanged(object sender, EventArgs e)
+        {
+            convert_converter_to_fitting();
             this.update_display();
         }
 
@@ -804,11 +844,6 @@ namespace Binjo
 
         }
 
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
-        }
-
         private void label18_Click(object sender, EventArgs e)
         {
 
@@ -828,6 +863,5 @@ namespace Binjo
         {
 
         }
-
     }
 }

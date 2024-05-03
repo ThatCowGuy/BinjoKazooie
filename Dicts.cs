@@ -188,11 +188,11 @@ namespace Binjo
         };
         public static Dictionary<String, int> TEXEL_FMT_BITSIZE = new Dictionary<String, int>
         {
-            { "RGBA32", 32 },
-            { "RGBA16", 16 },
-            { "CI8", 8 },
-            { "CI4", 4 },
-            { "IA8", 8 },
+            { "RGBA32", 32 },   { "RGBA32 (8888)", 32 },
+            { "RGBA16", 16 },   { "RGBA16 (5551)", 16 },
+            { "CI8", 8 },       { "CI8 (5551)", 8 },
+            { "CI4", 4 },       { "CI4 (5551)", 4 },
+            { "IA8", 8 },       { "IA8 (44)", 8 }
         };
 
         public static Dictionary<String, int> SETTILE_COLFORM = new Dictionary<String, int>
