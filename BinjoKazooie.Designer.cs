@@ -34,6 +34,7 @@ namespace Binjo
             this.panel1 = new System.Windows.Forms.Panel();
             this.segName_comboBox = new System.Windows.Forms.ComboBox();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
+            this.label1 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.panel2 = new System.Windows.Forms.Panel();
             this.button9 = new System.Windows.Forms.Button();
@@ -50,7 +51,6 @@ namespace Binjo
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.numericUpDown2 = new System.Windows.Forms.NumericUpDown();
             this.label4 = new System.Windows.Forms.Label();
-            this.button5 = new System.Windows.Forms.Button();
             this.panel3 = new System.Windows.Forms.Panel();
             this.label9 = new System.Windows.Forms.Label();
             this.dataGridView3 = new System.Windows.Forms.DataGridView();
@@ -75,7 +75,21 @@ namespace Binjo
             this.dataGridView7 = new System.Windows.Forms.DataGridView();
             this.export_BIN_button = new System.Windows.Forms.Button();
             this.export_GLTF_button = new System.Windows.Forms.Button();
-            this.label1 = new System.Windows.Forms.Label();
+            this.button1 = new System.Windows.Forms.Button();
+            this.panel8 = new System.Windows.Forms.Panel();
+            this.label18 = new System.Windows.Forms.Label();
+            this.Converter_Format_ComBox = new System.Windows.Forms.ComboBox();
+            this.Converter_Height_ComBox = new System.Windows.Forms.ComboBox();
+            this.label16 = new System.Windows.Forms.Label();
+            this.Converter_Width_ComBox = new System.Windows.Forms.ComboBox();
+            this.label13 = new System.Windows.Forms.Label();
+            this.Converter_Export_Btn = new System.Windows.Forms.Button();
+            this.b = new System.Windows.Forms.Label();
+            this.label14 = new System.Windows.Forms.Label();
+            this.Converter_Diversity_NumUpDown = new System.Windows.Forms.NumericUpDown();
+            this.Converter_Load_Btn = new System.Windows.Forms.Button();
+            this.Converter_Output_ImgBox = new System.Windows.Forms.PictureBox();
+            this.Converter_Input_ImgBox = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
@@ -94,6 +108,10 @@ namespace Binjo
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView6)).BeginInit();
             this.panel7.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView7)).BeginInit();
+            this.panel8.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.Converter_Diversity_NumUpDown)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.Converter_Output_ImgBox)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.Converter_Input_ImgBox)).BeginInit();
             this.SuspendLayout();
             // 
             // load_BIN_button
@@ -171,6 +189,18 @@ namespace Binjo
             this.checkBox1.UseVisualStyleBackColor = true;
             this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
             // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.ForeColor = System.Drawing.SystemColors.ButtonFace;
+            this.label1.Location = new System.Drawing.Point(4, 11);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(49, 13);
+            this.label1.TabIndex = 3;
+            this.label1.Text = "Segment";
+            this.label1.Click += new System.EventHandler(this.label1_Click);
+            // 
             // label3
             // 
             this.label3.AutoSize = true;
@@ -225,7 +255,7 @@ namespace Binjo
             this.button6.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
             this.button6.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
             this.button6.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
-            this.button6.Location = new System.Drawing.Point(7, 259);
+            this.button6.Location = new System.Drawing.Point(7, 253);
             this.button6.Name = "button6";
             this.button6.Size = new System.Drawing.Size(96, 23);
             this.button6.TabIndex = 20;
@@ -237,7 +267,7 @@ namespace Binjo
             // 
             this.label7.AutoSize = true;
             this.label7.ForeColor = System.Drawing.Color.White;
-            this.label7.Location = new System.Drawing.Point(4, 183);
+            this.label7.Location = new System.Drawing.Point(4, 181);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(91, 13);
             this.label7.TabIndex = 19;
@@ -257,7 +287,7 @@ namespace Binjo
             // 
             this.label5.AutoSize = true;
             this.label5.ForeColor = System.Drawing.Color.White;
-            this.label5.Location = new System.Drawing.Point(4, 235);
+            this.label5.Location = new System.Drawing.Point(4, 229);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(47, 13);
             this.label5.TabIndex = 17;
@@ -267,7 +297,7 @@ namespace Binjo
             // numericUpDown3
             // 
             this.numericUpDown3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(224)))), ((int)(((byte)(192)))));
-            this.numericUpDown3.Location = new System.Drawing.Point(57, 233);
+            this.numericUpDown3.Location = new System.Drawing.Point(57, 227);
             this.numericUpDown3.Maximum = new decimal(new int[] {
             99999,
             0,
@@ -285,7 +315,7 @@ namespace Binjo
             // 
             // button3
             // 
-            this.button3.Location = new System.Drawing.Point(7, 202);
+            this.button3.Location = new System.Drawing.Point(7, 197);
             this.button3.Name = "button3";
             this.button3.Size = new System.Drawing.Size(94, 23);
             this.button3.TabIndex = 15;
@@ -373,16 +403,6 @@ namespace Binjo
             this.label4.Size = new System.Drawing.Size(43, 13);
             this.label4.TabIndex = 6;
             this.label4.Text = "Texture";
-            // 
-            // button5
-            // 
-            this.button5.Location = new System.Drawing.Point(461, 12);
-            this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(92, 23);
-            this.button5.TabIndex = 15;
-            this.button5.Text = "Refresh";
-            this.button5.UseVisualStyleBackColor = true;
-            this.button5.Click += new System.EventHandler(this.button5_Click);
             // 
             // panel3
             // 
@@ -475,7 +495,7 @@ namespace Binjo
             // button7
             // 
             this.button7.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
-            this.button7.Location = new System.Drawing.Point(355, 12);
+            this.button7.Location = new System.Drawing.Point(453, 12);
             this.button7.Name = "button7";
             this.button7.Size = new System.Drawing.Size(100, 23);
             this.button7.TabIndex = 16;
@@ -486,7 +506,7 @@ namespace Binjo
             // button8
             // 
             this.button8.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
-            this.button8.Location = new System.Drawing.Point(355, 41);
+            this.button8.Location = new System.Drawing.Point(453, 41);
             this.button8.Name = "button8";
             this.button8.Size = new System.Drawing.Size(100, 23);
             this.button8.TabIndex = 17;
@@ -609,7 +629,7 @@ namespace Binjo
             // 
             // load_GLTF_button
             // 
-            this.load_GLTF_button.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.load_GLTF_button.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(180)))), ((int)(((byte)(210)))), ((int)(((byte)(255)))));
             this.load_GLTF_button.Location = new System.Drawing.Point(135, 12);
             this.load_GLTF_button.Name = "load_GLTF_button";
             this.load_GLTF_button.Size = new System.Drawing.Size(113, 23);
@@ -668,7 +688,7 @@ namespace Binjo
             // 
             // export_GLTF_button
             // 
-            this.export_GLTF_button.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.export_GLTF_button.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(180)))), ((int)(((byte)(210)))), ((int)(((byte)(255)))));
             this.export_GLTF_button.Location = new System.Drawing.Point(135, 41);
             this.export_GLTF_button.Name = "export_GLTF_button";
             this.export_GLTF_button.Size = new System.Drawing.Size(113, 23);
@@ -677,24 +697,209 @@ namespace Binjo
             this.export_GLTF_button.UseVisualStyleBackColor = false;
             this.export_GLTF_button.Click += new System.EventHandler(this.export_GLTF_button_Click);
             // 
-            // label1
+            // button1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.ForeColor = System.Drawing.SystemColors.ButtonFace;
-            this.label1.Location = new System.Drawing.Point(4, 11);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(49, 13);
-            this.label1.TabIndex = 3;
-            this.label1.Text = "Segment";
-            this.label1.Click += new System.EventHandler(this.label1_Click);
+            this.button1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(210)))), ((int)(((byte)(210)))), ((int)(((byte)(255)))));
+            this.button1.Location = new System.Drawing.Point(258, 12);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(113, 23);
+            this.button1.TabIndex = 22;
+            this.button1.Text = "Texture Converter";
+            this.button1.UseVisualStyleBackColor = false;
+            this.button1.Click += new System.EventHandler(this.button1_Click_1);
+            // 
+            // panel8
+            // 
+            this.panel8.BackColor = System.Drawing.Color.Transparent;
+            this.panel8.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel8.Controls.Add(this.label18);
+            this.panel8.Controls.Add(this.Converter_Format_ComBox);
+            this.panel8.Controls.Add(this.Converter_Height_ComBox);
+            this.panel8.Controls.Add(this.label16);
+            this.panel8.Controls.Add(this.Converter_Width_ComBox);
+            this.panel8.Controls.Add(this.label13);
+            this.panel8.Controls.Add(this.Converter_Export_Btn);
+            this.panel8.Controls.Add(this.b);
+            this.panel8.Controls.Add(this.label14);
+            this.panel8.Controls.Add(this.Converter_Diversity_NumUpDown);
+            this.panel8.Controls.Add(this.Converter_Load_Btn);
+            this.panel8.Controls.Add(this.Converter_Output_ImgBox);
+            this.panel8.Controls.Add(this.Converter_Input_ImgBox);
+            this.panel8.Location = new System.Drawing.Point(1106, 12);
+            this.panel8.Name = "panel8";
+            this.panel8.Size = new System.Drawing.Size(541, 195);
+            this.panel8.TabIndex = 22;
+            this.panel8.Paint += new System.Windows.Forms.PaintEventHandler(this.panel8_Paint);
+            // 
+            // label18
+            // 
+            this.label18.AutoSize = true;
+            this.label18.ForeColor = System.Drawing.Color.White;
+            this.label18.Location = new System.Drawing.Point(264, 20);
+            this.label18.Name = "label18";
+            this.label18.Size = new System.Drawing.Size(79, 13);
+            this.label18.TabIndex = 27;
+            this.label18.Text = "Storage Format";
+            this.label18.Click += new System.EventHandler(this.label18_Click);
+            // 
+            // Converter_Format_ComBox
+            // 
+            this.Converter_Format_ComBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Converter_Format_ComBox.FormattingEnabled = true;
+            this.Converter_Format_ComBox.Items.AddRange(new object[] {
+            "RGBA32 (8888)",
+            "RGBA16 (5551)",
+            "CI8 (5551)",
+            "CI4 (5551)",
+            "IA8 (44)"});
+            this.Converter_Format_ComBox.Location = new System.Drawing.Point(265, 36);
+            this.Converter_Format_ComBox.Name = "Converter_Format_ComBox";
+            this.Converter_Format_ComBox.Size = new System.Drawing.Size(118, 21);
+            this.Converter_Format_ComBox.TabIndex = 26;
+            // 
+            // Converter_Height_ComBox
+            // 
+            this.Converter_Height_ComBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Converter_Height_ComBox.FormattingEnabled = true;
+            this.Converter_Height_ComBox.Items.AddRange(new object[] {
+            "64",
+            "32",
+            "16",
+            "8",
+            "4"});
+            this.Converter_Height_ComBox.Location = new System.Drawing.Point(328, 76);
+            this.Converter_Height_ComBox.Name = "Converter_Height_ComBox";
+            this.Converter_Height_ComBox.Size = new System.Drawing.Size(55, 21);
+            this.Converter_Height_ComBox.TabIndex = 24;
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.ForeColor = System.Drawing.Color.White;
+            this.label16.Location = new System.Drawing.Point(266, 60);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(93, 13);
+            this.label16.TabIndex = 23;
+            this.label16.Text = "Image Dimensions";
+            this.label16.Click += new System.EventHandler(this.label16_Click);
+            // 
+            // Converter_Width_ComBox
+            // 
+            this.Converter_Width_ComBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Converter_Width_ComBox.FormattingEnabled = true;
+            this.Converter_Width_ComBox.Items.AddRange(new object[] {
+            "64",
+            "32",
+            "16",
+            "8",
+            "4"});
+            this.Converter_Width_ComBox.Location = new System.Drawing.Point(265, 76);
+            this.Converter_Width_ComBox.Name = "Converter_Width_ComBox";
+            this.Converter_Width_ComBox.Size = new System.Drawing.Size(55, 21);
+            this.Converter_Width_ComBox.TabIndex = 8;
+            this.Converter_Width_ComBox.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.ForeColor = System.Drawing.Color.White;
+            this.label13.Location = new System.Drawing.Point(389, 8);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(78, 13);
+            this.label13.TabIndex = 22;
+            this.label13.Text = "Output Texture";
+            this.label13.Click += new System.EventHandler(this.label13_Click);
+            // 
+            // Converter_Export_Btn
+            // 
+            this.Converter_Export_Btn.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
+            this.Converter_Export_Btn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
+            this.Converter_Export_Btn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
+            this.Converter_Export_Btn.Location = new System.Drawing.Point(265, 132);
+            this.Converter_Export_Btn.Name = "Converter_Export_Btn";
+            this.Converter_Export_Btn.Size = new System.Drawing.Size(118, 23);
+            this.Converter_Export_Btn.TabIndex = 20;
+            this.Converter_Export_Btn.Text = "Export Image";
+            this.Converter_Export_Btn.UseVisualStyleBackColor = true;
+            this.Converter_Export_Btn.Click += new System.EventHandler(this.Converter_Export_Btn_Click);
+            // 
+            // b
+            // 
+            this.b.AutoSize = true;
+            this.b.ForeColor = System.Drawing.Color.White;
+            this.b.Location = new System.Drawing.Point(125, 8);
+            this.b.Name = "b";
+            this.b.Size = new System.Drawing.Size(70, 13);
+            this.b.TabIndex = 19;
+            this.b.Text = "Input Texture";
+            this.b.Click += new System.EventHandler(this.label2_Click_1);
+            // 
+            // label14
+            // 
+            this.label14.AutoSize = true;
+            this.label14.ForeColor = System.Drawing.Color.White;
+            this.label14.Location = new System.Drawing.Point(263, 108);
+            this.label14.Name = "label14";
+            this.label14.Size = new System.Drawing.Size(47, 13);
+            this.label14.TabIndex = 17;
+            this.label14.Text = "Diversity";
+            // 
+            // Converter_Diversity_NumUpDown
+            // 
+            this.Converter_Diversity_NumUpDown.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(224)))), ((int)(((byte)(192)))));
+            this.Converter_Diversity_NumUpDown.Location = new System.Drawing.Point(328, 105);
+            this.Converter_Diversity_NumUpDown.Maximum = new decimal(new int[] {
+            99999,
+            0,
+            0,
+            0});
+            this.Converter_Diversity_NumUpDown.Name = "Converter_Diversity_NumUpDown";
+            this.Converter_Diversity_NumUpDown.Size = new System.Drawing.Size(55, 20);
+            this.Converter_Diversity_NumUpDown.TabIndex = 16;
+            this.Converter_Diversity_NumUpDown.Value = new decimal(new int[] {
+            2,
+            0,
+            0,
+            0});
+            // 
+            // Converter_Load_Btn
+            // 
+            this.Converter_Load_Btn.Location = new System.Drawing.Point(9, 34);
+            this.Converter_Load_Btn.Name = "Converter_Load_Btn";
+            this.Converter_Load_Btn.Size = new System.Drawing.Size(113, 23);
+            this.Converter_Load_Btn.TabIndex = 15;
+            this.Converter_Load_Btn.Text = "Load Image";
+            this.Converter_Load_Btn.UseVisualStyleBackColor = true;
+            this.Converter_Load_Btn.Click += new System.EventHandler(this.Converter_Load_Btn_Click);
+            // 
+            // Converter_Output_ImgBox
+            // 
+            this.Converter_Output_ImgBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.Converter_Output_ImgBox.Location = new System.Drawing.Point(392, 28);
+            this.Converter_Output_ImgBox.Name = "Converter_Output_ImgBox";
+            this.Converter_Output_ImgBox.Size = new System.Drawing.Size(128, 128);
+            this.Converter_Output_ImgBox.TabIndex = 10;
+            this.Converter_Output_ImgBox.TabStop = false;
+            // 
+            // Converter_Input_ImgBox
+            // 
+            this.Converter_Input_ImgBox.BackColor = System.Drawing.Color.Transparent;
+            this.Converter_Input_ImgBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.Converter_Input_ImgBox.Location = new System.Drawing.Point(128, 27);
+            this.Converter_Input_ImgBox.Name = "Converter_Input_ImgBox";
+            this.Converter_Input_ImgBox.Size = new System.Drawing.Size(128, 128);
+            this.Converter_Input_ImgBox.TabIndex = 7;
+            this.Converter_Input_ImgBox.TabStop = false;
+            this.Converter_Input_ImgBox.Click += new System.EventHandler(this.pictureBox4_Click);
             // 
             // BinjoKazooie
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(44)))), ((int)(((byte)(44)))), ((int)(((byte)(44)))));
-            this.ClientSize = new System.Drawing.Size(1121, 605);
+            this.ClientSize = new System.Drawing.Size(1706, 605);
+            this.Controls.Add(this.panel8);
+            this.Controls.Add(this.button1);
             this.Controls.Add(this.export_GLTF_button);
             this.Controls.Add(this.export_BIN_button);
             this.Controls.Add(this.panel7);
@@ -705,7 +910,6 @@ namespace Binjo
             this.Controls.Add(this.button7);
             this.Controls.Add(this.panel4);
             this.Controls.Add(this.panel3);
-            this.Controls.Add(this.button5);
             this.Controls.Add(this.panel2);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.panel1);
@@ -741,6 +945,11 @@ namespace Binjo
             this.panel7.ResumeLayout(false);
             this.panel7.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView7)).EndInit();
+            this.panel8.ResumeLayout(false);
+            this.panel8.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.Converter_Diversity_NumUpDown)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.Converter_Output_ImgBox)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.Converter_Input_ImgBox)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -760,7 +969,6 @@ namespace Binjo
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.PictureBox pictureBox2;
         private System.Windows.Forms.Button button4;
-        private System.Windows.Forms.Button button5;
         private System.Windows.Forms.Button button3;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.NumericUpDown numericUpDown3;
@@ -795,6 +1003,21 @@ namespace Binjo
         private System.Windows.Forms.Button export_BIN_button;
         private System.Windows.Forms.Button export_GLTF_button;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Panel panel8;
+        private System.Windows.Forms.Button Converter_Export_Btn;
+        private System.Windows.Forms.Label b;
+        private System.Windows.Forms.Label label14;
+        private System.Windows.Forms.NumericUpDown Converter_Diversity_NumUpDown;
+        private System.Windows.Forms.Button Converter_Load_Btn;
+        private System.Windows.Forms.PictureBox Converter_Output_ImgBox;
+        private System.Windows.Forms.PictureBox Converter_Input_ImgBox;
+        private System.Windows.Forms.ComboBox Converter_Height_ComBox;
+        private System.Windows.Forms.Label label16;
+        private System.Windows.Forms.ComboBox Converter_Width_ComBox;
+        private System.Windows.Forms.Label label13;
+        private System.Windows.Forms.Label label18;
+        private System.Windows.Forms.ComboBox Converter_Format_ComBox;
     }
 }
 

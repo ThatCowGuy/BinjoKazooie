@@ -114,11 +114,11 @@ namespace Binjo
 
         public static Dictionary<string, int> TEX_TYPES = new Dictionary<string, int>
         {
-            { "CI4", 0x01 },
-            { "CI8", 0x02 },
-            { "RGBA16", 0x04 },
-            { "RGBA32", 0x08 },
-            { "IA8", 0x10 }
+            { "CI4", 0x01 },    { "CI4 (5551)", 0x01 },
+            { "CI8", 0x02 },    { "CI8 (5551)", 0x02 },
+            { "RGBA16", 0x04 }, { "RGBA16 (5551)", 0x04 },
+            { "RGBA32", 0x08 }, { "RGBA32 (8888)", 0x08 },
+            { "IA8", 0x10 },    { "IA8 (44)", 0x10 }
         };
 
         public uint get_tex_ID_from_datasection_offset(uint datasection_offset)

@@ -18,6 +18,8 @@ namespace Binjo
         public BIN_Handler handler = new BIN_Handler();
         public static String version = "v1.0.0";
 
+        public Boolean texture_converter_active = false;
+
         public BinjoKazooie()
         {
             InitializeComponent();
@@ -26,6 +28,9 @@ namespace Binjo
             this.checkBox1.Visible = false;
             this.Width = 585;
             this.segName_comboBox.SelectedIndex = 0;
+            this.Converter_Format_ComBox.SelectedIndex = 0;
+            this.Converter_Width_ComBox.SelectedIndex = 0;
+            this.Converter_Height_ComBox.SelectedIndex = 0;
             update_display();
         }
         private void Form1_Load(object sender, EventArgs e)
@@ -50,6 +55,8 @@ namespace Binjo
         private void load_bin_button_Click(object sender, EventArgs e)
         {
             this.handler.load_BIN();
+
+            this.texture_converter_active = false;
             this.set_bounds_for_numericUpDown2();
 
             this.update_display();
@@ -61,6 +68,8 @@ namespace Binjo
         private void load_GLTF_button_Click(object sender, EventArgs e)
         {
             this.handler.load_GLTF();
+
+            this.texture_converter_active = false;
             this.set_bounds_for_numericUpDown2();
 
             update_display();
@@ -136,6 +145,12 @@ namespace Binjo
             btn.Enabled = true;
         }
 
+        private void button1_Click_1(object sender, EventArgs e)
+        {
+            this.texture_converter_active = true;
+            this.update_display();
+        }
+
         // this is where most the GUI shenanigans happen. but to be honest, Im only
         // writing this comment to find this function easier...
         public void update_display()
@@ -153,6 +168,13 @@ namespace Binjo
             this.panel5.Visible = false;
             this.panel6.Visible = false;
             this.panel7.Visible = false;
+            this.panel8.Visible = false; // Texture Converter Panel
+
+            if (this.texture_converter_active == true)
+            {
+                this.panel8.Visible = true;
+                this.panel8.Location = get_bottom_of_DGV_1();
+            }
 
             if (this.handler.file_loaded == true)
             {
@@ -524,6 +546,12 @@ namespace Binjo
         {
             export_image(this.replacement_cvt);
         }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            Console.WriteLine("Hello");
+        }
+
         private void button2_Click(object sender, EventArgs e)
         {
             this.handler.export_image_of_element((int) this.numericUpDown2.Value, true);
@@ -569,7 +597,12 @@ namespace Binjo
         }
         public Bitmap replacement_ori;
         public Bitmap replacement_cvt;
+
+        public Bitmap converter_ori;
+        public Bitmap converter_cvt;
+
         public List<MathHelpers.ColorPixel> replacement_palette;
+        public List<MathHelpers.ColorPixel> converter_palette;
         public void convert_replacement_to_fitting()
         {
             if (this.replacement_ori == null)
@@ -602,6 +635,28 @@ namespace Binjo
             this.pictureBox2.Image = new Bitmap(this.replacement_cvt, display_w, display_h);
             this.pictureBox2.Update();
         }
+        public void convert_converter_to_fitting()
+        {
+            if (this.converter_ori == null)
+            {
+                return;
+            }
+
+            int new_w = Int32.Parse(this.Converter_Width_ComBox.Text);
+            int new_h = Int32.Parse(this.Converter_Height_ComBox.Text);
+            int new_tex_type = Texture_Segment.TEX_TYPES[this.Converter_Format_ComBox.Text];
+            double wm_ratio = ((double) new_w / (double) new_h);
+            int display_w = 128;
+            int display_h = 128;
+            // the display version is scaled up (always. but keep the ratio)
+            if (wm_ratio > 1.0) display_h = (int) (display_h / wm_ratio);
+            if (wm_ratio < 1.0) display_w = (int) (display_w * wm_ratio);
+
+            this.converter_cvt = Texture_Segment.convert_to_fit(this.converter_ori, new_w, new_h, new_tex_type, (int) this.Converter_Diversity_NumUpDown.Value);
+
+            this.Converter_Output_ImgBox.Image = new Bitmap(this.converter_cvt, display_w, display_h);
+            this.Converter_Output_ImgBox.Update();
+        }
         private void button3_Click_1(object sender, EventArgs e)
         {
             OpenFileDialog OFD = new OpenFileDialog();
@@ -621,6 +676,34 @@ namespace Binjo
                 this.replacement_ori = new Bitmap(tmp_img);
             }
             this.convert_replacement_to_fitting();
+            this.update_display();
+        }
+        private void Converter_Load_Btn_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog OFD = new OpenFileDialog();
+            OFD.InitialDirectory = File_Handler.get_basedir_or_assets();
+            if (OFD.ShowDialog() == DialogResult.OK)
+            {
+                File_Handler.remembered_assets_path = Path.GetDirectoryName(OFD.FileName);
+                System.Console.WriteLine(String.Format("Loading File {0}...", OFD.FileName));
+            }
+            else
+            {
+                System.Console.WriteLine(String.Format("Cancelled."));
+                return;
+            }
+            using (var tmp_img = new Bitmap(OFD.FileName))
+            {
+                this.converter_ori = new Bitmap(tmp_img);
+            }
+            // this.convert_replacement_to_fitting();
+            this.Converter_Input_ImgBox.Image = new Bitmap(this.converter_ori);
+            this.Converter_Input_ImgBox.Update();
+            this.update_display();
+        }
+        private void Converter_Export_Btn_Click(object sender, EventArgs e)
+        {
+            convert_converter_to_fitting();
             this.update_display();
         }
 
@@ -710,5 +793,41 @@ namespace Binjo
         {
 
         }
+
+        private void label2_Click_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label16_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label18_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label13_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void pictureBox4_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void panel8_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
     }
 }
