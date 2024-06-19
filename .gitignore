@@ -8,6 +8,8 @@
 *.bin
 *.bak
 
+*__pycache__*
+*.cache
 assets/*
 !assets/.gitkeep
 exports/*

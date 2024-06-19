@@ -19,6 +19,10 @@ def read_bytes(data, offset, cnt):
         result += data[offset + i]
     return result
 
+def get_bytes(data, offset, cnt):
+    return data[offset:(offset+cnt)]
+
+
 def int_to_bytes(val, cnt, endianness="big"):
     return val.to_bytes(cnt, byteorder=endianness)
 
