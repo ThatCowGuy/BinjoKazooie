@@ -1,3 +1,13 @@
+
+# ignore all types of ROM files
+*.z64
+*.v64
+*.n64
+
+# and all types of binary data files
+*.bin
+*.bak
+
 assets/*
 !assets/.gitkeep
 exports/*

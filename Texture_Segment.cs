@@ -394,7 +394,7 @@ namespace Binjo
             }
             this.valid = true;
             this.file_offset = (uint)file_offset;
-            this.file_offset_meta = (uint)file_offset + 0x08;
+            this.file_offset_meta = (uint)(file_offset + Texture_Segment.HEADER_SIZE);
 
             // parsing properties
             // === 0x00 ===============================
@@ -403,7 +403,7 @@ namespace Binjo
             this.unk_1 = File_Handler.read_short(file_data, file_offset + 0x06, false);
 
             // computing properties
-            this.full_header_size = (uint)(0x08 + (this.tex_cnt * 0x10));
+            this.full_header_size = (uint)(Texture_Segment.HEADER_SIZE + (this.tex_cnt * Tex_Meta.ELEMENT_SIZE));
             this.file_offset_data = (uint)file_offset + this.full_header_size;
 
             this.meta = new Tex_Meta[this.tex_cnt];
