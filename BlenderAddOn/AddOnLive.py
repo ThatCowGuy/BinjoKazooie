@@ -1,4 +1,8 @@
 
+# multi file addon workflow
+# https://b3d.interplanety.org/en/creating-multifile-add-on-for-blender/ <-- looks promising
+# https://blender.stackexchange.com/questions/202570/multi-files-to-addon
+
 bl_info = {
     "name": "BINjo-Kazooie",
     "blender": (3, 4, 1),

@@ -34,15 +34,19 @@ class ModelBIN_VtxSeg:
 
         self.vtx_list = []
         for idx in range(0, self.vtx_cnt):
-            file_offset_vtx = self.file_offset_data + (idx * ModelBIN_VtxElem.ELEMENT_SIZE)
+            file_offset_vtx = self.file_offset_data + (idx * ModelBIN_VtxElem.SIZE)
             vtx = ModelBIN_VtxElem.create_from_data(file_data, file_offset_vtx)
             self.vtx_list.append(vtx)
+
+        print(f"parsed {self.vtx_cnt} vertices.")
+        self.valid = True
+        return
 
 
 
 
 class ModelBIN_VtxElem:
-    ELEMENT_SIZE = 0x10
+    SIZE = 0x10
 
     def __init__(self):
         # actual Coords
@@ -72,7 +76,7 @@ class ModelBIN_VtxElem:
         vtx.g = BinjoUtils.read_bytes(file_data, file_offset + 0x0D, 1)
         vtx.b = BinjoUtils.read_bytes(file_data, file_offset + 0x0E, 1)
         vtx.a = BinjoUtils.read_bytes(file_data, file_offset + 0x0F, 1)
-        print(f"{vtx.x:+5d}, {vtx.y:+5d}, {vtx.z:+5d}")
+        # print(f"v {vtx.x:+5d}, {vtx.y:+5d}, {vtx.z:+5d}")
         return vtx
 
     # translate BKs uint8 UV coords into Blenders float [0.0 - 1.0] UV coords

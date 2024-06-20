@@ -17,26 +17,26 @@ class ModelBIN_TexSeg:
 
         # parsed properties
         # === 0x00 ===============================
-        self.data_size = BinjoUtils.read_bytes(data, file_offset + 0x00, 4)
-        self.tex_cnt = BinjoUtils.read_bytes(data, file_offset + 0x04, 2)
-        self.unk_1 = BinjoUtils.read_bytes(data, file_offset + 0x06, 2)
+        self.data_size  = BinjoUtils.read_bytes(data, file_offset + 0x00, 4)
+        self.tex_cnt    = BinjoUtils.read_bytes(data, file_offset + 0x04, 2)
+        self.unk_1      = BinjoUtils.read_bytes(data, file_offset + 0x06, 2)
 
         # computing properties
-        self.meta_data_size = (self.tex_cnt * ModelBIN_TexElem.META_ELEMENT_SIZE)
+        self.meta_data_size = (self.tex_cnt * ModelBIN_TexElem.META_SIZE)
         self.full_header_size = ModelBIN_TexSeg.HEADER_SIZE + self.meta_data_size
         self.file_offset_data = file_offset + self.full_header_size
 
         # now get all the tex elements; first, grab all the data offsets though
         img_data_offsets = []
         for idx in range(0, self.tex_cnt):
-            file_offset_meta = file_offset + ModelBIN_TexSeg.HEADER_SIZE + (idx * ModelBIN_TexElem.META_ELEMENT_SIZE)
+            file_offset_meta = file_offset + ModelBIN_TexSeg.HEADER_SIZE + (idx * ModelBIN_TexElem.META_SIZE)
             img_data_offsets.append(BinjoUtils.read_bytes(data, file_offset_meta + 0x00, 4))
         # the final entry is slightly "fake" because its just the end of all img data, but I need this for size-calc
         img_data_offsets.append(self.data_size)
         self.tex_elements = []
         for idx in range(0, self.tex_cnt):
             # some precalculated values for element extraction
-            file_offset_meta = file_offset + ModelBIN_TexSeg.HEADER_SIZE + (idx * ModelBIN_TexElem.META_ELEMENT_SIZE)
+            file_offset_meta = file_offset + ModelBIN_TexSeg.HEADER_SIZE + (idx * ModelBIN_TexElem.META_SIZE)
             file_offset_data = self.file_offset_data + img_data_offsets[idx]
             img_data_size = (img_data_offsets[idx+1] - img_data_offsets[idx])
             # now create the tex element and append it to our list
@@ -45,13 +45,14 @@ class ModelBIN_TexSeg:
 
         print(f"parsed {self.tex_cnt} image files.")
         self.valid = True
+        return
 
 
 
 
 class ModelBIN_TexElem:
-    # not calling this just "ELEMENT_SIZE" because the element itself also contains the (disjunct) data..
-    META_ELEMENT_SIZE = 0x10
+    # not calling this just "SIZE" because the element itself also contains the (disjunct) data..
+    META_SIZE = 0x10
 
     # input the file_offset to the meta element
     def __init__(self, data, file_offset_meta, file_offset_data, img_data_size):
