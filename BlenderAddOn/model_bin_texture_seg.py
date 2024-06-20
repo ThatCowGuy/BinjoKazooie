@@ -1,7 +1,6 @@
 
 import BinjoUtils
 import os
-from PIL import Image 
 
 class ModelBIN_TexSeg:
     HEADER_SIZE = 0x08
@@ -34,36 +33,24 @@ class ModelBIN_TexSeg:
             img_data_offsets.append(BinjoUtils.read_bytes(data, file_offset_meta + 0x00, 4))
         # the final entry is slightly "fake" because its just the end of all img data, but I need this for size-calc
         img_data_offsets.append(self.data_size)
-
         self.tex_elements = []
         for idx in range(0, self.tex_cnt):
             # some precalculated values for element extraction
             file_offset_meta = file_offset + ModelBIN_TexSeg.HEADER_SIZE + (idx * ModelBIN_TexElem.META_ELEMENT_SIZE)
-            file_offset_data = img_data_offsets[idx]
+            file_offset_data = self.file_offset_data + img_data_offsets[idx]
             img_data_size = (img_data_offsets[idx+1] - img_data_offsets[idx])
             # now create the tex element and append it to our list
             tex = ModelBIN_TexElem(data, file_offset_meta, file_offset_data, img_data_size)
-            # tex_filename = f"image_{idx:02d}.tex.bin"
-            # tex.export_as_binary(tex_filename)
-            # cmd = f"./BINjoTextureConverter.exe {tex_filename}"
-            # print(cmd)
-            # os.system(cmd)
             self.tex_elements.append(tex)
 
-        # data
+        print(f"parsed {self.tex_cnt} image files.")
         self.valid = True
 
-    def 
-
-    def create_IMG_from_bytes(byte_arr):
-        # https://pillow.readthedocs.io/en/stable/handbook/concepts.html#concept-modes
-        # Mode RGBA should catch all needs; expecting 4x8 bit pixels
-        IMG = Image.frombytes("RGBA", (32, 32), byte_arr)
-        IMG.save("test.png")
 
 
 
 class ModelBIN_TexElem:
+    # not calling this just "ELEMENT_SIZE" because the element itself also contains the (disjunct) data..
     META_ELEMENT_SIZE = 0x10
 
     # input the file_offset to the meta element
@@ -93,7 +80,14 @@ class ModelBIN_TexElem:
         # === 0x00 ===============================
         self.data_size = img_data_size
         self.img_data = BinjoUtils.get_bytes(data, file_offset_data, self.data_size)
-        print(self)
+        self.palette, self.pixel_data = BinjoUtils.convert_img_data_to_pixels(
+            self.img_data,
+            self.tex_type,
+            self.width, self.height
+        )
+        self.IMG = BinjoUtils.create_IMG_from_bytes(self.pixel_data, self.width, self.height)
+        self.IMG.save(f"exports/pic_{BinjoUtils.to_decal_hex(self.datasection_offset_data, 2)}.png")
+        # print(self)
 
     def __str__(self):
         return (
@@ -111,6 +105,3 @@ class ModelBIN_TexElem:
     def export_as_binary(self, filename):
         with open(filename, mode="wb") as output:
             output.write(self.img_data)
-
-    def convert_binary_to_pixels(self):
-        

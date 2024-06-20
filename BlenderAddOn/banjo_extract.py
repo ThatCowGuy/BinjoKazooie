@@ -10,7 +10,7 @@ ROM_list = [
 ]
 
 if __name__ == '__main__':
-
+    
     ROM_filename = ROM_list[1]
     print(f"Reading in ROM \"{ROM_filename}\"...")
     with open(ROM_filename, mode="rb") as rom_file:

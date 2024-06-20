@@ -217,7 +217,7 @@ namespace Binjo
                     for (int i = 0; i < 0x10; i++)
                     {
                         uint color_value = File_Handler.read_short(data, (i * 2), false);
-                        // RGB555
+                        // RGB5551
                         color_palette[i * 4 + 0] = (byte) (((double)((color_value >> 0xB) & 0b011111) / 0b011111) * 0xFF); // R
                         color_palette[i * 4 + 1] = (byte) (((double)((color_value >> 0x6) & 0b011111) / 0b011111) * 0xFF); // G
                         color_palette[i * 4 + 2] = (byte) (((double)((color_value >> 0x1) & 0b011111) / 0b011111) * 0xFF); // B

@@ -14,5 +14,9 @@ assets/*
 !assets/.gitkeep
 exports/*
 !exports/.gitkeep
+BlenderAddOn/exports/*
+!BlenderAddOn/exports/.gitkeep
 .vs/*
 .vscode/*
+BlenderAddOn/.vs/*
+BlenderAddOn/.vscode/*
