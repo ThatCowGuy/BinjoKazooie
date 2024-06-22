@@ -1,9 +1,9 @@
 
-import BinjoUtils
-from model_bin_header import ModelBIN_Header
-from model_bin_texture_seg import ModelBIN_TexSeg
-from model_bin_vertex_seg import ModelBIN_VtxSeg
-from model_bin_collision_seg import ModelBIN_ColSeg
+from . import binjo_utils
+from . binjo_model_bin_header import ModelBIN_Header
+from . binjo_model_bin_texture_seg import ModelBIN_TexSeg
+from . binjo_model_bin_vertex_seg import ModelBIN_VtxSeg
+from . binjo_model_bin_collision_seg import ModelBIN_ColSeg
 
 class ModelBIN:
     # Header                done

@@ -1,5 +1,5 @@
 
-import BinjoUtils
+from . import binjo_utils
 import os
 
 class ModelBIN_TexSeg:
@@ -17,9 +17,9 @@ class ModelBIN_TexSeg:
 
         # parsed properties
         # === 0x00 ===============================
-        self.data_size  = BinjoUtils.read_bytes(data, file_offset + 0x00, 4)
-        self.tex_cnt    = BinjoUtils.read_bytes(data, file_offset + 0x04, 2)
-        self.unk_1      = BinjoUtils.read_bytes(data, file_offset + 0x06, 2)
+        self.data_size  = binjo_utils.read_bytes(data, file_offset + 0x00, 4)
+        self.tex_cnt    = binjo_utils.read_bytes(data, file_offset + 0x04, 2)
+        self.unk_1      = binjo_utils.read_bytes(data, file_offset + 0x06, 2)
 
         # computing properties
         self.meta_data_size = (self.tex_cnt * ModelBIN_TexElem.META_SIZE)
@@ -30,7 +30,7 @@ class ModelBIN_TexSeg:
         img_data_offsets = []
         for idx in range(0, self.tex_cnt):
             file_offset_meta = file_offset + ModelBIN_TexSeg.HEADER_SIZE + (idx * ModelBIN_TexElem.META_SIZE)
-            img_data_offsets.append(BinjoUtils.read_bytes(data, file_offset_meta + 0x00, 4))
+            img_data_offsets.append(binjo_utils.read_bytes(data, file_offset_meta + 0x00, 4))
         # the final entry is slightly "fake" because its just the end of all img data, but I need this for size-calc
         img_data_offsets.append(self.data_size)
         self.tex_elements = []
@@ -58,13 +58,13 @@ class ModelBIN_TexElem:
     def __init__(self, data, file_offset_meta, file_offset_data, img_data_size):
         # parsed properties (META elements)
         # === 0x00 ===============================
-        self.datasection_offset_data = BinjoUtils.read_bytes(data, file_offset_meta + 0x00, 4)
-        self.tex_type                = BinjoUtils.read_bytes(data, file_offset_meta + 0x04, 2)
-        self.unk_1                   = BinjoUtils.read_bytes(data, file_offset_meta + 0x06, 2)
-        self.width                   = BinjoUtils.read_bytes(data, file_offset_meta + 0x08, 1)
-        self.height                  = BinjoUtils.read_bytes(data, file_offset_meta + 0x09, 1)
-        self.unk_2                   = BinjoUtils.read_bytes(data, file_offset_meta + 0x0A, 2)
-        self.unk_3                   = BinjoUtils.read_bytes(data, file_offset_meta + 0x0C, 4)
+        self.datasection_offset_data = binjo_utils.read_bytes(data, file_offset_meta + 0x00, 4)
+        self.tex_type                = binjo_utils.read_bytes(data, file_offset_meta + 0x04, 2)
+        self.unk_1                   = binjo_utils.read_bytes(data, file_offset_meta + 0x06, 2)
+        self.width                   = binjo_utils.read_bytes(data, file_offset_meta + 0x08, 1)
+        self.height                  = binjo_utils.read_bytes(data, file_offset_meta + 0x09, 1)
+        self.unk_2                   = binjo_utils.read_bytes(data, file_offset_meta + 0x0A, 2)
+        self.unk_3                   = binjo_utils.read_bytes(data, file_offset_meta + 0x0C, 4)
 
         # locators
         self.file_offset_meta = file_offset_meta
@@ -80,26 +80,26 @@ class ModelBIN_TexElem:
         # additional parsed properties (DATA elements)
         # === 0x00 ===============================
         self.data_size = img_data_size
-        self.img_data = BinjoUtils.get_bytes(data, file_offset_data, self.data_size)
-        self.palette, self.pixel_data = BinjoUtils.convert_img_data_to_pixels(
+        self.img_data = binjo_utils.get_bytes(data, file_offset_data, self.data_size)
+        self.palette, self.pixel_data = binjo_utils.convert_img_data_to_pixels(
             self.img_data,
             self.tex_type,
             self.width, self.height
         )
-        self.IMG = BinjoUtils.create_IMG_from_bytes(self.pixel_data, self.width, self.height)
-        self.IMG.save(f"exports/pic_{BinjoUtils.to_decal_hex(self.datasection_offset_data, 2)}.png")
+        # self.IMG = binjo_utils.create_IMG_from_bytes(self.pixel_data, self.width, self.height)
+        # self.IMG.save(f"exports/pic_{binjo_utils.to_decal_hex(self.datasection_offset_data, 2)}.png")
         # print(self)
 
     def __str__(self):
         return (
             f'Tex_Meta(\n'
-            f'    datasection_offset_data = {BinjoUtils.to_decal_hex(self.datasection_offset_data, 4)},\n'
-            f'    tex_type                = {BinjoUtils.to_decal_hex(self.tex_type, 2)},\n'
-            f'    unk_1                   = {BinjoUtils.to_decal_hex(self.unk_1, 2)},\n'
-            f'    width                   = {BinjoUtils.to_decal_hex(self.width, 1)},\n'
-            f'    height                  = {BinjoUtils.to_decal_hex(self.height, 1)},\n'
-            f'    unk_2                   = {BinjoUtils.to_decal_hex(self.unk_2, 2)},\n'
-            f'    unk_3                   = {BinjoUtils.to_decal_hex(self.unk_3, 4)}\n'
+            f'    datasection_offset_data = {binjo_utils.to_decal_hex(self.datasection_offset_data, 4)},\n'
+            f'    tex_type                = {binjo_utils.to_decal_hex(self.tex_type, 2)},\n'
+            f'    unk_1                   = {binjo_utils.to_decal_hex(self.unk_1, 2)},\n'
+            f'    width                   = {binjo_utils.to_decal_hex(self.width, 1)},\n'
+            f'    height                  = {binjo_utils.to_decal_hex(self.height, 1)},\n'
+            f'    unk_2                   = {binjo_utils.to_decal_hex(self.unk_2, 2)},\n'
+            f'    unk_3                   = {binjo_utils.to_decal_hex(self.unk_3, 4)}\n'
             f')'
         )
 

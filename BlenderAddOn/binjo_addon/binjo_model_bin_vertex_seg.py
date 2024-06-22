@@ -1,5 +1,5 @@
 
-import BinjoUtils
+from . import binjo_utils
 
 class ModelBIN_VtxSeg:
     HEADER_SIZE = 0x18
@@ -15,18 +15,18 @@ class ModelBIN_VtxSeg:
         self.file_offset = file_offset
         self.file_offset_data = file_offset + ModelBIN_VtxSeg.HEADER_SIZE
         # parsing properties
-        self.min_x =        BinjoUtils.read_bytes(file_data, file_offset + 0x00, 2, type="signed")
-        self.min_y =        BinjoUtils.read_bytes(file_data, file_offset + 0x02, 2, type="signed")
-        self.min_z =        BinjoUtils.read_bytes(file_data, file_offset + 0x04, 2, type="signed")
-        self.max_x =        BinjoUtils.read_bytes(file_data, file_offset + 0x06, 2, type="signed")
-        self.max_y =        BinjoUtils.read_bytes(file_data, file_offset + 0x08, 2, type="signed")
-        self.max_z =        BinjoUtils.read_bytes(file_data, file_offset + 0x0A, 2, type="signed")
-        self.center_x =     BinjoUtils.read_bytes(file_data, file_offset + 0x0C, 2, type="signed")
-        self.center_y =     BinjoUtils.read_bytes(file_data, file_offset + 0x0E, 2, type="signed")
-        self.center_z =     BinjoUtils.read_bytes(file_data, file_offset + 0x10, 2, type="signed")
-        self.local_norm =   BinjoUtils.read_bytes(file_data, file_offset + 0x12, 2, type="signed")
-        self.vtx_cnt =      BinjoUtils.read_bytes(file_data, file_offset + 0x14, 2)
-        self.global_norm =  BinjoUtils.read_bytes(file_data, file_offset + 0x16, 2, type="signed")
+        self.min_x =        binjo_utils.read_bytes(file_data, file_offset + 0x00, 2, type="signed")
+        self.min_y =        binjo_utils.read_bytes(file_data, file_offset + 0x02, 2, type="signed")
+        self.min_z =        binjo_utils.read_bytes(file_data, file_offset + 0x04, 2, type="signed")
+        self.max_x =        binjo_utils.read_bytes(file_data, file_offset + 0x06, 2, type="signed")
+        self.max_y =        binjo_utils.read_bytes(file_data, file_offset + 0x08, 2, type="signed")
+        self.max_z =        binjo_utils.read_bytes(file_data, file_offset + 0x0A, 2, type="signed")
+        self.center_x =     binjo_utils.read_bytes(file_data, file_offset + 0x0C, 2, type="signed")
+        self.center_y =     binjo_utils.read_bytes(file_data, file_offset + 0x0E, 2, type="signed")
+        self.center_z =     binjo_utils.read_bytes(file_data, file_offset + 0x10, 2, type="signed")
+        self.local_norm =   binjo_utils.read_bytes(file_data, file_offset + 0x12, 2, type="signed")
+        self.vtx_cnt =      binjo_utils.read_bytes(file_data, file_offset + 0x14, 2)
+        self.global_norm =  binjo_utils.read_bytes(file_data, file_offset + 0x16, 2, type="signed")
 
         # calculated properties
         if (self.vtx_cnt == 0):
@@ -67,15 +67,15 @@ class ModelBIN_VtxElem:
 
     def create_from_data(file_data, file_offset):
         vtx = ModelBIN_VtxElem()
-        vtx.x = BinjoUtils.read_bytes(file_data, file_offset + 0x00, 2, type="signed")
-        vtx.y = BinjoUtils.read_bytes(file_data, file_offset + 0x02, 2, type="signed")
-        vtx.z = BinjoUtils.read_bytes(file_data, file_offset + 0x04, 2, type="signed")
-        vtx.u = BinjoUtils.read_bytes(file_data, file_offset + 0x08, 2, type="signed")
-        vtx.v = BinjoUtils.read_bytes(file_data, file_offset + 0x0A, 2, type="signed")
-        vtx.r = BinjoUtils.read_bytes(file_data, file_offset + 0x0C, 1)
-        vtx.g = BinjoUtils.read_bytes(file_data, file_offset + 0x0D, 1)
-        vtx.b = BinjoUtils.read_bytes(file_data, file_offset + 0x0E, 1)
-        vtx.a = BinjoUtils.read_bytes(file_data, file_offset + 0x0F, 1)
+        vtx.x = binjo_utils.read_bytes(file_data, file_offset + 0x00, 2, type="signed")
+        vtx.y = binjo_utils.read_bytes(file_data, file_offset + 0x02, 2, type="signed")
+        vtx.z = binjo_utils.read_bytes(file_data, file_offset + 0x04, 2, type="signed")
+        vtx.u = binjo_utils.read_bytes(file_data, file_offset + 0x08, 2, type="signed")
+        vtx.v = binjo_utils.read_bytes(file_data, file_offset + 0x0A, 2, type="signed")
+        vtx.r = binjo_utils.read_bytes(file_data, file_offset + 0x0C, 1)
+        vtx.g = binjo_utils.read_bytes(file_data, file_offset + 0x0D, 1)
+        vtx.b = binjo_utils.read_bytes(file_data, file_offset + 0x0E, 1)
+        vtx.a = binjo_utils.read_bytes(file_data, file_offset + 0x0F, 1)
         # print(f"v {vtx.x:+5d}, {vtx.y:+5d}, {vtx.z:+5d}")
         return vtx
 

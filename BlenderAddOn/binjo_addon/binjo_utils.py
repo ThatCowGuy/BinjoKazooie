@@ -1,11 +1,10 @@
 
 import zlib
 import numpy as np
-from PIL import Image 
+# from PIL import Image 
 import sys
 
-import model_LU
-
+from . import binjo_model_LU
 
 
 
@@ -57,15 +56,10 @@ def create_IMG_from_bytes(pixel_data, w, h):
     # https://blender.stackexchange.com/questions/643/is-it-possible-to-create-image-data-and-save-to-a-file-from-a-script
     # Mode RGBA should catch all needs; expecting 4x8 bit pixels
     pixel_data = pixel_data.flatten()
-    # tmp = ""
-    # for i in range(32*32*4):
-    #     tmp += f"{pixel_data[i]:3d} "
-    #     if (i % 4 == 3):
-    #         tmp += "| "
-    #     if (i % 32 == 31):
-    #         print(tmp)
-    #         tmp = ""
-    return Image.frombytes("RGBA", (w, h), pixel_data)
+    
+    # return Image.frombytes("RGBA", (w, h), pixel_data)
+
+
     
 # https://n64squid.com/homebrew/n64-sdk/textures/image-formats/
 def convert_img_data_to_pixels(bin_data, tex_type, w, h):
@@ -187,7 +181,7 @@ def convert_img_data_to_pixels(bin_data, tex_type, w, h):
 extra_file_offset = 0x10CD0
 
 def extract_model(data, filename):
-    PT_Address = model_LU.map_model_lookup[filename][1]
+    PT_Address = binjo_model_LU.map_model_lookup[filename][1]
     ROM_address = read_bytes(data, PT_Address, 4) + extra_file_offset
     print(f"Model Filename:\t\t{filename}")
     print(f"Pointer-Table:\t\t{to_decal_hex(PT_Address, 4)}")
@@ -220,7 +214,7 @@ def extract_model(data, filename):
     # with open("test.compr.bin", mode="wb") as output:
     #     output.write(model_file)
     model_file = decompress(model_file)
-    with open("test.bin", mode="wb") as output:
-        output.write(model_file)
+    # with open("test.bin", mode="wb") as output:
+    #     output.write(model_file)
 
     return model_file

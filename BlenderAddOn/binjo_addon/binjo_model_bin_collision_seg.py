@@ -1,5 +1,5 @@
 
-import BinjoUtils
+from . import binjo_utils
 
 class ModelBIN_ColSeg:
     HEADER_SIZE = 0x18
@@ -13,18 +13,18 @@ class ModelBIN_ColSeg:
             return
 
         # parsing properties
-        self.min_geo_cube_x = BinjoUtils.read_bytes(file_data, file_offset + 0x00, 2, type="signed")
-        self.min_geo_cube_y = BinjoUtils.read_bytes(file_data, file_offset + 0x02, 2, type="signed")
-        self.min_geo_cube_z = BinjoUtils.read_bytes(file_data, file_offset + 0x04, 2, type="signed")
-        self.max_geo_cube_x = BinjoUtils.read_bytes(file_data, file_offset + 0x06, 2, type="signed")
-        self.max_geo_cube_y = BinjoUtils.read_bytes(file_data, file_offset + 0x08, 2, type="signed")
-        self.max_geo_cube_z = BinjoUtils.read_bytes(file_data, file_offset + 0x0A, 2, type="signed")
-        self.stride_y       = BinjoUtils.read_bytes(file_data, file_offset + 0x0C, 2)
-        self.stride_z       = BinjoUtils.read_bytes(file_data, file_offset + 0x0E, 2)
-        self.geo_cube_cnt   = BinjoUtils.read_bytes(file_data, file_offset + 0x10, 2)
-        self.geo_cube_scale = BinjoUtils.read_bytes(file_data, file_offset + 0x12, 2)
-        self.tri_cnt        = BinjoUtils.read_bytes(file_data, file_offset + 0x14, 2)
-        self.unk_1          = BinjoUtils.read_bytes(file_data, file_offset + 0x16, 2)
+        self.min_geo_cube_x = binjo_utils.read_bytes(file_data, file_offset + 0x00, 2, type="signed")
+        self.min_geo_cube_y = binjo_utils.read_bytes(file_data, file_offset + 0x02, 2, type="signed")
+        self.min_geo_cube_z = binjo_utils.read_bytes(file_data, file_offset + 0x04, 2, type="signed")
+        self.max_geo_cube_x = binjo_utils.read_bytes(file_data, file_offset + 0x06, 2, type="signed")
+        self.max_geo_cube_y = binjo_utils.read_bytes(file_data, file_offset + 0x08, 2, type="signed")
+        self.max_geo_cube_z = binjo_utils.read_bytes(file_data, file_offset + 0x0A, 2, type="signed")
+        self.stride_y       = binjo_utils.read_bytes(file_data, file_offset + 0x0C, 2)
+        self.stride_z       = binjo_utils.read_bytes(file_data, file_offset + 0x0E, 2)
+        self.geo_cube_cnt   = binjo_utils.read_bytes(file_data, file_offset + 0x10, 2)
+        self.geo_cube_scale = binjo_utils.read_bytes(file_data, file_offset + 0x12, 2)
+        self.tri_cnt        = binjo_utils.read_bytes(file_data, file_offset + 0x14, 2)
+        self.unk_1          = binjo_utils.read_bytes(file_data, file_offset + 0x16, 2)
 
         # calculated properties
         self.unique_tri_cnt = 0
@@ -62,8 +62,8 @@ class ModelBIN_GeoCubeElem:
 
     def __init__(self, file_data, file_offset):
         # parsing properties
-        self.starting_tri_ID    = BinjoUtils.read_bytes(file_data, file_offset + 0x00, 2)
-        self.tri_cnt            = BinjoUtils.read_bytes(file_data, file_offset + 0x02, 2)
+        self.starting_tri_ID    = binjo_utils.read_bytes(file_data, file_offset + 0x00, 2)
+        self.tri_cnt            = binjo_utils.read_bytes(file_data, file_offset + 0x02, 2)
         return
 
 
@@ -74,11 +74,11 @@ class ModelBIN_TriElem:
     
     def __init__(self, file_data, file_offset):
         # parsing properties
-        self.index_1        = BinjoUtils.read_bytes(file_data, file_offset + 0x00, 2)
-        self.index_2        = BinjoUtils.read_bytes(file_data, file_offset + 0x02, 2)
-        self.index_3        = BinjoUtils.read_bytes(file_data, file_offset + 0x04, 2)
-        self.unk_1          = BinjoUtils.read_bytes(file_data, file_offset + 0x06, 2)
-        self.collision_type = BinjoUtils.read_bytes(file_data, file_offset + 0x08, 4)
+        self.index_1        = binjo_utils.read_bytes(file_data, file_offset + 0x00, 2)
+        self.index_2        = binjo_utils.read_bytes(file_data, file_offset + 0x02, 2)
+        self.index_3        = binjo_utils.read_bytes(file_data, file_offset + 0x04, 2)
+        self.unk_1          = binjo_utils.read_bytes(file_data, file_offset + 0x06, 2)
+        self.collision_type = binjo_utils.read_bytes(file_data, file_offset + 0x08, 4)
         # print(f"f {self.index_1}-{self.index_2}-{self.index_3}")
         return
 
