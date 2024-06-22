@@ -182,29 +182,27 @@ extra_file_offset = 0x10CD0
 
 def extract_model(data, filename):
     PT_Address = binjo_model_LU.map_model_lookup[filename][1]
-    ROM_address = read_bytes(data, PT_Address, 4) + extra_file_offset
+    model_start_address = read_bytes(data, PT_Address + 0x00, 4) + extra_file_offset
+    model_end_address   = read_bytes(data, PT_Address + 0x08, 4) + extra_file_offset
     print(f"Model Filename:\t\t{filename}")
     print(f"Pointer-Table:\t\t{to_decal_hex(PT_Address, 4)}")
-    print(f"ROM Adress:\t\t{to_decal_hex(ROM_address, 4)}")
+    print(f"Model Start Adress:\t{to_decal_hex(model_start_address, 4)}")
+    print(f"Model End Adress:\t{to_decal_hex(model_end_address, 4)}")
 
-    compression_ident = read_bytes(data, (ROM_address + 0), 2)
+    compression_ident = read_bytes(data, (model_start_address + 0), 2)
     if (compression_ident != 0x1172):
-        print(f"The Data at {to_decal_hex(ROM_address, 4)} does not seem to contain Model Data !")
+        print(f"The Data at {to_decal_hex(model_start_address, 4)} does not seem to contain Model Data !")
         print(f" -- read: {to_decal_hex(compression_ident, 2)}")
         return
-    uncompressed_size = read_bytes(data, (ROM_address + 2), 4)
+    uncompressed_size = read_bytes(data, (model_start_address + 2), 4)
     print(f"4B Compression-Header:\t{to_decal_hex(uncompressed_size, 4)}")
 
     model_file = bytearray()
     model_file += int_to_bytes(compression_ident, 2)
 
     read_size = 0
-    while(True):
-        val = read_bytes(data, (ROM_address + 0x02 + read_size), 2)
-        # check if we've reached the end
-        if (val == 0x1172):
-            print(f"Found start of another Model File at {to_decal_hex((ROM_address + 0x02 + read_size), 4)} - Done.")
-            break
+    while(model_start_address + 0x02 + read_size < model_end_address):
+        val = read_bytes(data, (model_start_address + 0x02 + read_size), 2)
         model_file += int_to_bytes(val, 2)
         read_size += 2
     # now there is still some trailing padding (0xAA) at the end, which we wanna cut

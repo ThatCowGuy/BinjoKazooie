@@ -32,7 +32,7 @@ class ModelBIN_TexSeg:
             file_offset_meta = file_offset + ModelBIN_TexSeg.HEADER_SIZE + (idx * ModelBIN_TexElem.META_SIZE)
             img_data_offsets.append(binjo_utils.read_bytes(data, file_offset_meta + 0x00, 4))
         # the final entry is slightly "fake" because its just the end of all img data, but I need this for size-calc
-        img_data_offsets.append(self.data_size)
+        img_data_offsets.append(self.data_size - self.full_header_size)
         self.tex_elements = []
         for idx in range(0, self.tex_cnt):
             # some precalculated values for element extraction

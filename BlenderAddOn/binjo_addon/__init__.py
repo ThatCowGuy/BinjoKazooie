@@ -55,10 +55,24 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
     def execute(self, context):                 # execute() is called when running the operator.
         scene = context.scene
 
-        model = BINjo_ModelBIN_Handler(scene.binjo_props.rom_path)
+        bin_handler = BINjo_ModelBIN_Handler(scene.binjo_props.rom_path)
+        bin_handler.load_model_file("TTC - Treasure Trove Cove")
 
-        for obj in scene.objects:
-            obj.location.x += 1.0
+        print("creating new object")
+        # setting up a new mesh for the scene
+        imported_mesh = bpy.data.meshes.new("test_mesh")
+        imported_object = bpy.data.objects.new("test_object", imported_mesh)
+        # imported_collection = bpy.data.collections.new("test_collection")
+        # scene.collection.children.link(imported_collection)
+        # imported_collection.objects.link(imported_object)
+
+        vertices    = bin_handler.model_object.vertex_coord_list
+        edges       = bin_handler.model_object.edge_idx_list
+        faces       = bin_handler.model_object.face_idx_list
+        imported_mesh.from_pydata(vertices, edges, faces)
+
+        scene.collection.objects.link(imported_object)
+
         return {'FINISHED'}  
 
 
