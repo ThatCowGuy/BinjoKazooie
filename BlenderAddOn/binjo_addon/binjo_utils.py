@@ -164,8 +164,8 @@ def convert_img_data_to_pixels(bin_data, tex_type, w, h):
                 # in IA8, the first nibble is the intensity => every color-value
                 # NOTE: This math looks pretty weird, but the 2nd summand is just to interpolate the values from
                 #       a nibble into a byte, to avoid rounding oddities
-                intensity = ((data[px_id] << 0) & 0b11110000) + (data[px_id] >> 4)
-                alpha     = ((data[px_id] << 4) & 0b11110000) + (data[px_id] & 0b00001111)
+                intensity = int( ((bin_data[px_id] << 0) & 0b11110000) + ((bin_data[px_id] >> 4) & 0b00001111) )
+                alpha     = int( ((bin_data[px_id] << 4) & 0b11110000) + ((bin_data[px_id] >> 0) & 0b00001111) )
 
                 # NOTE: the python Image constructors expect the colors to be in RGB...
                 pixel_data[y, x, 0] = intensity  # R
@@ -181,6 +181,10 @@ def convert_img_data_to_pixels(bin_data, tex_type, w, h):
 extra_file_offset = 0x10CD0
 
 def extract_model(data, filename):
+    if (filename not in binjo_model_LU.map_model_lookup):
+        print(f"Model Filename \"{filename}\" is not part of the LU in \"binjo_model_LU.py\" !")
+        print(f"Cancelling extraction...")
+        return None
     PT_Address = binjo_model_LU.map_model_lookup[filename][1]
     model_start_address = read_bytes(data, PT_Address + 0x00, 4) + extra_file_offset
     model_end_address   = read_bytes(data, PT_Address + 0x08, 4) + extra_file_offset
