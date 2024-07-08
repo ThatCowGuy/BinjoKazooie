@@ -35,7 +35,7 @@ class ModelBIN_VtxSeg:
         self.vtx_list = []
         for idx in range(0, self.vtx_cnt):
             file_offset_vtx = self.file_offset_data + (idx * ModelBIN_VtxElem.SIZE)
-            vtx = ModelBIN_VtxElem.create_from_data(file_data, file_offset_vtx)
+            vtx = ModelBIN_VtxElem.build_from_binary_data(file_data, file_offset_vtx)
             self.vtx_list.append(vtx)
 
         print(f"parsed {self.vtx_cnt} vertices.")
@@ -65,7 +65,7 @@ class ModelBIN_VtxElem:
         self.transformed_U = 0.0
         self.transformed_V = 0.0
 
-    def create_from_data(file_data, file_offset):
+    def build_from_binary_data(file_data, file_offset):
         vtx = ModelBIN_VtxElem()
         vtx.x = binjo_utils.read_bytes(file_data, file_offset + 0x00, 2, type="signed")
         vtx.y = binjo_utils.read_bytes(file_data, file_offset + 0x02, 2, type="signed")
@@ -82,8 +82,8 @@ class ModelBIN_VtxElem:
     # translate BKs uint8 UV coords into Blenders float [0.0 - 1.0] UV coords
     def calc_transformed_UVs(self, tile_descriptor):
         if (tile_descriptor is not None):
-            self.transformed_U = ((self.u / 64.0) + tile_descriptor.S_shift + 0.5) / tile_descriptor.assigned_tex_meta.width
-            self.transformed_V = ((self.v / 64.0) + tile_descriptor.T_shift + 0.5) / tile_descriptor.assigned_tex_meta.height
+            self.transformed_U = ((self.u / 64.0) + tile_descriptor.S_shift + 0.5) / tile_descriptor.tex_width
+            self.transformed_V = ((self.v / 64.0) + tile_descriptor.T_shift + 0.5) / tile_descriptor.tex_height
         else:
             self.transformed_U = ((self.u / 64.0) + 0 + 0.5) / 32.0
             self.transformed_V = ((self.v / 64.0) + 0 + 0.5) / 32.0

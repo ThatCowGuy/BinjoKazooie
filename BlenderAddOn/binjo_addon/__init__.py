@@ -1,4 +1,11 @@
 
+
+import os
+
+from . binjo_bin_handler import BINjo_ModelBIN_Handler
+
+import bpy
+
 # multi file addon workflow
 # https://b3d.interplanety.org/en/creating-multifile-add-on-for-blender/ <-- looks promising
 # https://blender.stackexchange.com/questions/202570/multi-files-to-addon
@@ -9,10 +16,7 @@ bl_info = {
     "category": "Object",
 }
 
-import bpy
-import os
-
-from . binjo_bin_handler import BINjo_ModelBIN_Handler
+bin_handler = None
 
 # Properties are data elements that show up in the GUI Panel
 class BINJO_Properties(bpy.types.PropertyGroup):
@@ -33,7 +37,7 @@ class BINJO_Properties(bpy.types.PropertyGroup):
     model_filename_enum : bpy.props.EnumProperty(
         name="Model File Name Enum",
         description="Internal Model Filename Enum",
-        default="(0x01) TTC - Treasure Trove Cove",
+        default="(0x46) RBB - Rusty Bucket Bay A",
         items = [
             ("(0x00) Unknown 01", "(0x00) Unknown 01", ""),
             ("(0x01) TTC - Treasure Trove Cove", "(0x01) TTC - Treasure Trove Cove", ""),
@@ -229,6 +233,8 @@ class BINJO_PT_main_panel(bpy.types.Panel):
         row.prop(context.scene.binjo_props, "rom_path", text="")
         row = layout.row()
         row.prop(context.scene.binjo_props, "model_filename_enum", text="")
+        row = layout.row()
+        row.operator("export.dump_images")
 
 # def menu_func(self, context):
 #     self.layout.operator(BINJO_OT_import_from_ROM.bl_idname)
@@ -245,6 +251,7 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
     def execute(self, context):                 # execute() is called when running the operator.
         scene = context.scene
 
+        global bin_handler
         bin_handler = BINjo_ModelBIN_Handler(scene.binjo_props.rom_path)
         bin_handler.load_model_file(scene.binjo_props.model_filename_enum)
 
@@ -257,13 +264,53 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
             # scene.collection.children.link(imported_collection)
             # imported_collection.objects.link(imported_object)
             vertices    = bin_handler.model_object.vertex_coord_list
-            edges       = bin_handler.model_object.edge_idx_list
+            # edges       = bin_handler.model_object.edge_idx_list
+            edges       = []
             faces       = bin_handler.model_object.face_idx_list
             imported_mesh.from_pydata(vertices, edges, faces)
+
+            # now create actual materials from the mat-names
+            for binjo_mat in bin_handler.model_object.mat_list:
+                mat = bpy.data.materials.new(binjo_mat.name)
+                mat.use_nodes = True
+                if (binjo_mat.IMG != None):
+                    tex_node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+                    tex_node.location = [-300, +300]
+                    tex_node.image = binjo_mat.IMG
+
+                    mat.node_tree.links.new(
+                        tex_node.outputs[0],
+                        mat.node_tree.nodes[0].inputs["Base Color"]
+                    )
+
+                imported_object.data.materials.append(mat)
+
+            import_UV = imported_object.data.uv_layers.new(name="import_UV")
+            for (face, tri) in zip(imported_mesh.polygons, bin_handler.model_object.complete_tri_list):
+                # set material index of the face according to the data within tri
+                face.material_index = tri.mat_index
+                # and set the UV coords of the face through the loop indices
+                import_UV.data[face.loop_indices[0]].uv = (tri.vtx_1.transformed_U, tri.vtx_1.transformed_V)
+                import_UV.data[face.loop_indices[1]].uv = (tri.vtx_2.transformed_U, tri.vtx_2.transformed_V)
+                import_UV.data[face.loop_indices[2]].uv = (tri.vtx_3.transformed_U, tri.vtx_3.transformed_V)
+
+                # https://blender.stackexchange.com/questions/30677/get-set-coordinates-for-uv-vertices-using-python
+                # https://blender.stackexchange.com/questions/9399/add-uv-layer-to-mesh-add-uv-coords-with-python
+
             scene.collection.objects.link(imported_object)
 
         return {'FINISHED'}
 
+class BINJO_OT_dump_images(bpy.types.Operator):
+    """Dump all the currently loaded Image Objects"""
+    bl_idname = "export.dump_images"
+    bl_label = "Dump Images"
+    bl_options = {'REGISTER'}
+
+    def execute(self, context):
+        global bin_handler
+        bin_handler.dump_image_files_to(path=f"C:\\Users\\cray4\\source\\repos\\BinjoKazooie\\BlenderAddOn\\exports\\")
+        return {'FINISHED'}
 
 
 
@@ -272,7 +319,8 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
 classes = [
     BINJO_Properties,
     BINJO_PT_main_panel,
-    BINJO_OT_import_from_ROM
+    BINJO_OT_import_from_ROM,
+    BINJO_OT_dump_images
 ]
 
 def register():

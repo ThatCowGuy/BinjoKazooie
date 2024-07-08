@@ -46,6 +46,13 @@ class ModelBIN_TexSeg:
         print(f"parsed {self.tex_cnt} image files.")
         self.valid = True
         return
+    
+    # figure out which tex corresponds to a given datasection offset
+    def get_tex_ID_from_datasection_offset(self, datasection_offset_data):
+        for idx, tex in enumerate(self.tex_elements):
+            if (tex.datasection_offset_data == datasection_offset_data):
+                return idx
+        return -1
 
 
 
@@ -86,9 +93,28 @@ class ModelBIN_TexElem:
             self.tex_type,
             self.width, self.height
         )
-        # self.IMG = binjo_utils.create_IMG_from_bytes(self.pixel_data, self.width, self.height)
-        # self.IMG.save(f"exports/pic_{binjo_utils.to_decal_hex(self.datasection_offset_data, 2)}.png")
-        # print(self)
+
+        # to see if this is ran from blenders API or not, just use a try-catch block that will throw if bpy is inexistent
+        try:
+            import bpy
+            self.IMG = bpy.data.images.new("tmp", width=self.width, height=self.height)
+            # Blenders bpy.data.images expects the RGBA values to range inbetween (0.0, 1.0) instead of (0, 255)
+            pixel_data_floats = [float(val / 255.0) for val in self.pixel_data.flatten()]
+            self.IMG.pixels = pixel_data_floats
+            self.IMG.filepath_raw = f"C:\\Users\\cray4\\source\\repos\\BinjoKazooie\\BlenderAddOn\\exports\\pic_{binjo_utils.to_decal_hex(self.datasection_offset_data, 4)}.png"
+            self.IMG.file_format = 'PNG'
+            self.IMG.save()
+            self.is_blender = True
+        except:
+            from PIL import Image
+            self.IMG = Image.frombytes("RGBA", (self.width, self.height), self.pixel_data.flatten())
+            self.IMG.save(f"exports/pic_{binjo_utils.to_decal_hex(self.datasection_offset_data, 4)}.png")
+            self.is_blender = False
+
+    def export_as_file(self, path):
+        self.IMG.filepath_raw = path + f"pic_{binjo_utils.to_decal_hex(self.datasection_offset_data, 2)}.png"
+        self.IMG.file_format = 'PNG'
+        self.IMG.save()
 
     def __str__(self):
         return (

@@ -19,10 +19,12 @@ class BINjo_ModelBIN_Handler:
             print(f"Model File \"{model_filename}\" could not be loaded !")
             print(f"Cancelling Model instantiation...")
             return
-
         self.model_object = ModelBIN(model_file_data)
         self.model_object.arrange_mesh_data()
 
+    def dump_image_files_to(self, path):
+        for IMG in self.model_object.TexSeg.tex_elements:
+            IMG.export_as_file(path=path)
     
 
 

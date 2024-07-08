@@ -43,7 +43,8 @@ class ModelBIN_ColSeg:
         self.unique_tri_list = []
         for idx in range(0, self.tri_cnt):
             file_offset_tri = self.file_offset_tris + (idx * ModelBIN_TriElem.SIZE)
-            tri = ModelBIN_TriElem(file_data, file_offset_tri)
+            tri = ModelBIN_TriElem()
+            tri.build_from_binary_data(file_data, file_offset_tri)
             self.tri_list.append(tri)
             if (tri not in self.unique_tri_list):
                 self.unique_tri_list.append(tri)
@@ -53,6 +54,14 @@ class ModelBIN_ColSeg:
         print(f"{self.unique_tri_cnt} ({(100.0 * self.unique_tri_cnt / self.tri_cnt):.2f}%) of those tris are unique.")
         self.valid = True
         return
+
+    # link the VTX objects in the given VTX-list to the TRI objects in our tri-list via their indices
+    def link_vertex_objects_for_all_tris(self, vtx_list):
+        # I'm deliberately NOT using the func within ModelBIN_TriElem to avoid passing the list around so much
+        for tri in self.tri_list:
+            tri.vtx_1 = vtx_list[tri.index_1]
+            tri.vtx_2 = vtx_list[tri.index_2]
+            tri.vtx_3 = vtx_list[tri.index_3]
 
 
 
@@ -70,24 +79,82 @@ class ModelBIN_GeoCubeElem:
 
 
 class ModelBIN_TriElem:
+    # NOTE: this is strictly the size of a tri in the binary collision segment !
     SIZE = 0x0C
-    
-    def __init__(self, file_data, file_offset):
+
+    # NOTE: the existance of coll_type determines if this tri is collidable;
+    #       the existance of tex_id determines if this tri is visible
+    def __init__(self):
+        self.vtx_1 = None
+        self.vtx_2 = None
+        self.vtx_3 = None
+        
+    def build_from_binary_data(self, file_data, file_offset):
         # parsing properties
         self.index_1        = binjo_utils.read_bytes(file_data, file_offset + 0x00, 2)
         self.index_2        = binjo_utils.read_bytes(file_data, file_offset + 0x02, 2)
         self.index_3        = binjo_utils.read_bytes(file_data, file_offset + 0x04, 2)
         self.unk_1          = binjo_utils.read_bytes(file_data, file_offset + 0x06, 2)
         self.collision_type = binjo_utils.read_bytes(file_data, file_offset + 0x08, 4)
-        # print(f"f {self.index_1}-{self.index_2}-{self.index_3}")
+        self.tex_idx        = None
         return
 
+    def build_from_parameters(self, idx1, idx2, idx3, coll_type=None, tex_id=None):
+        # parsing properties
+        self.index_1        = idx1
+        self.index_2        = idx2
+        self.index_3        = idx3
+        self.unk_1          = 0x00
+        self.collision_type = coll_type
+        self.tex_idx        = tex_id
+        return
+
+    # link the VTX objects in the given VTX-list to the TRI objects in our tri-list via their indices
+    def link_vertex_objects(self, vtx_list):
+        self.vtx_1 = vtx_list[self.index_1]
+        self.vtx_2 = vtx_list[self.index_2]
+        self.vtx_3 = vtx_list[self.index_3]
+
+    def compare_only_indices(self, other):
+        if not isinstance(other, ModelBIN_TriElem):
+            return False
+        # checking all cyclic permutations because they are essentially identical
+        # non-cyclic permutations have a different normal-vector though !
+        if (
+            self.index_1 == other.index_1 and \
+            self.index_2 == other.index_2 and \
+            self.index_3 == other.index_3
+        ):
+            return True
+        if (
+            self.index_1 == other.index_2 and \
+            self.index_2 == other.index_3 and \
+            self.index_3 == other.index_1
+        ):
+            return True
+        if (
+            self.index_1 == other.index_3 and \
+            self.index_2 == other.index_1 and \
+            self.index_3 == other.index_2
+        ):
+            return True
+        return False
+
+    # built-in equals() method; used to evaluate (A == B) expressions
     def __eq__(self, other):
         if not isinstance(other, ModelBIN_TriElem):
             return False
-        return (
-            self.index_1 == other.index_1 and \
-            self.index_2 == other.index_2 and \
-            self.index_3 == other.index_3 and \
-            self.collision_type == other.collision_type
-        )
+        if self.collision_type != other.collision_type:
+            return False
+        if self.tex_idx != other.tex_idx:
+            return False
+        # and finally compare the indices
+        return (self.compare_only_indices(other))
+
+    # built-in less_then() method; used to evaluate (A < B) expressions
+    def __lt__(self, other):
+        if (self.tex_idx > other.tex_idx):
+            return False
+        if (self.collision_type > other.collision_type):
+            return False
+        return True

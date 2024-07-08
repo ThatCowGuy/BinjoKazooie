@@ -35,6 +35,16 @@ def get_bytes(data, offset, cnt):
 def int_to_bytes(val, cnt, endianness="big"):
     return val.to_bytes(cnt, byteorder=endianness)
 
+def apply_bitmask(value, mask):
+    # apply mask
+    tmp_val = (value & mask)
+    # and shift the value according to the masks position
+    # (== r-shifting both until the lowest mask-bit is set)
+    while (mask & 0b01 == 0):
+        tmp_val = tmp_val >> 1
+        mask = mask >> 1
+    return tmp_val
+
 
 
 # from decomp tools/rareunzip.py
@@ -56,6 +66,16 @@ def create_IMG_from_bytes(pixel_data, w, h):
     # https://blender.stackexchange.com/questions/643/is-it-possible-to-create-image-data-and-save-to-a-file-from-a-script
     # Mode RGBA should catch all needs; expecting 4x8 bit pixels
     pixel_data = pixel_data.flatten()
+    # to see if this is ran from blenders API or not, just use a try-catch block that will throw if bpy is inexistent
+    try:
+        import bpy
+        IMG = bpy.data.images.new("tmp", width=w, height=h)
+        IMG.pixels = pixel_data
+        return IMG
+    except:
+        print("BPY prolly doesnt exist")
+        return None
+
     
     # return Image.frombytes("RGBA", (w, h), pixel_data)
 
