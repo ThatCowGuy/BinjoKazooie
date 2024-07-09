@@ -23,7 +23,7 @@ class BINJO_Properties(bpy.types.PropertyGroup):
     rom_path: bpy.props.StringProperty(
         name="",
         description="Path to ROM",
-        default="",
+        default="C:\\Users\\cray4\\source\\repos\\BinjoKazooie\\BlenderAddOn\\banjo.us.v10.z64",
         maxlen=1024,
         subtype='FILE_PATH'
     )
@@ -37,7 +37,7 @@ class BINJO_Properties(bpy.types.PropertyGroup):
     model_filename_enum : bpy.props.EnumProperty(
         name="Model File Name Enum",
         description="Internal Model Filename Enum",
-        default="(0x46) RBB - Rusty Bucket Bay A",
+        default="(0x9B) GL - Floor 7 - RBB Entrance A",
         items = [
             ("(0x00) Unknown 01", "(0x00) Unknown 01", ""),
             ("(0x01) TTC - Treasure Trove Cove", "(0x01) TTC - Treasure Trove Cove", ""),
@@ -269,23 +269,48 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
             faces       = bin_handler.model_object.face_idx_list
             imported_mesh.from_pydata(vertices, edges, faces)
 
+            # create over-arching layer/attribute elements
+            import_UV = imported_object.data.uv_layers.new(name="import_UV")
+            color_attribute = imported_mesh.attributes.new(name='Color', domain='CORNER', type='BYTE_COLOR')
+
             # now create actual materials from the mat-names
             for binjo_mat in bin_handler.model_object.mat_list:
                 mat = bpy.data.materials.new(binjo_mat.name)
+                
                 mat.use_nodes = True
-                if (binjo_mat.IMG != None):
-                    tex_node = mat.node_tree.nodes.new("ShaderNodeTexImage")
-                    tex_node.location = [-300, +300]
-                    tex_node.image = binjo_mat.IMG
+                mat.blend_method = "HASHED" # "OPAQUE" == Solid; "HASHED" == Dithered Transparency
+                mat.shadow_method = "NONE"
+                mat.use_backface_culling = True
+                # mat.specular_intensity = 0.0 # doesn't work for whatever reason ?
+                mat.node_tree.nodes["Principled BSDF"].inputs["Specular"].default_value = 0
 
-                    mat.node_tree.links.new(
-                        tex_node.outputs[0],
-                        mat.node_tree.nodes[0].inputs["Base Color"]
-                    )
+                # texture node (NOTE that this will also assign "None" if the mat doesnt have an image)
+                tex_node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+                tex_node.location = [-600, +300]
+                tex_node.image = binjo_mat.IMG
+            
+                # color node (RGB)
+                color_node = mat.node_tree.nodes.new("ShaderNodeVertexColor")
+                color_node.location = (-600, 0)
+                color_node.layer_name = "Color"
+                # mixer-node (texture * RGB)                  
+                mix_node_1 = mat.node_tree.nodes.new("ShaderNodeMixRGB")
+                mix_node_1.blend_type = "MULTIPLY"
+                mix_node_1.location = (-300, +300)
+                mix_node_1.inputs[0].default_value = 1.0
+
+                # link tex and color nodes to mixer
+                mat.node_tree.links.new(tex_node.outputs["Color"], mix_node_1.inputs["Color1"])
+                mat.node_tree.links.new(color_node.outputs["Color"], mix_node_1.inputs["Color2"])
+                # link mixer to base-color input in main-material node
+                mat.node_tree.links.new(mix_node_1.outputs["Color"], mat.node_tree.nodes[0].inputs["Base Color"])
+
+                # and link tex alpha output to mat alpha input
+                mat.node_tree.links.new(color_node.outputs["Alpha"], mat.node_tree.nodes[0].inputs["Alpha"])
 
                 imported_object.data.materials.append(mat)
 
-            import_UV = imported_object.data.uv_layers.new(name="import_UV")
+            loop_ids = []
             for (face, tri) in zip(imported_mesh.polygons, bin_handler.model_object.complete_tri_list):
                 # set material index of the face according to the data within tri
                 face.material_index = tri.mat_index
@@ -294,10 +319,35 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
                 import_UV.data[face.loop_indices[1]].uv = (tri.vtx_2.transformed_U, tri.vtx_2.transformed_V)
                 import_UV.data[face.loop_indices[2]].uv = (tri.vtx_3.transformed_U, tri.vtx_3.transformed_V)
 
-                # https://blender.stackexchange.com/questions/30677/get-set-coordinates-for-uv-vertices-using-python
-                # https://blender.stackexchange.com/questions/9399/add-uv-layer-to-mesh-add-uv-coords-with-python
+                # aswell as the RGBA shades
+                if (face.loop_indices[0] not in loop_ids):
+                    loop_ids.append(face.loop_indices[0])
+                else:
+                    print("DUPLICATE")
+                if (face.loop_indices[1] not in loop_ids):
+                    loop_ids.append(face.loop_indices[1])
+                else:
+                    print("DUPLICATE")
+                if (face.loop_indices[2] not in loop_ids):
+                    loop_ids.append(face.loop_indices[2])
+                else:
+                    print("DUPLICATE")
+
+                if ("INVIS" in bpy.data.materials[face.material_index].name):
+                    # pure collision tris will be drawn in magenta
+                    color_attribute.data[face.loop_indices[0]].color = (1.0, 0, 1.0, 1.0)
+                    color_attribute.data[face.loop_indices[1]].color = (1.0, 0, 1.0, 1.0)
+                    color_attribute.data[face.loop_indices[2]].color = (1.0, 0, 1.0, 1.0)
+                else:
+                    # others get their vertex RGBA values assigned (regardless of textured or not)
+                    color_attribute.data[face.loop_indices[0]].color = (tri.vtx_1.r/255, tri.vtx_1.g/255, tri.vtx_1.b/255, tri.vtx_1.a/255)
+                    color_attribute.data[face.loop_indices[1]].color = (tri.vtx_2.r/255, tri.vtx_2.g/255, tri.vtx_2.b/255, tri.vtx_2.a/255)
+                    color_attribute.data[face.loop_indices[2]].color = (tri.vtx_3.r/255, tri.vtx_3.g/255, tri.vtx_3.b/255, tri.vtx_3.a/255)
 
             scene.collection.objects.link(imported_object)
+
+            # just some names to check if neccessary
+            print([e.name for e in bpy.data.materials[0].node_tree.nodes["Principled BSDF"].inputs])
 
         return {'FINISHED'}
 

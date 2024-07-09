@@ -41,16 +41,29 @@ class ModelBIN:
         self.complete_tri_list = ColSeg.unique_tri_list.copy()
         # then walk through the DLs with a TileDescriptor and a simulated VTX-Buffer to scan for visual tris;
         # the descriptor holds meta data for the GPU and handles the VTX-Buffer, which has a capacity of 32 tri-IDs
-        descriptor = TileDescriptor()
+        descriptor_array = []
+        for idx in range(0, 10):
+            descriptor_array.append(TileDescriptor())
+        active_descriptor = 0
         vertex_buffer = [0] * 0x20
         for cmd in DLSeg.command_list:
+
+            if (cmd.command_name == "G_TEXTURE"):
+                active_descriptor = cmd.parameters[1]
+                continue
+
             if (cmd.command_name == "G_SETTIMG"):
                 # find the tex that corresponds to this address (and only update the descriptor if it was actual data)
                 potential_tex_idx = TexSeg.get_tex_ID_from_datasection_offset(cmd.parameters[3])
                 if (potential_tex_idx != -1):
-                    descriptor.tex_idx = potential_tex_idx
-                    descriptor.tex_width  = TexSeg.tex_elements[descriptor.tex_idx].width
-                    descriptor.tex_height = TexSeg.tex_elements[descriptor.tex_idx].height
+                    descriptor_array[active_descriptor].tex_idx = potential_tex_idx
+                    descriptor_array[active_descriptor].tex_width  = TexSeg.tex_elements[descriptor_array[active_descriptor].tex_idx].width
+                    descriptor_array[active_descriptor].tex_height = TexSeg.tex_elements[descriptor_array[active_descriptor].tex_idx].height
+                else:
+                    pass
+                    # descriptor_array[active_descriptor].tex_idx = None
+                    # descriptor_array[active_descriptor].tex_width  = 0
+                    # descriptor_array[active_descriptor].tex_height = 0
                 continue
             
             if (cmd.command_name == "G_VTX"):
@@ -69,7 +82,7 @@ class ModelBIN:
                     vertex_buffer[cmd.parameters[1]],
                     vertex_buffer[cmd.parameters[2]]
                 )
-                self.add_and_transform_tri(tmp_tri, descriptor)
+                self.add_and_transform_tri(tmp_tri, descriptor_array[active_descriptor])
                 continue
 
             if (cmd.command_name == "G_TRI2"):
@@ -79,14 +92,14 @@ class ModelBIN:
                     vertex_buffer[cmd.parameters[1]],
                     vertex_buffer[cmd.parameters[2]]
                 )
-                self.add_and_transform_tri(tmp_tri, descriptor)
+                self.add_and_transform_tri(tmp_tri, descriptor_array[active_descriptor])
                 tmp_tri = ModelBIN_TriElem()
                 tmp_tri.build_from_parameters(
                     vertex_buffer[cmd.parameters[3]],
                     vertex_buffer[cmd.parameters[4]],
                     vertex_buffer[cmd.parameters[5]]
                 )
-                self.add_and_transform_tri(tmp_tri, descriptor)
+                self.add_and_transform_tri(tmp_tri, descriptor_array[active_descriptor])
                 continue
 
 
@@ -102,6 +115,8 @@ class ModelBIN:
         # if the tri wasnt already added, its vertex objects wont be linked yet
         if (matching_tri_index == -1):
             new_tri.link_vertex_objects(self.VtxSeg.vtx_list)
+        # this is ALWAYS true if the tri was found in the DLs; Textured or not
+        new_tri.visible = True
         # finally, link the tex ID and calculate the Blender-UVs with the help of the descriptor
         new_tri.tex_idx = tile_descriptor.tex_idx
         new_tri.vtx_1.calc_transformed_UVs(tile_descriptor)
@@ -136,10 +151,14 @@ class ModelBIN:
             self.edge_idx_list.append((tri.index_2, tri.index_3))
             self.edge_idx_list.append((tri.index_3, tri.index_1))
 
-            img_alias = "INVIS"
-            if (tri.tex_idx != None):
+            if (tri.visible == False):
+                img_alias = "INVIS"
+            if (tri.visible == True and tri.tex_idx == None):
+                img_alias = "FLAT"
+            if (tri.visible == True and tri.tex_idx != None):
                 datasection_offset_data = self.TexSeg.tex_elements[tri.tex_idx].datasection_offset_data
                 img_alias = f"{binjo_utils.to_decal_hex(datasection_offset_data, 4)}"
+
             coll_encoding = "NOCOLL"
             if (tri.collision_type != None):
                 coll_encoding = f"{binjo_utils.to_decal_hex(tri.collision_type, 4)}"
@@ -149,10 +168,9 @@ class ModelBIN:
             if mat not in self.mat_list:
                 mat.link_image_object(self.TexSeg)
                 self.mat_list.append(mat)
+                print(f"appended MAT: {mat.name}")
 
             tri.mat_index = self.mat_list.index(mat)
-
-        print(self.mat_list)
         return
 
 class BinjoMaterial:
@@ -163,6 +181,9 @@ class BinjoMaterial:
     
     def link_image_object(self, TexSeg):
         if (self.img_alias == "INVIS"):
+            self.IMG = None
+            return
+        if (self.img_alias == "FLAT"):
             self.IMG = None
             return
         tex_id = TexSeg.get_tex_ID_from_datasection_offset(int(self.img_alias, base=16))

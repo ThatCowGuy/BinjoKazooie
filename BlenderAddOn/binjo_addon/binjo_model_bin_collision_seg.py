@@ -97,6 +97,7 @@ class ModelBIN_TriElem:
         self.unk_1          = binjo_utils.read_bytes(file_data, file_offset + 0x06, 2)
         self.collision_type = binjo_utils.read_bytes(file_data, file_offset + 0x08, 4)
         self.tex_idx        = None
+        self.visible        = False
         return
 
     def build_from_parameters(self, idx1, idx2, idx3, coll_type=None, tex_id=None):
@@ -107,6 +108,7 @@ class ModelBIN_TriElem:
         self.unk_1          = 0x00
         self.collision_type = coll_type
         self.tex_idx        = tex_id
+        self.visible        = (tex_id != None)
         return
 
     # link the VTX objects in the given VTX-list to the TRI objects in our tri-list via their indices

@@ -81,19 +81,20 @@ class ModelBIN_VtxElem:
 
     # translate BKs uint8 UV coords into Blenders float [0.0 - 1.0] UV coords
     def calc_transformed_UVs(self, tile_descriptor):
-        if (tile_descriptor is not None):
+        if (tile_descriptor is not None and tile_descriptor.tex_idx is not None):
             self.transformed_U = ((self.u / 64.0) + tile_descriptor.S_shift + 0.5) / tile_descriptor.tex_width
             self.transformed_V = ((self.v / 64.0) + tile_descriptor.T_shift + 0.5) / tile_descriptor.tex_height
         else:
             self.transformed_U = ((self.u / 64.0) + 0 + 0.5) / 32.0
             self.transformed_V = ((self.v / 64.0) + 0 + 0.5) / 32.0
         # Note: Flipping the V coordinate
-        self.transformed_V = -1 * self.transformed_V
+        # self.transformed_V = -1 * self.transformed_V
 
     def reverse_UV_transforms(self, w_factor, h_factor):
         # Note: undoing the flipping
         self.u = int(64.0 * ((+1 * self.transformed_U * w_factor) - 0.5))
-        self.v = int(64.0 * ((-1 * self.transformed_V * h_factor) - 0.5))
+        self.v = int(64.0 * ((+1 * self.transformed_V * h_factor) - 0.5))
+        # self.v = int(64.0 * ((-1 * self.transformed_V * h_factor) - 0.5))
 
     def clone(self):
         return self.__class__(
