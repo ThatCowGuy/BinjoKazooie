@@ -23,9 +23,16 @@ class BINJO_Properties(bpy.types.PropertyGroup):
     rom_path: bpy.props.StringProperty(
         name="",
         description="Path to ROM",
-        default="C:\\Users\\cray4\\source\\repos\\BinjoKazooie\\BlenderAddOn\\banjo.us.v10.z64",
+        default="",
         maxlen=1024,
         subtype='FILE_PATH'
+    )
+    export_path: bpy.props.StringProperty(
+        name="",
+        description="Path to Store Exports",
+        default="",
+        maxlen=1024,
+        subtype='DIR_PATH'
     )
     model_filename: bpy.props.StringProperty(
         name="",
@@ -37,7 +44,7 @@ class BINJO_Properties(bpy.types.PropertyGroup):
     model_filename_enum : bpy.props.EnumProperty(
         name="Model File Name Enum",
         description="Internal Model Filename Enum",
-        default="(0x9B) GL - Floor 7 - RBB Entrance A",
+        default="(0x01) TTC - Treasure Trove Cove",
         items = [
             ("(0x00) Unknown 01", "(0x00) Unknown 01", ""),
             ("(0x01) TTC - Treasure Trove Cove", "(0x01) TTC - Treasure Trove Cove", ""),
@@ -227,17 +234,23 @@ class BINJO_PT_main_panel(bpy.types.Panel):
     
     def draw(self, context):
         layout = self.layout
+
         row = layout.row()
-        row.operator("import.from_rom")
+        row.prop(context.scene.binjo_props, "rom_path", text="ROM")
+
         row = layout.row()
-        row.prop(context.scene.binjo_props, "rom_path", text="")
+        row.label(text="Active Map:")
         row = layout.row()
         row.prop(context.scene.binjo_props, "model_filename_enum", text="")
         row = layout.row()
-        row.operator("export.dump_images")
+        row.operator("import.from_rom")
 
-# def menu_func(self, context):
-#     self.layout.operator(BINJO_OT_import_from_ROM.bl_idname)
+        row = layout.row()
+        row.label(text="Export Path:")
+        row = layout.row()
+        row.prop(context.scene.binjo_props, "export_path")
+        row = layout.row()
+        row.operator("export.dump_images")
 
 
 
@@ -349,7 +362,7 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
             # just some names to check if neccessary
             print([e.name for e in bpy.data.materials[0].node_tree.nodes["Principled BSDF"].inputs])
 
-        return {'FINISHED'}
+        return { 'FINISHED' }
 
 class BINJO_OT_dump_images(bpy.types.Operator):
     """Dump all the currently loaded Image Objects"""
@@ -358,8 +371,15 @@ class BINJO_OT_dump_images(bpy.types.Operator):
     bl_options = {'REGISTER'}
 
     def execute(self, context):
+        path = context.scene.binjo_props.export_path
+        if (path == ""):
+            return { 'CANCELLED' }
+        if (os.isdir(path) == False):
+            return { 'CANCELLED' }
         global bin_handler
-        bin_handler.dump_image_files_to(path=f"C:\\Users\\cray4\\source\\repos\\BinjoKazooie\\BlenderAddOn\\exports\\")
+        if (bin_handler is None):
+            return { 'CANCELLED' }
+        bin_handler.dump_image_files_to(path=path)
         return {'FINISHED'}
 
 

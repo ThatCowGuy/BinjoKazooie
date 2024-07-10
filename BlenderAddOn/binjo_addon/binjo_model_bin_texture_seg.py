@@ -101,9 +101,7 @@ class ModelBIN_TexElem:
             # Blenders bpy.data.images expects the RGBA values to range inbetween (0.0, 1.0) instead of (0, 255)
             pixel_data_floats = [float(val / 255.0) for val in self.pixel_data.flatten()]
             self.IMG.pixels = pixel_data_floats
-            self.IMG.filepath_raw = f"C:\\Users\\cray4\\source\\repos\\BinjoKazooie\\BlenderAddOn\\exports\\pic_{binjo_utils.to_decal_hex(self.datasection_offset_data, 4)}.png"
             self.IMG.file_format = 'PNG'
-            self.IMG.save()
             self.is_blender = True
         except:
             from PIL import Image
