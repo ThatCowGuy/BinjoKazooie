@@ -18,6 +18,9 @@ bl_info = {
 
 bin_handler = None
 
+def highlight_invis_changed(self, context):
+    pass
+
 # Properties are data elements that show up in the GUI Panel
 class BINJO_Properties(bpy.types.PropertyGroup):
     rom_path: bpy.props.StringProperty(
@@ -41,6 +44,12 @@ class BINJO_Properties(bpy.types.PropertyGroup):
         maxlen=1024,
         subtype='NONE'
     )
+    highlight_invis : bpy.props.BoolProperty(
+        name="Highlight INVIS Mats",
+        description="Highlight all the INVIS materials in magenta. Those are usually collision only.",
+        default = False,
+        update = highlight_invis_changed
+    ) 
     model_filename_enum : bpy.props.EnumProperty(
         name="Model File Name Enum",
         description="Internal Model Filename Enum",
@@ -252,6 +261,9 @@ class BINJO_PT_main_panel(bpy.types.Panel):
         row = layout.row()
         row.operator("export.dump_images")
 
+        row = layout.row()
+        row.prop(context.scene.binjo_props, "highlight_invis")
+
 
 
 # OT elements are Operators, which basically are callable Blender-Commands
@@ -296,7 +308,7 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
                 mat.use_backface_culling = True
                 # mat.specular_intensity = 0.0 # doesn't work for whatever reason ?
                 mat.node_tree.nodes["Principled BSDF"].inputs["Specular"].default_value = 0
-
+                
                 # texture node (NOTE that this will also assign "None" if the mat doesnt have an image)
                 tex_node = mat.node_tree.nodes.new("ShaderNodeTexImage")
                 tex_node.location = [-600, +300]
@@ -304,22 +316,28 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
             
                 # color node (RGB)
                 color_node = mat.node_tree.nodes.new("ShaderNodeVertexColor")
-                color_node.location = (-600, 0)
+                new_x = (tex_node.location[0] + tex_node.width - color_node.width)
+                color_node.location = (new_x, 0)
                 color_node.layer_name = "Color"
                 # mixer-node (texture * RGB)                  
                 mix_node_1 = mat.node_tree.nodes.new("ShaderNodeMixRGB")
                 mix_node_1.blend_type = "MULTIPLY"
-                mix_node_1.location = (-300, +300)
+                mix_node_1.location = (-275, +300)
                 mix_node_1.inputs[0].default_value = 1.0
 
-                # link tex and color nodes to mixer
-                mat.node_tree.links.new(tex_node.outputs["Color"], mix_node_1.inputs["Color1"])
-                mat.node_tree.links.new(color_node.outputs["Color"], mix_node_1.inputs["Color2"])
-                # link mixer to base-color input in main-material node
-                mat.node_tree.links.new(mix_node_1.outputs["Color"], mat.node_tree.nodes[0].inputs["Base Color"])
+                if ("INVIS" not in mat.name):
+                    # link tex and color nodes to mixer
+                    mat.node_tree.links.new(tex_node.outputs["Color"], mix_node_1.inputs["Color1"])
+                    mat.node_tree.links.new(color_node.outputs["Color"], mix_node_1.inputs["Color2"])
+                    # link mixer to base-color input in main-material node
+                    mat.node_tree.links.new(mix_node_1.outputs["Color"], mat.node_tree.nodes[0].inputs["Base Color"])
 
-                # and link tex alpha output to mat alpha input
-                mat.node_tree.links.new(color_node.outputs["Alpha"], mat.node_tree.nodes[0].inputs["Alpha"])
+                    # and link color node's alpha output to mat alpha input
+                    mat.node_tree.links.new(color_node.outputs["Alpha"], mat.node_tree.nodes[0].inputs["Alpha"])
+                else:
+                    # and link the color node directly to the material
+                    mat.node_tree.links.new(color_node.outputs["Color"], mat.node_tree.nodes[0].inputs["Base Color"])
+                    mat.node_tree.links.new(color_node.outputs["Alpha"], mat.node_tree.nodes[0].inputs["Alpha"])
 
                 imported_object.data.materials.append(mat)
 
@@ -331,22 +349,9 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
                 import_UV.data[face.loop_indices[0]].uv = (tri.vtx_1.transformed_U, tri.vtx_1.transformed_V)
                 import_UV.data[face.loop_indices[1]].uv = (tri.vtx_2.transformed_U, tri.vtx_2.transformed_V)
                 import_UV.data[face.loop_indices[2]].uv = (tri.vtx_3.transformed_U, tri.vtx_3.transformed_V)
-
+                
                 # aswell as the RGBA shades
-                if (face.loop_indices[0] not in loop_ids):
-                    loop_ids.append(face.loop_indices[0])
-                else:
-                    print("DUPLICATE")
-                if (face.loop_indices[1] not in loop_ids):
-                    loop_ids.append(face.loop_indices[1])
-                else:
-                    print("DUPLICATE")
-                if (face.loop_indices[2] not in loop_ids):
-                    loop_ids.append(face.loop_indices[2])
-                else:
-                    print("DUPLICATE")
-
-                if ("INVIS" in bpy.data.materials[face.material_index].name):
+                if ("INVIS" in imported_object.data.materials[face.material_index].name):
                     # pure collision tris will be drawn in magenta
                     color_attribute.data[face.loop_indices[0]].color = (1.0, 0, 1.0, 1.0)
                     color_attribute.data[face.loop_indices[1]].color = (1.0, 0, 1.0, 1.0)
