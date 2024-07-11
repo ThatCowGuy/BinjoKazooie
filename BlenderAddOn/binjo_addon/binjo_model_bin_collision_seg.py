@@ -57,6 +57,9 @@ class ModelBIN_ColSeg:
 
     # link the VTX objects in the given VTX-list to the TRI objects in our tri-list via their indices
     def link_vertex_objects_for_all_tris(self, vtx_list):
+        if (self.valid == False):
+            print("Cannot link vertices - No Collision Segment")
+            return
         # I'm deliberately NOT using the func within ModelBIN_TriElem to avoid passing the list around so much
         for tri in self.tri_list:
             tri.vtx_1 = vtx_list[tri.index_1]

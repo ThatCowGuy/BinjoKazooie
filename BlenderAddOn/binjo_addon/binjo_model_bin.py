@@ -37,71 +37,76 @@ class ModelBIN:
             ColSeg = self.ColSeg
         if (DLSeg == None):
             DLSeg = self.DLSeg
-        # start of by grabbing all the tris from the coll segment
-        self.complete_tri_list = ColSeg.unique_tri_list.copy()
-        # then walk through the DLs with a TileDescriptor and a simulated VTX-Buffer to scan for visual tris;
-        # the descriptor holds meta data for the GPU and handles the VTX-Buffer, which has a capacity of 32 tri-IDs
-        descriptor_array = []
-        for idx in range(0, 10):
-            descriptor_array.append(TileDescriptor())
-        active_descriptor = 0
-        vertex_buffer = [0] * 0x20
-        for cmd in DLSeg.command_list:
+        
+        if (ColSeg.valid == True):
+            # start of by grabbing all the tris from the coll segment
+            self.complete_tri_list = ColSeg.unique_tri_list.copy()
+        else:
+            self.complete_tri_list = []
 
-            if (cmd.command_name == "G_TEXTURE"):
-                active_descriptor = cmd.parameters[1]
-                continue
+        if (DLSeg.valid == True):
+            # then walk through the DLs with a TileDescriptor and a simulated VTX-Buffer to scan for visual tris;
+            # the descriptor holds meta data for the GPU and handles the VTX-Buffer, which has a capacity of 32 tri-IDs
+            descriptor_array = []
+            for idx in range(0, 10):
+                descriptor_array.append(TileDescriptor())
+            active_descriptor = 0
+            vertex_buffer = [0] * 0x20
+            for cmd in DLSeg.command_list:
 
-            if (cmd.command_name == "G_SETTIMG"):
-                # find the tex that corresponds to this address (and only update the descriptor if it was actual data)
-                potential_tex_idx = TexSeg.get_tex_ID_from_datasection_offset(cmd.parameters[3])
-                if (potential_tex_idx != -1):
-                    descriptor_array[active_descriptor].tex_idx = potential_tex_idx
-                    descriptor_array[active_descriptor].tex_width  = TexSeg.tex_elements[descriptor_array[active_descriptor].tex_idx].width
-                    descriptor_array[active_descriptor].tex_height = TexSeg.tex_elements[descriptor_array[active_descriptor].tex_idx].height
-                else:
-                    pass
-                    # descriptor_array[active_descriptor].tex_idx = None
-                    # descriptor_array[active_descriptor].tex_width  = 0
-                    # descriptor_array[active_descriptor].tex_height = 0
-                continue
-            
-            if (cmd.command_name == "G_VTX"):
-                first_vtx_idx = (cmd.parameters[4] // 0x10)
-                vtx_load_cnt = cmd.parameters[1]
-                # write the corresponding vtx into the simulated buffer
-                buffer_offset = cmd.parameters[0]
-                for idx in range(0, vtx_load_cnt):
-                    vertex_buffer[buffer_offset + idx] = (first_vtx_idx + idx)
-                continue
+                if (cmd.command_name == "G_TEXTURE"):
+                    active_descriptor = cmd.parameters[1]
+                    continue
 
-            if (cmd.command_name == "G_TRI1"):
-                tmp_tri = ModelBIN_TriElem()
-                tmp_tri.build_from_parameters(
-                    vertex_buffer[cmd.parameters[0]],
-                    vertex_buffer[cmd.parameters[1]],
-                    vertex_buffer[cmd.parameters[2]]
-                )
-                self.add_and_transform_tri(tmp_tri, descriptor_array[active_descriptor])
-                continue
+                if (cmd.command_name == "G_SETTIMG"):
+                    # find the tex that corresponds to this address (and only update the descriptor if it was actual data)
+                    potential_tex_idx = TexSeg.get_tex_ID_from_datasection_offset(cmd.parameters[3])
+                    if (potential_tex_idx != -1):
+                        descriptor_array[active_descriptor].tex_idx = potential_tex_idx
+                        descriptor_array[active_descriptor].tex_width  = TexSeg.tex_elements[descriptor_array[active_descriptor].tex_idx].width
+                        descriptor_array[active_descriptor].tex_height = TexSeg.tex_elements[descriptor_array[active_descriptor].tex_idx].height
+                    else:
+                        pass
+                        # descriptor_array[active_descriptor].tex_idx = None
+                        # descriptor_array[active_descriptor].tex_width  = 0
+                        # descriptor_array[active_descriptor].tex_height = 0
+                    continue
+                
+                if (cmd.command_name == "G_VTX"):
+                    first_vtx_idx = (cmd.parameters[4] // 0x10)
+                    vtx_load_cnt = cmd.parameters[1]
+                    # write the corresponding vtx into the simulated buffer
+                    buffer_offset = cmd.parameters[0]
+                    for idx in range(0, vtx_load_cnt):
+                        vertex_buffer[buffer_offset + idx] = (first_vtx_idx + idx)
+                    continue
 
-            if (cmd.command_name == "G_TRI2"):
-                tmp_tri = ModelBIN_TriElem()
-                tmp_tri.build_from_parameters(
-                    vertex_buffer[cmd.parameters[0]],
-                    vertex_buffer[cmd.parameters[1]],
-                    vertex_buffer[cmd.parameters[2]]
-                )
-                self.add_and_transform_tri(tmp_tri, descriptor_array[active_descriptor])
-                tmp_tri = ModelBIN_TriElem()
-                tmp_tri.build_from_parameters(
-                    vertex_buffer[cmd.parameters[3]],
-                    vertex_buffer[cmd.parameters[4]],
-                    vertex_buffer[cmd.parameters[5]]
-                )
-                self.add_and_transform_tri(tmp_tri, descriptor_array[active_descriptor])
-                continue
+                if (cmd.command_name == "G_TRI1"):
+                    tmp_tri = ModelBIN_TriElem()
+                    tmp_tri.build_from_parameters(
+                        vertex_buffer[cmd.parameters[0]],
+                        vertex_buffer[cmd.parameters[1]],
+                        vertex_buffer[cmd.parameters[2]]
+                    )
+                    self.add_and_transform_tri(tmp_tri, descriptor_array[active_descriptor])
+                    continue
 
+                if (cmd.command_name == "G_TRI2"):
+                    tmp_tri = ModelBIN_TriElem()
+                    tmp_tri.build_from_parameters(
+                        vertex_buffer[cmd.parameters[0]],
+                        vertex_buffer[cmd.parameters[1]],
+                        vertex_buffer[cmd.parameters[2]]
+                    )
+                    self.add_and_transform_tri(tmp_tri, descriptor_array[active_descriptor])
+                    tmp_tri = ModelBIN_TriElem()
+                    tmp_tri.build_from_parameters(
+                        vertex_buffer[cmd.parameters[3]],
+                        vertex_buffer[cmd.parameters[4]],
+                        vertex_buffer[cmd.parameters[5]]
+                    )
+                    self.add_and_transform_tri(tmp_tri, descriptor_array[active_descriptor])
+                    continue
 
     # this func needs the entire existing-tri list aswell as the vtx-seg, so its in the collection class
     def add_and_transform_tri(self, new_tri, tile_descriptor):

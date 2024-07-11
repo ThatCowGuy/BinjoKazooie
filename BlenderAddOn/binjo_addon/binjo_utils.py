@@ -208,6 +208,11 @@ def extract_model(data, filename):
     PT_Address = binjo_model_LU.map_model_lookup[filename][1]
     model_start_address = read_bytes(data, PT_Address + 0x00, 4) + extra_file_offset
     model_end_address   = read_bytes(data, PT_Address + 0x08, 4) + extra_file_offset
+    if (model_start_address == model_end_address):
+        print(f"Model Filename \"{filename}\" doesn't contain any Data !")
+        print(f"Cancelling...")
+        return None
+
     print(f"Model Filename:\t\t{filename}")
     print(f"Pointer-Table:\t\t{to_decal_hex(PT_Address, 4)}")
     print(f"Model Start Adress:\t{to_decal_hex(model_start_address, 4)}")
@@ -217,13 +222,13 @@ def extract_model(data, filename):
     if (compression_ident != 0x1172):
         print(f"The Data at {to_decal_hex(model_start_address, 4)} does not seem to contain Model Data !")
         print(f" -- read: {to_decal_hex(compression_ident, 2)}")
-        return
+        return None
+
     uncompressed_size = read_bytes(data, (model_start_address + 2), 4)
     print(f"4B Compression-Header:\t{to_decal_hex(uncompressed_size, 4)}")
 
     model_file = bytearray()
     model_file += int_to_bytes(compression_ident, 2)
-
     read_size = 0
     while(model_start_address + 0x02 + read_size < model_end_address):
         val = read_bytes(data, (model_start_address + 0x02 + read_size), 2)

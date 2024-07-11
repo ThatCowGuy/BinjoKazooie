@@ -291,3 +291,6 @@ class ModelBIN_DLSeg:
             upper = binjo_utils.read_bytes(file_data, file_offset_cmd + 0x00, 4)
             lower = binjo_utils.read_bytes(file_data, file_offset_cmd + 0x04, 4)
             self.command_list.append(DisplayList_Command(upper, lower))
+
+        self.valid = True
+        return

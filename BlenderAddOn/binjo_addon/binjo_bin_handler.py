@@ -15,10 +15,12 @@ class BINjo_ModelBIN_Handler:
 
     def load_model_file(self, model_filename):
         model_file_data = binjo_utils.extract_model(self.ROM_data, model_filename)
-        if (model_file_data is None):
+        if (model_file_data is None or len(model_file_data) == 0):
             print(f"Model File \"{model_filename}\" could not be loaded !")
+            print(f"Either Binjo straight up failed on it, or its empty !")
             print(f"Cancelling Model instantiation...")
             return
+
         self.model_object = ModelBIN(model_file_data)
         self.model_object.arrange_mesh_data()
 
