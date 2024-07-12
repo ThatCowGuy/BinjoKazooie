@@ -19,7 +19,21 @@ bl_info = {
 bin_handler = None
 
 def highlight_invis_changed(self, context):
-    pass
+    target_object = context.scene.collection.objects["import_Object"]
+    color_attribute = target_object.data.attributes["import_Color"]
+    for face in target_object.data.polygons:
+        if ("INVIS" in target_object.data.materials[face.material_index].name):
+            # if the toggle is active
+            if (context.scene.binjo_props.highlight_invis == True):
+                # pure collision tris will be drawn in magenta
+                color_attribute.data[face.loop_indices[0]].color = (1.0, 0, 1.0, 1.0)
+                color_attribute.data[face.loop_indices[1]].color = (1.0, 0, 1.0, 1.0)
+                color_attribute.data[face.loop_indices[2]].color = (1.0, 0, 1.0, 1.0)
+            else:
+                # otherwise make them gray and fully transparent
+                color_attribute.data[face.loop_indices[0]].color = (0.7, 0.7, 0.7, 0.0)
+                color_attribute.data[face.loop_indices[1]].color = (0.7, 0.7, 0.7, 0.0)
+                color_attribute.data[face.loop_indices[2]].color = (0.7, 0.7, 0.7, 0.0)
 
 # Properties are data elements that show up in the GUI Panel
 class BINJO_Properties(bpy.types.PropertyGroup):
@@ -259,11 +273,40 @@ class BINJO_PT_main_panel(bpy.types.Panel):
         row = layout.row()
         row.prop(context.scene.binjo_props, "export_path")
         row = layout.row()
+        row.operator("export.to_bin")
+        row = layout.row()
         row.operator("export.dump_images")
 
         row = layout.row()
         row.prop(context.scene.binjo_props, "highlight_invis")
 
+
+class BINJO_OT_export_to_BIN(bpy.types.Operator):
+    """Export the model to a BIN File"""
+    bl_idname = "export.to_bin"
+    bl_label = "Export to BIN"
+    bl_options = {'REGISTER'}
+
+    def execute(self, context):                 # execute() is called when running the operator.
+        scene = context.scene
+        self.report({'INFO'}, "This Feature is a WIP; It only collects model Data for now! Check [Window] > [Toggle System Console]")
+
+        global bin_handler
+        target_object = context.scene.collection.objects["import_Object"]
+        color_attribute = target_object.data.attributes["import_Color"]
+        uv_layer = target_object.data.uv_layers["import_UV"]
+
+        for face in target_object.data.polygons:
+            # XYZ
+            for (vertex_idx, loop_idx) in zip(face.vertices, face.loop_indices):
+                x, y, z = [round(coord) for coord in target_object.data.vertices[vertex_idx].co]
+                r, g, b, a = [round(255 * channel) for channel in color_attribute.data[loop_idx].color]
+                print("XYZ = ", x, y, z)
+                print("RGBA = ", r, g, b, a)
+
+                print(uv_layer.data[loop_idx].uv)
+
+        return { 'FINISHED' }
 
 
 # OT elements are Operators, which basically are callable Blender-Commands
@@ -282,31 +325,30 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
 
         if (bin_handler.model_object is not None):
             print("creating new object")
+
             # setting up a new mesh for the scene
-            imported_mesh = bpy.data.meshes.new("test_mesh")
-            imported_object = bpy.data.objects.new("test_object", imported_mesh)
-            # imported_collection = bpy.data.collections.new("test_collection")
-            # scene.collection.children.link(imported_collection)
-            # imported_collection.objects.link(imported_object)
+            imported_mesh = bpy.data.meshes.new("import_Mesh")
+            imported_object = bpy.data.objects.new("import_Object", imported_mesh)
+            
             vertices    = bin_handler.model_object.vertex_coord_list
-            # edges       = bin_handler.model_object.edge_idx_list
             edges       = []
             faces       = bin_handler.model_object.face_idx_list
             imported_mesh.from_pydata(vertices, edges, faces)
 
             # create over-arching layer/attribute elements
             import_UV = imported_object.data.uv_layers.new(name="import_UV")
-            color_attribute = imported_mesh.attributes.new(name='Color', domain='CORNER', type='BYTE_COLOR')
+            color_attribute = imported_mesh.attributes.new(name='import_Color', domain='CORNER', type='BYTE_COLOR')
 
             # now create actual materials from the mat-names
             for binjo_mat in bin_handler.model_object.mat_list:
                 mat = bpy.data.materials.new(binjo_mat.name)
                 
+                # setting internal parameters within the mat
                 mat.use_nodes = True
-                mat.blend_method = "HASHED" # "OPAQUE" == Solid; "HASHED" == Dithered Transparency
+                mat.blend_method = "HASHED" # "HASHED" == Dithered Transparency
                 mat.shadow_method = "NONE"
                 mat.use_backface_culling = True
-                # mat.specular_intensity = 0.0 # doesn't work for whatever reason ?
+                # setting exposed parameters within the mat
                 mat.node_tree.nodes["Principled BSDF"].inputs["Specular"].default_value = 0
                 
                 # texture node (NOTE that this will also assign "None" if the mat doesnt have an image)
@@ -314,16 +356,17 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
                 tex_node.location = [-600, +300]
                 tex_node.image = binjo_mat.IMG
             
-                # color node (RGB)
+                # color node (RGB+A)
                 color_node = mat.node_tree.nodes.new("ShaderNodeVertexColor")
                 new_x = (tex_node.location[0] + tex_node.width - color_node.width)
                 color_node.location = (new_x, 0)
-                color_node.layer_name = "Color"
+                color_node.layer_name = "import_Color" # this name is what's connecting the node to the attribute
+
                 # mixer-node (texture * RGB)                  
                 mix_node_1 = mat.node_tree.nodes.new("ShaderNodeMixRGB")
                 mix_node_1.blend_type = "MULTIPLY"
                 mix_node_1.location = (-275, +300)
-                mix_node_1.inputs[0].default_value = 1.0
+                mix_node_1.inputs["Fac"].default_value = 1.0
 
                 if ("INVIS" not in mat.name):
                     # link tex and color nodes to mixer
@@ -352,10 +395,17 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
                 
                 # aswell as the RGBA shades
                 if ("INVIS" in imported_object.data.materials[face.material_index].name):
-                    # pure collision tris will be drawn in magenta
-                    color_attribute.data[face.loop_indices[0]].color = (1.0, 0, 1.0, 1.0)
-                    color_attribute.data[face.loop_indices[1]].color = (1.0, 0, 1.0, 1.0)
-                    color_attribute.data[face.loop_indices[2]].color = (1.0, 0, 1.0, 1.0)
+                    # if the toggle is active
+                    if (context.scene.binjo_props.highlight_invis == True):
+                        # pure collision tris will be drawn in magenta
+                        color_attribute.data[face.loop_indices[0]].color = (1.0, 0, 1.0, 1.0)
+                        color_attribute.data[face.loop_indices[1]].color = (1.0, 0, 1.0, 1.0)
+                        color_attribute.data[face.loop_indices[2]].color = (1.0, 0, 1.0, 1.0)
+                    else:
+                        # otherwise make them gray and fully transparent
+                        color_attribute.data[face.loop_indices[0]].color = (0.7, 0.7, 0.7, 0.0)
+                        color_attribute.data[face.loop_indices[1]].color = (0.7, 0.7, 0.7, 0.0)
+                        color_attribute.data[face.loop_indices[2]].color = (0.7, 0.7, 0.7, 0.0)
                 else:
                     # others get their vertex RGBA values assigned (regardless of textured or not)
                     color_attribute.data[face.loop_indices[0]].color = (tri.vtx_1.r/255, tri.vtx_1.g/255, tri.vtx_1.b/255, tri.vtx_1.a/255)
@@ -395,6 +445,7 @@ classes = [
     BINJO_Properties,
     BINJO_PT_main_panel,
     BINJO_OT_import_from_ROM,
+    BINJO_OT_export_to_BIN,
     BINJO_OT_dump_images
 ]
 
