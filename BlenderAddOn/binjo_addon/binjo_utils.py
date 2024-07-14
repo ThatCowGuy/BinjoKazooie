@@ -53,6 +53,11 @@ def apply_bitmask(value, mask):
         mask = mask >> 1
     return tmp_val
 
+# cut VALUE in the shape of BIT_LEN and shift it by BIT_OFFSET to the left
+def shift_cut(value, bit_offset, bit_len)
+    value = value & (np.pow(2, bit_len) - 1)
+    return (value << bit_offset)
+
 
 
 # from decomp tools/rareunzip.py
@@ -89,7 +94,7 @@ def create_IMG_from_bytes(pixel_data, w, h):
     
 # https://n64squid.com/homebrew/n64-sdk/textures/image-formats/
 def convert_img_data_to_pixels(bin_data, tex_type, w, h):
-    if (tex_type == Dicts.tex_types["CI4"]): # C4 or CI4; 16 RGB5551-colors, pixels are encoded per row as 4bit IDs
+    if (tex_type == Dicts.TEX_TYPES["CI4"]): # C4 or CI4; 16 RGB5551-colors, pixels are encoded per row as 4bit IDs
         
         # first parse the color palette
         color_palette = np.zeros((0x10, 4), dtype=np.uint8)
@@ -121,7 +126,7 @@ def convert_img_data_to_pixels(bin_data, tex_type, w, h):
                 pixel_data[y, x, 3] = color_palette[pal_id, 3]
         return color_palette, pixel_data
 
-    if (tex_type == Dicts.tex_types["CI8"]): # C8 or CI8; 32 RGBA5551-colors, pixels are encoded per row as 8bit IDs
+    if (tex_type == Dicts.TEX_TYPES["CI8"]): # C8 or CI8; 32 RGBA5551-colors, pixels are encoded per row as 8bit IDs
         
         # first parse the color palette
         color_palette = np.zeros((0x100, 4), dtype=np.uint8)
@@ -148,7 +153,7 @@ def convert_img_data_to_pixels(bin_data, tex_type, w, h):
                 pixel_data[y, x, 3] = color_palette[pal_id, 3] # A
         return color_palette, pixel_data
 
-    if (tex_type == Dicts.tex_types["RGBA16"]): # RGBA16 or RGBA5551 without a palette; pixels stored as a 16bit texel
+    if (tex_type == Dicts.TEX_TYPES["RGBA16"]): # RGBA16 or RGBA5551 without a palette; pixels stored as a 16bit texel
 
         # parse the image data
         pixel_data = np.zeros((h, w, 4), dtype=np.uint8)
@@ -164,7 +169,7 @@ def convert_img_data_to_pixels(bin_data, tex_type, w, h):
                 pixel_data[y, x, 3] = (color_value & 0b1) * 0xFF  # A
         return None, pixel_data
 
-    if (tex_type == Dicts.tex_types["RGBA32"]): # RGBA32 or RGBA8888 without a palette; pixels stored as a 32bit texel
+    if (tex_type == Dicts.TEX_TYPES["RGBA32"]): # RGBA32 or RGBA8888 without a palette; pixels stored as a 32bit texel
 
         # parse the image data
         pixel_data = np.zeros((h, w, 4), dtype=np.uint8)
@@ -179,7 +184,7 @@ def convert_img_data_to_pixels(bin_data, tex_type, w, h):
                 pixel_data[y, x, 3] = int(bin_data[(px_id * 4) + 3]) # A
         return None, pixel_data
 
-    if (tex_type == Dicts.tex_types["IA8"]): # IA8 - each byte is a pixel; a nibble of intensity and a nibble of alpha
+    if (tex_type == Dicts.TEX_TYPES["IA8"]): # IA8 - each byte is a pixel; a nibble of intensity and a nibble of alpha
 
         # parse the image data
         pixel_data = np.zeros((h, w, 4), dtype=np.uint8)

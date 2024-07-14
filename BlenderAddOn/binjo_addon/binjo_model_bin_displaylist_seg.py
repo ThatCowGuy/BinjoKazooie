@@ -1,64 +1,14 @@
 
 from . import binjo_utils
+from . binjo_dicts import Dicts
 
 class DisplayList_Command:
-    F3DEX_CMD_NAMES = {
-        0x00: "G_SPNOOP",
-        0x01: "G_MTX",
-        0x03: "G_MOVEMEM",
-        0x04: "G_VTX",
-        0x06: "G_DL",
-        0xAF: "G_LOAD_UCODE",
-        0xB0: "G_BRANCH_Z",
-        0xB1: "G_TRI2",
-        0xB2: "G_MODIFYVTX",
-        0xB3: "G_RDPHALF_2",
-        0xB5: "G_QUAD",
-        0xB6: "G_CLEARGEOMETRYMODE",
-        0xB7: "G_SETGEOMETRYMODE",
-        0xB8: "G_ENDDL",
-        0xB9: "G_SetOtherMode_L",
-        0xBA: "G_SetOtherMode_H",
-        0xBB: "G_TEXTURE",
-        0xBC: "G_MOVEWORD",
-        0xBD: "G_POPMTX",
-        0xBE: "G_CULLDL",
-        0xBF: "G_TRI1",
-        0xC0: "G_NOOP",
-        0xE4: "G_TEXRECT",
-        0xE5: "G_TEXRECTFLIP",
-        0xE6: "G_RDPLOADSYNC",
-        0xE7: "G_RDPPIPESYNC",
-        0xE8: "G_RDPTILESYNC",
-        0xE9: "G_RDPFULLSYNC",
-        0xEA: "G_SETKEYGB",
-        0xEB: "G_SETKEYR",
-        0xEC: "G_SETCONVERT",
-        0xED: "G_SETSCISSOR",
-        0xEE: "G_SETPRIMDEPTH",
-        0xEF: "G_RDPSetOtherMode",
-        0xF0: "G_LOADTLUT",
-        0xF2: "G_SETTILESIZE",
-        0xF3: "G_LOADBLOCK",
-        0xF4: "G_LOADTILE",
-        0xF5: "G_SETTILE",
-        0xF6: "G_FILLRECT",
-        0xF7: "G_SETFILLCOLOR",
-        0xF8: "G_SETFOGCOLOR",
-        0xF9: "G_SETBLENDCOLOR",
-        0xFA: "G_SETPRIMCOLOR",
-        0xFB: "G_SETENVCOLOR",
-        0xFC: "G_SETCOMBINE",
-        0xFD: "G_SETTIMG",
-        0xFE: "G_SETZIMG",
-        0xFF: "G_SETCIMG"
-    }
 
     def __init__(self, upper=0x00, lower=0x00):
         self.upper = upper
         self.lower = lower
         self.command_byte = (upper >> 24)
-        self.command_name = DisplayList_Command.F3DEX_CMD_NAMES[self.command_byte]
+        self.command_name = Dicts.F3DEX_CMD_NAMES[self.command_byte]
         # print(self.command_name)
         self.infer_parameters()
 
@@ -245,6 +195,164 @@ class DisplayList_Command:
             print(f"Unimplemented (and unhandled) Command encountered: {self.command_name}")
             DisplayList_Command.unimplemented_commands.append(self.command_name)
         return
+
+    def G_CLEARGEOMETRYMODE(flags):
+        cmd = 0x00
+        cmd = cmd | (binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_CLEARGEOMETRYMODE"], 56, 8))
+        cmd = cmd | (binjo_utils.shift_cut(flags, 0, 32))
+        return cmd
+    
+    def G_SETGEOMETRYMODE(flags):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_SETGEOMETRYMODE"], 56, 8)
+        cmd |= binjo_utils.shift_cut(flags, 0, 32)
+        return cmd
+
+    def G_TEXTURE(mipmap_cnt, descriptor_idx, activate, scaling_S, scaling_T):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_TEXTURE"], 56, 8)
+        cmd |= binjo_utils.shift_cut(mipmap_cnt, 43, 3)
+        cmd |= binjo_utils.shift_cut(descriptor_idx, 40, 3)
+        cmd |= binjo_utils.shift_cut((1 if activate else 0), 32, 8)  # technically only 1 bit, but the entire byte is reserved
+        cmd |= binjo_utils.shift_cut(scaling_S, 16, 16)
+        cmd |= binjo_utils.shift_cut(scaling_T, 0, 16)
+        return cmd
+
+    def G_SETTIMG(color_format, bitsize, seg_address):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_SETTIMG"], 56, 8)
+        cmd |= binjo_utils.shift_cut(Dicts.SETTILE_COLFORMAT[color_format], 53, 3)
+        bitsize_transformed = int(math.log(bitsize / 4, 2))
+        cmd |= binjo_utils.shift_cut(bitsize_transformed, 51, 2)
+        addr_transformed = (Dicts.INTERNAL_SEG_NAMES["Tex"] << 24) + seg_address
+        cmd |= binjo_utils.shift_cut(addr_transformed, 0, 32)
+        return cmd
+    
+    def G_SETTILE(
+        color_format, bitsize, width, TMEM, descriptor_idx, pal,
+        clamp_S, mirror_S, wrap_S, shift_S,
+        clamp_T, mirror_T, wrap_T, shift_T
+    ):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_SETTILE"], 56, 8)
+        cmd |= binjo_utils.shift_cut(SETTILE_COLFORMAT[color_format], 53, 3)
+        bitsize_transformed = int(math.log(bitsize / 4, 2))
+        cmd |= binjo_utils.shift_cut(bitsize_transformed, 51, 2)
+        num64 = (width * bitsize) // 64
+        cmd |= binjo_utils.shift_cut(num64, 41, 9)  # there is a bit of padding in front of this, so bit #50 is unused
+        cmd |= binjo_utils.shift_cut(TMEM, 32, 9)
+        cmd |= binjo_utils.shift_cut(descriptor_idx, 24, 3)
+        cmd |= binjo_utils.shift_cut(pal, 20, 4)
+        # T axis
+        cmd |= binjo_utils.shift_cut(int(clamp_T), 19, 1)
+        cmd |= binjo_utils.shift_cut(int(mirror_T), 18, 1)
+        cmd |= binjo_utils.shift_cut(wrap_T, 14, 4)
+        cmd |= binjo_utils.shift_cut(shift_T, 10, 4)
+        # S axis
+        cmd |= binjo_utils.shift_cut(int(clamp_S), 9, 1)
+        cmd |= binjo_utils.shift_cut(int(mirror_S), 8, 1)
+        cmd |= binjo_utils.shift_cut(wrap_S, 4, 4)
+        cmd |= binjo_utils.shift_cut(shift_S, 0, 4)
+        return cmd
+
+    def G_SETTILESIZE(ULx, ULy, descriptor_idx, width, height):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_SETTILESIZE"], 56, 8)
+        cmd |= binjo_utils.shift_cut(ULx, 44, 12)  # 3 nibbles
+        cmd |= binjo_utils.shift_cut(ULy, 32, 12)  # 3 nibbles
+        cmd |= binjo_utils.shift_cut(descriptor_idx, 24, 8)
+        W_transformed = 4 * (width - 1)
+        H_transformed = 4 * (height - 1)
+        cmd |= binjo_utils.shift_cut(W_transformed, 12, 12)  # 3 nibbles
+        cmd |= binjo_utils.shift_cut(H_transformed, 0, 12)  # 3 nibbles
+        return cmd
+
+    def G_LOADTLUT(descriptor_idx, color_cnt):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_LOADTLUT"], 56, 8)
+        cmd |= binjo_utils.shift_cut(descriptor_idx, 24, 8)
+        cc_transformed = 4 * (color_cnt - 1)
+        cmd |= binjo_utils.shift_cut(cc_transformed, 12, 12)  # 3 nibbles
+        return cmd
+
+    def G_SetOtherMode_H(target, bitlen, modebits):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_SetOtherMode_H"], 56, 8)
+        cmd |= binjo_utils.shift_cut(OTHERMODE_H_MDSFT[target], 40, 8)
+        cmd |= binjo_utils.shift_cut(bitlen, 32, 8)
+        cmd |= binjo_utils.shift_cut(modebits, 0, 32)
+        return cmd
+
+    def G_LOADBLOCK(ULx, ULy, descriptor_idx, width, height, texel_bitsize):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_LOADBLOCK"], 56, 8)
+        cmd |= binjo_utils.shift_cut(ULx, 44, 12)  # 3 nibbles
+        cmd |= binjo_utils.shift_cut(ULy, 32, 12)  # 3 nibbles
+        cmd |= binjo_utils.shift_cut(descriptor_idx, 24, 8)
+        texel_cnt = (width * height) - 1  # Subtract 1 as per note
+        cmd |= binjo_utils.shift_cut(texel_cnt, 12, 12)  # 3 nibbles
+        DXT = binjo_utils.calc_DXT(width, texel_bitsize)
+        cmd |= binjo_utils.shift_cut(DXT, 0, 12)  # 3 nibbles
+        return cmd
+
+    def G_RDPPIPESYNC():
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_RDPPIPESYNC"], 56, 8)
+        return cmd
+    
+    def G_SETCOMBINE():
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_SETCOMBINE"], 56, 8)
+        cmd |= binjo_utils.shift_cut(0x00129804, 32, 24)
+        cmd |= binjo_utils.shift_cut(0x3F15FFFF, 0, 32)
+        return cmd
+
+    def G_DL(final, segment, seg_address):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_DL"], 56, 8)
+        cmd |= binjo_utils.shift_cut((1 if final else 0), 48, 8)
+        cmd |= binjo_utils.shift_cut(Dicts.INTERNAL_SEG_NAMES[segment], 24, 8)
+        cmd |= binjo_utils.shift_cut(seg_address, 0, 24)
+        return cmd
+
+    def G_VTX(buffer_target, vtx_cnt, vtx_start_id):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_VTX"], 56, 8)
+        cmd |= binjo_utils.shift_cut(2 * buffer_target, 48, 8)  # buffer id is doubled in encoding
+        cmd |= binjo_utils.shift_cut(vtx_cnt, 42, 6)
+        mem_size = (vtx_cnt * 0x10) - 1  # -1 as required by F3DEX
+        cmd |= binjo_utils.shift_cut(mem_size, 32, 10)
+        cmd |= binjo_utils.shift_cut(Dicts.INTERNAL_SEG_NAMES["VTX"], 24, 8)
+        seg_address = vtx_start_id * 0x10
+        cmd |= binjo_utils.shift_cut(seg_address, 0, 24)
+        return cmd
+
+    def G_TRI1(id_A1, id_A2, id_A3):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_TRI1"], 56, 8)
+        # A is stored in the back
+        cmd |= binjo_utils.shift_cut(id_A1 * 2, 16, 8)
+        cmd |= binjo_utils.shift_cut(id_A2 * 2, 8,  8)
+        cmd |= binjo_utils.shift_cut(id_A3 * 2, 0,  8)
+        return cmd
+
+    def G_TRI2(id_A1, id_A2, id_A3, id_B1, id_B2, id_B3):
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_TRI2"], 56, 8)
+        # A is stored in the FRONT
+        cmd |= binjo_utils.shift_cut(id_A1 * 2, 48, 8)
+        cmd |= binjo_utils.shift_cut(id_A2 * 2, 40, 8)
+        cmd |= binjo_utils.shift_cut(id_A3 * 2, 32, 8)
+        # B is stored in the back
+        cmd |= binjo_utils.shift_cut(id_B1 * 2, 16, 8)
+        cmd |= binjo_utils.shift_cut(id_B2 * 2, 8,  8)
+        cmd |= binjo_utils.shift_cut(id_B3 * 2, 0,  8)
+        return cmd
+
+    def G_ENDDL():
+        cmd = 0x00
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_ENDDL"], 56, 8)
+        return cmd
 
 
 

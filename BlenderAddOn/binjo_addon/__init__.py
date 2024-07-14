@@ -294,48 +294,46 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
     bl_options = {'REGISTER'}
 
     def execute(self, context):                 # execute() is called when running the operator.
-
         scene = context.scene
         self.report({'INFO'}, "This Feature is a WIP; It only collects model Data for now! Check [Window] > [Toggle System Console]")
 
         global bin_handler
+        new_ModelBin = ModelBIN()
+
+        # grab the targetted object (NOTE: should grab every object later... ugh)
         target_object = context.scene.collection.objects["import_Object"]
+        # remember current mode, and set it to OBJECT for the time being
         original_mode = target_object.mode
         bpy.ops.object.mode_set(mode='OBJECT')
 
-
-        new_ModelBin = ModelBIN()
-
-        textures = []
+        tex_list = []
         material_tex_index_dict = {}
         # scan through all available textures
         for mat in target_object.data.materials:
             print(mat.name)
             # skip materials that dont rock a texture
-            if ("INVIS" in mat.name):
+            if (mat.node_tree.nodes["TEX"].image == None):
+                material_tex_index_dict[mat.name] = -1
                 continue
             # create a tex object from the image data linked to this material
             tex = ModelBIN_TexElem.build_from_IMG(mat.node_tree.nodes["TEX"].image)
             # and add it to our list if it is new
-            if (tex not in textures):
-                textures.append(tex)
+            if (tex not in tex_list):
+                tex_list.append(tex)
             # finally, add the material to our dictionary to find the tex-index easily later
-            material_tex_index_dict[mat.name] = textures.index(tex)
+            material_tex_index_dict[mat.name] = tex_list.index(tex)
 
         new_ModelBin.Header.tex_offset = 0x0038
-        new_ModelBin.TexSeg.populate_from_elements(textures)
-        
-        new_ModelBin.export_to_BIN(filename=f"{context.scene.binjo_props.export_path}/test.bin")
+        new_ModelBin.TexSeg.populate_from_elements(tex_list)
 
-        color_attribute = target_object.data.color_attributes["import_Color"]
-        uv_layer = target_object.data.uv_layers["import_UV"]
 
-        verts = []
-        vtx_cnt = 0
-        tris = []
+
+        # for every texture that we extracted, create an empty list of tris,
+        # into which we sort the entire model (+1 for no-texture)
+        # (this is funky python list comprehension syntax to init a list of empty lists)
+        polygon_list_list = [ [] for __ in range(new_ModelBin.TexSeg.tex_cnt + 1)]
 
         for face in target_object.data.polygons:
-
             # catch if the user tries to convert a non-triangulated model
             if (len(face.vertices) > 3):
                 self.report({'ERROR_INVALID_INPUT'}, f"Some Face in your Mesh is not triangular (vertex-count: {len(face.vertices)}) !")
@@ -344,42 +342,70 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
             # completely ignoring loose geometry (vtx_cnt < 3)
             if (len(face.vertices) < 3):
                 continue
+            
+            face_mat = target_object.data.materials[face.material_index]
+            mat_tex_index = material_tex_index_dict[face_mat.name]
+            if (mat_tex_index >= 0):
+                polygon_list_list[mat_tex_index].append(face)
+            else:
+                polygon_list_list[-1].append(face)
+            
 
-            for (vertex_idx, loop_idx) in zip(face.vertices, face.loop_indices):
 
-                coords = target_object.data.vertices[vertex_idx].co
-                rgba =  color_attribute.data[loop_idx].color
-                uvs = uv_layer.data[loop_idx].uv
+        color_attribute = target_object.data.color_attributes["import_Color"]
+        uv_layer = target_object.data.uv_layers["import_UV"]
 
-                x, y, z = [round(coord) for coord in coords]
-                r, g, b, a = [round(255 * channel) for channel in rgba]
-                u_transf, v_transf = uvs.x, uvs.y
+        verts = []
+        tris = []
+        vtx_cnt = 0
 
-                # print("XYZ  = ", x, y, z)
-                # print("RGBA = ", r, g, b, a)
-                # print("UV   = ", u_transf, v_transf)
+        command_list = []
 
-                vtx = ModelBIN_VtxElem.build_from_model_data(x, y, z, r, g, b, a, u_transf, v_transf)
-                verts.append(vtx)
+        # now we can iterate over the sorted lists
+        for polygon_list in polygon_list_list:
+            if (len(polygon_list) == 0):
+                continue
 
-            assigned_mat = target_object.data.materials[face.material_index]
+            rep_poly = polygon_list[0]
+            assigned_mat = target_object.data.materials[rep_poly.material_index]
             # 0x000050E0_0x00000100 => 0xTEX_OFFSET_0xCOLL_TYPE
-            coll_type = assigned_mat.name[13:19]
-            
-            tri = ModelBIN_TriElem()
-            tri.build_from_parameters((vtx_cnt + 0), (vtx_cnt + 1), (vtx_cnt + 2), coll_type=coll_type, tex_id=None)
-            tri.vtx_1 = verts[(vtx_cnt + 0)]
-            tri.vtx_2 = verts[(vtx_cnt + 1)]
-            tri.vtx_3 = verts[(vtx_cnt + 2)]
-            
-            tris.append(tri)
-            vtx_cnt += 3
+            # this is reaaaaaaaaaaaaaally ugly
+            if ("NOCOLL" in assigned_mat.name):
+                coll_type = None
+            else:
+                coll_type = assigned_mat.name[13:19]
+            # I can infer the tex_id through the material-dict I created above now
+            tex_id = material_tex_index_dict[assigned_mat.name]
+
+            for polygon in polygon_list:
+
+                for (vertex_idx, loop_idx) in zip(face.vertices, face.loop_indices):
+                    # get the XYZ coord containers, RGBA shade containers and UV coord containers
+                    coords = target_object.data.vertices[vertex_idx].co
+                    rgba =  color_attribute.data[loop_idx].color
+                    uvs = uv_layer.data[loop_idx].uv
+                    # and extract the individual values
+                    x, y, z = [round(coord) for coord in coords]
+                    r, g, b, a = [round(255 * channel) for channel in rgba]
+                    u_transf, v_transf = uvs.x, uvs.y
+                    # to build a vertex from them
+                    vtx = ModelBIN_VtxElem.build_from_model_data(x, y, z, r, g, b, a, u_transf, v_transf)
+                    verts.append(vtx)
+                    vtx_cnt += 1
+                
+                # from that, I can build the tri from the newest 3 vertices
+                tri = ModelBIN_TriElem()
+                tri.build_from_parameters((vtx_cnt - 3), (vtx_cnt - 2), (vtx_cnt - 1), coll_type=coll_type, tex_id=tex_id)
+                tri.vtx_1 = verts[(vtx_cnt - 3)]
+                tri.vtx_2 = verts[(vtx_cnt - 2)]
+                tri.vtx_3 = verts[(vtx_cnt - 1)]
+                tris.append(tri)
         
         print(len(verts), len(tris))
 
-        target_object.data.polygons[-1].select = True
+        # reset object to original mode, export the collected data to BIN
         bpy.ops.object.mode_set(mode=original_mode)
-
+        new_ModelBin.export_to_BIN(filename=f"{context.scene.binjo_props.export_path}/test.bin")
         return { 'FINISHED' }
 
 
