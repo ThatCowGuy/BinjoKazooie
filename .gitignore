@@ -20,3 +20,4 @@ BlenderAddOn/exports/*
 .vscode/*
 BlenderAddOn/.vs/*
 BlenderAddOn/.vscode/*
+BlenderAddOn/REBOOT_BLENDER.bat

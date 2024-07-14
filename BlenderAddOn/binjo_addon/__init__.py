@@ -2,9 +2,15 @@
 
 import os
 
+from . binjo_model_bin import ModelBIN
 from . binjo_bin_handler import BINjo_ModelBIN_Handler
 
+from . binjo_model_bin_vertex_seg import ModelBIN_VtxSeg, ModelBIN_VtxElem
+from . binjo_model_bin_collision_seg import ModelBIN_ColSeg, ModelBIN_TriElem
+from . binjo_model_bin_texture_seg import ModelBIN_TexSeg, ModelBIN_TexElem
+
 import bpy
+import bmesh
 
 # multi file addon workflow
 # https://b3d.interplanety.org/en/creating-multifile-add-on-for-blender/ <-- looks promising
@@ -20,7 +26,7 @@ bin_handler = None
 
 def highlight_invis_changed(self, context):
     target_object = context.scene.collection.objects["import_Object"]
-    color_attribute = target_object.data.attributes["import_Color"]
+    color_attribute = target_object.data.color_attributes["import_Color"]
     for face in target_object.data.polygons:
         if ("INVIS" in target_object.data.materials[face.material_index].name):
             # if the toggle is active
@@ -288,23 +294,91 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
     bl_options = {'REGISTER'}
 
     def execute(self, context):                 # execute() is called when running the operator.
+
         scene = context.scene
         self.report({'INFO'}, "This Feature is a WIP; It only collects model Data for now! Check [Window] > [Toggle System Console]")
 
         global bin_handler
         target_object = context.scene.collection.objects["import_Object"]
-        color_attribute = target_object.data.attributes["import_Color"]
+        original_mode = target_object.mode
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+
+        new_ModelBin = ModelBIN()
+
+        textures = []
+        material_tex_index_dict = {}
+        # scan through all available textures
+        for mat in target_object.data.materials:
+            print(mat.name)
+            # skip materials that dont rock a texture
+            if ("INVIS" in mat.name):
+                continue
+            # create a tex object from the image data linked to this material
+            tex = ModelBIN_TexElem.build_from_IMG(mat.node_tree.nodes["TEX"].image)
+            # and add it to our list if it is new
+            if (tex not in textures):
+                textures.append(tex)
+            # finally, add the material to our dictionary to find the tex-index easily later
+            material_tex_index_dict[mat.name] = textures.index(tex)
+
+        new_ModelBin.Header.tex_offset = 0x0038
+        new_ModelBin.TexSeg.populate_from_elements(textures)
+        
+        new_ModelBin.export_to_BIN(filename=f"{context.scene.binjo_props.export_path}/test.bin")
+
+        color_attribute = target_object.data.color_attributes["import_Color"]
         uv_layer = target_object.data.uv_layers["import_UV"]
 
-        for face in target_object.data.polygons:
-            # XYZ
-            for (vertex_idx, loop_idx) in zip(face.vertices, face.loop_indices):
-                x, y, z = [round(coord) for coord in target_object.data.vertices[vertex_idx].co]
-                r, g, b, a = [round(255 * channel) for channel in color_attribute.data[loop_idx].color]
-                print("XYZ = ", x, y, z)
-                print("RGBA = ", r, g, b, a)
+        verts = []
+        vtx_cnt = 0
+        tris = []
 
-                print(uv_layer.data[loop_idx].uv)
+        for face in target_object.data.polygons:
+
+            # catch if the user tries to convert a non-triangulated model
+            if (len(face.vertices) > 3):
+                self.report({'ERROR_INVALID_INPUT'}, f"Some Face in your Mesh is not triangular (vertex-count: {len(face.vertices)}) !")
+                bpy.ops.object.mode_set(mode=original_mode)
+                return { 'CANCELLED' }
+            # completely ignoring loose geometry (vtx_cnt < 3)
+            if (len(face.vertices) < 3):
+                continue
+
+            for (vertex_idx, loop_idx) in zip(face.vertices, face.loop_indices):
+
+                coords = target_object.data.vertices[vertex_idx].co
+                rgba =  color_attribute.data[loop_idx].color
+                uvs = uv_layer.data[loop_idx].uv
+
+                x, y, z = [round(coord) for coord in coords]
+                r, g, b, a = [round(255 * channel) for channel in rgba]
+                u_transf, v_transf = uvs.x, uvs.y
+
+                # print("XYZ  = ", x, y, z)
+                # print("RGBA = ", r, g, b, a)
+                # print("UV   = ", u_transf, v_transf)
+
+                vtx = ModelBIN_VtxElem.build_from_model_data(x, y, z, r, g, b, a, u_transf, v_transf)
+                verts.append(vtx)
+
+            assigned_mat = target_object.data.materials[face.material_index]
+            # 0x000050E0_0x00000100 => 0xTEX_OFFSET_0xCOLL_TYPE
+            coll_type = assigned_mat.name[13:19]
+            
+            tri = ModelBIN_TriElem()
+            tri.build_from_parameters((vtx_cnt + 0), (vtx_cnt + 1), (vtx_cnt + 2), coll_type=coll_type, tex_id=None)
+            tri.vtx_1 = verts[(vtx_cnt + 0)]
+            tri.vtx_2 = verts[(vtx_cnt + 1)]
+            tri.vtx_3 = verts[(vtx_cnt + 2)]
+            
+            tris.append(tri)
+            vtx_cnt += 3
+        
+        print(len(verts), len(tris))
+
+        target_object.data.polygons[-1].select = True
+        bpy.ops.object.mode_set(mode=original_mode)
 
         return { 'FINISHED' }
 
@@ -353,11 +427,13 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
                 
                 # texture node (NOTE that this will also assign "None" if the mat doesnt have an image)
                 tex_node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+                tex_node.name = "TEX"
                 tex_node.location = [-600, +300]
                 tex_node.image = binjo_mat.IMG
             
                 # color node (RGB+A)
                 color_node = mat.node_tree.nodes.new("ShaderNodeVertexColor")
+                color_node.name = "RGBA"
                 new_x = (tex_node.location[0] + tex_node.width - color_node.width)
                 color_node.location = (new_x, 0)
                 color_node.layer_name = "import_Color" # this name is what's connecting the node to the attribute

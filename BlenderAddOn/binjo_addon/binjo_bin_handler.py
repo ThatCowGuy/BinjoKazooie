@@ -21,7 +21,8 @@ class BINjo_ModelBIN_Handler:
             print(f"Cancelling Model instantiation...")
             return
 
-        self.model_object = ModelBIN(model_file_data)
+        self.model_object = ModelBIN()
+        self.model_object.populate_from_data(model_file_data)
         self.model_object.arrange_mesh_data()
 
     def dump_image_files_to(self, path):

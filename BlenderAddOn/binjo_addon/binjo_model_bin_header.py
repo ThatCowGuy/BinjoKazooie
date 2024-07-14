@@ -5,9 +5,30 @@ class ModelBIN_Header:
 
     # python class constructor basically also serves as my member declaration...
     def __init__(self, bin_data=None):
+        # === 0x00 ========================================================
+        self.start_identifier   = 0x0000_000B
+        self.geo_offset         = 0
+        self.tex_offset         = 0x0038
+        self.geo_type           = 0
+        self.DL_offset          = 0
+        # === 0x10 ========================================================
+        self.vtx_offset         = 0
+        self.unk_1              = 0
+        self.bone_offset        = 0
+        self.coll_offset        = 0
+        # === 0x20 ========================================================
+        self.FX_END             = 0
+        self.FX_offset          = 0
+        self.unk_2              = 0
+        self.anim_tex_offset    = 0
+        # === 0x30 ========================================================
+        self.tri_cnt            = 0
+        self.vtx_cnt            = 0
+        self.unk_3              = 0x42C8_0000
+
+        self.valid = True
         if (bin_data == None):
             print("initializing empty ModelBIN_Header OBJ...")
-            self.valid = False
             return        
         # parsed properties
         # === 0x00 ========================================================
@@ -33,6 +54,30 @@ class ModelBIN_Header:
         # PARSING COMPLETE
         self.valid = True
         print(self)
+
+    def get_bytes(self):
+        output = bytearray()
+        # === 0x00 ========================================================
+        output += binjo_utils.int_to_bytes(self.start_identifier, 4)
+        output += binjo_utils.int_to_bytes(self.geo_offset, 4)
+        output += binjo_utils.int_to_bytes(self.tex_offset, 2)
+        output += binjo_utils.int_to_bytes(self.geo_type, 2)
+        output += binjo_utils.int_to_bytes(self.DL_offset, 4)
+        # === 0x10 ========================================================
+        output += binjo_utils.int_to_bytes(self.vtx_offset, 4)
+        output += binjo_utils.int_to_bytes(self.unk_1, 4)
+        output += binjo_utils.int_to_bytes(self.bone_offset, 4)
+        output += binjo_utils.int_to_bytes(self.coll_offset, 4)
+        # === 0x20 ========================================================
+        output += binjo_utils.int_to_bytes(self.FX_END, 4)
+        output += binjo_utils.int_to_bytes(self.FX_offset, 4)
+        output += binjo_utils.int_to_bytes(self.unk_2, 4)
+        output += binjo_utils.int_to_bytes(self.anim_tex_offset, 4)
+        # === 0x30 ========================================================
+        output += binjo_utils.int_to_bytes(self.tri_cnt, 2)
+        output += binjo_utils.int_to_bytes(self.vtx_cnt, 2)
+        output += binjo_utils.int_to_bytes(self.unk_3, 4)
+        return output
     
     def __str__(self):
         return (

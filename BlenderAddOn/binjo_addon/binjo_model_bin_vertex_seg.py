@@ -79,6 +79,19 @@ class ModelBIN_VtxElem:
         # print(f"v {vtx.x:+5d}, {vtx.y:+5d}, {vtx.z:+5d}")
         return vtx
 
+    def build_from_model_data(x, y, z, r, g, b, a, u_transf, v_transf):
+        vtx = ModelBIN_VtxElem()
+        vtx.x = x
+        vtx.y = y
+        vtx.z = z
+        vtx.r = r
+        vtx.g = g
+        vtx.b = b
+        vtx.a = a
+        vtx.transformed_U = u_transf
+        vtx.transformed_V = v_transf
+        return vtx
+
     # translate BKs uint8 UV coords into Blenders float [0.0 - 1.0] UV coords
     def calc_transformed_UVs(self, tile_descriptor):
         if (tile_descriptor is not None and tile_descriptor.tex_idx is not None):

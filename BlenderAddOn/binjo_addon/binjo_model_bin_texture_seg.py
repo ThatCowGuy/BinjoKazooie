@@ -1,11 +1,17 @@
 
 from . import binjo_utils
+from . binjo_dicts import Dicts
 import os
+import sys
+import bpy
 
 class ModelBIN_TexSeg:
     HEADER_SIZE = 0x08
 
-    def __init__(self, data, file_offset):
+    def __init__(self):
+        self.valid = False
+
+    def populate_from_data(self, data, file_offset):
         if file_offset == 0:
             print("No Texture Segment")
             self.valid = False
@@ -40,12 +46,45 @@ class ModelBIN_TexSeg:
             file_offset_data = self.file_offset_data + img_data_offsets[idx]
             img_data_size = (img_data_offsets[idx+1] - img_data_offsets[idx])
             # now create the tex element and append it to our list
-            tex = ModelBIN_TexElem(data, file_offset_meta, file_offset_data, img_data_size)
+            tex = ModelBIN_TexElem()
+            tex.build_from_data(data, file_offset_meta, file_offset_data, img_data_size)
             self.tex_elements.append(tex)
 
         print(f"parsed {self.tex_cnt} image files.")
         self.valid = True
         return
+
+    def populate_from_elements(self, tex_list):
+        self.file_offset = 0x0038
+        self.file_offset_meta = self.file_offset + ModelBIN_TexSeg.HEADER_SIZE
+        
+        self.tex_cnt = 0
+        self.data_size = 0
+        self.tex_elements = []
+        for tex in tex_list:
+            tex.datasection_offset_data = self.data_size
+            self.data_size += tex.data_size
+            tex.file_offset_meta = self.file_offset_meta + (self.tex_cnt * ModelBIN_TexElem.META_SIZE)
+            self.tex_cnt += 1
+            self.tex_elements.append(tex)
+        
+        self.meta_data_size = (self.tex_cnt * ModelBIN_TexElem.META_SIZE)
+        self.full_header_size = ModelBIN_TexSeg.HEADER_SIZE + self.meta_data_size
+        self.file_offset_data = self.file_offset + self.full_header_size
+
+        self.unk_1 = 0
+        self.valid = True
+
+    def get_bytes(self):
+        output = bytearray()
+        output += binjo_utils.int_to_bytes(self.data_size, 4)
+        output += binjo_utils.int_to_bytes(self.tex_cnt, 2)
+        output += binjo_utils.int_to_bytes(0x00, 2)
+        for tex in self.tex_elements:
+            output += tex.get_bytes_meta()
+        for tex in self.tex_elements:
+            output += tex.get_bytes_data()
+        return output
     
     # figure out which tex corresponds to a given datasection offset
     def get_tex_ID_from_datasection_offset(self, datasection_offset_data):
@@ -62,7 +101,23 @@ class ModelBIN_TexElem:
     META_SIZE = 0x10
 
     # input the file_offset to the meta element
-    def __init__(self, data, file_offset_meta, file_offset_data, img_data_size):
+    def __init__(self):
+        pass
+
+    def __eq__(self, other):
+        # first compare some light meta data
+        if (self.tex_type != other.tex_type):
+            return False
+        if (self.width != other.width):
+            return False
+        if (self.height != other.height):
+            return False
+        # then compare the actual pixel data
+        if (self.pixel_data != other.pixel_data):
+            return False
+        return True
+        
+    def build_from_data(self, data, file_offset_meta, file_offset_data, img_data_size):
         # parsed properties (META elements)
         # === 0x00 ===============================
         self.datasection_offset_data = binjo_utils.read_bytes(data, file_offset_meta + 0x00, 4)
@@ -96,7 +151,6 @@ class ModelBIN_TexElem:
 
         # to see if this is ran from blenders API or not, just use a try-catch block that will throw if bpy is inexistent
         try:
-            import bpy
             self.IMG = bpy.data.images.new("tmp", width=self.width, height=self.height)
             # Blenders bpy.data.images expects the RGBA values to range inbetween (0.0, 1.0) instead of (0, 255)
             pixel_data_floats = [float(val / 255.0) for val in self.pixel_data.flatten()]
@@ -108,6 +162,34 @@ class ModelBIN_TexElem:
             self.IMG = Image.frombytes("RGBA", (self.width, self.height), self.pixel_data.flatten())
             self.IMG.save(f"exports/pic_{binjo_utils.to_decal_hex(self.datasection_offset_data, 4)}.png")
             self.is_blender = False
+
+    def build_from_IMG(IMG):
+        tex = ModelBIN_TexElem()
+        # dimensions
+        tex.width, tex.height = IMG.size[0], IMG.size[1]
+        tex.pixel_total = (tex.width * tex.height)
+        # type + data
+        tex.tex_type = Dicts.tex_types["RGBA32"]
+        tex.pixel_data = [round(255 * val) for val in IMG.pixels]
+        tex.data_size = len(tex.pixel_data)
+        return tex
+
+    def get_bytes_meta(self):
+        output = bytearray()
+        output += binjo_utils.int_to_bytes(self.datasection_offset_data, 4)
+        output += binjo_utils.int_to_bytes(self.tex_type, 2)
+        output += binjo_utils.int_to_bytes(0x00, 2)
+        output += binjo_utils.int_to_bytes(self.width, 1)
+        output += binjo_utils.int_to_bytes(self.height, 1)
+        output += binjo_utils.int_to_bytes(0x00, 2)
+        output += binjo_utils.int_to_bytes(0x00, 4)
+        return output
+
+    def get_bytes_data(self):
+        return bytearray(self.pixel_data)
+        
+
+
 
     def export_as_file(self, path):
         self.IMG.filepath_raw = path + f"pic_{binjo_utils.to_decal_hex(self.datasection_offset_data, 2)}.png"

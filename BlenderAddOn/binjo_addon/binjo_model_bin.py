@@ -2,7 +2,7 @@
 from . import binjo_utils
 from . binjo_model_bin_header import ModelBIN_Header
 from . binjo_model_bin_texture_seg import ModelBIN_TexSeg
-from . binjo_model_bin_vertex_seg import ModelBIN_VtxSeg
+from . binjo_model_bin_vertex_seg import ModelBIN_VtxSeg, ModelBIN_VtxElem
 from . binjo_model_bin_collision_seg import ModelBIN_ColSeg, ModelBIN_TriElem
 from . binjo_model_bin_displaylist_seg import ModelBIN_DLSeg, TileDescriptor
 
@@ -18,9 +18,14 @@ class ModelBIN:
     # Animated Textures
     # GeoLayout
 
-    def __init__(self, bin_data):
+    def __init__(self):
+        self.Header = ModelBIN_Header()
+        self.TexSeg = ModelBIN_TexSeg()
+
+    def populate_from_data(self, bin_data):
         self.Header = ModelBIN_Header(bin_data)
-        self.TexSeg = ModelBIN_TexSeg(bin_data, self.Header.tex_offset)
+        self.TexSeg = ModelBIN_TexSeg()
+        self.TexSeg.populate_from_data(bin_data, self.Header.tex_offset)
         self.VtxSeg = ModelBIN_VtxSeg(bin_data, self.Header.vtx_offset, vtx_cnt=self.Header.vtx_cnt)
 
         self.ColSeg = ModelBIN_ColSeg(bin_data, self.Header.coll_offset)
@@ -28,6 +33,15 @@ class ModelBIN:
 
         self.DLSeg  = ModelBIN_DLSeg(bin_data, self.Header.DL_offset)
         self.build_complete_tri_list()
+
+    def export_to_BIN(self, filename="default.bin"):
+        output = bytearray()
+        if (self.Header.valid == True):
+            output += self.Header.get_bytes()
+        if (self.TexSeg.valid == True):
+            output += self.TexSeg.get_bytes()
+        with open(filename, "wb") as output_file:
+            output_file.write(output)
     
     # combine the data from the Collision and DL Segments into one comprehensive list
     def build_complete_tri_list(self, TexSeg=None, ColSeg=None, DLSeg=None):
