@@ -257,6 +257,13 @@ class ColorPixel:
         da = self.a - other.a
         return np.sqrt(dr*dr + dg*dg + db*db + da*da)
 
+    def convert_8888_to_5551(self):
+        r = (self.r >> 3) & 0b11111
+        g = (self.g >> 3) & 0b11111
+        b = (self.b >> 3) & 0b11111
+        a = 1 if self.a > (255 / 2) else 0
+        return (r << 11) + (g << 6) + (b << 1) + (a << 0)
+
 # From an input IMG, build a palette containing (color_cnt) colors, which best
 # represent the IMG. The most occuring colors will be selected at first, and then
 # close matches will be filtered out iteratively until the palette is acceptable;
@@ -277,7 +284,7 @@ def approx_palette_by_most_used_with_diversity(IMG_color_pixels, color_cnt, dive
     
     # now build the reduced palette by using the top (color_cnt) colors
     reduced_palette = []
-    for i in range(0, color_cnt):
+    while (len(reduced_palette) < color_cnt and len(palette) > 0):
         reduced_palette.append(palette.pop(0))
     while (len(reduced_palette) < color_cnt):
         reduced_palette.append(ColorPixel(0, 0, 0, 0))
@@ -397,14 +404,15 @@ def convert_RGBA32_IMG_to_bytes(IMG, tex_type):
         # convert palette and indices into a bytearray
         data = bytearray()
         for color in palette:
-            data += int_to_bytes(int(color.r), 1)
-            data += int_to_bytes(int(color.g), 1)
-            data += int_to_bytes(int(color.b), 1)
-            data += int_to_bytes(int(color.a), 1)
+            data += int_to_bytes(int(color.convert_8888_to_5551()), 2)
         for idx in range(0, (len(indices) // 2)):
             concat_index = ((indices[2*idx + 0] & 0x0F) << 4) + ((indices[2*idx + 1] & 0x0F) << 0)
             data += int_to_bytes(concat_index, 1)
-        return data
+
+        color_pixels = [palette[idx] for idx in indices]
+        pixels = []
+        [pixels.extend([cpx.r, cpx.g, cpx.b, cpx.a]) for cpx in color_pixels]
+        return data, pixels
 
     if (tex_type == Dicts.TEX_TYPES["CI8"]): # C8 or CI8; 256 RGBA5551-colors, pixels are encoded per row as 8bit IDs
         print("Converting IMG to CI8 palette + indices...")
@@ -423,13 +431,14 @@ def convert_RGBA32_IMG_to_bytes(IMG, tex_type):
         # convert palette and indices into a bytearray
         data = bytearray()
         for color in palette:
-            data += int_to_bytes(int(color.r), 1)
-            data += int_to_bytes(int(color.g), 1)
-            data += int_to_bytes(int(color.b), 1)
-            data += int_to_bytes(int(color.a), 1)
+            data += int_to_bytes(int(color.convert_8888_to_5551()), 2)
         for idx in range(0, len(indices)):
             data += int_to_bytes(indices[idx], 1)
-        return data
+
+        color_pixels = [palette[idx] for idx in indices]
+        pixels = []
+        [pixels.extend([cpx.r, cpx.g, cpx.b, cpx.a]) for cpx in color_pixels]
+        return data, pixels
     
     print("Unknown tex type in convert_IMG_to_palette_and_pixels() !")
     return None, None

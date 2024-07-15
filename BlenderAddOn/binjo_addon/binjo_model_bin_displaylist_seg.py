@@ -8,9 +8,11 @@ class DisplayList_Command:
 
     def __init__(self, upper=0x00, lower=0x00, full=0x00):
         if (full != 0x00):
+            self.full = full
             self.upper = ((full >> 32) & 0xFFFFFFFF)
             self.lower = ((full >>  0) & 0xFFFFFFFF)
         else:
+            self.full = ((upper << 32) + lower & 0xFFFFFFFF)
             self.upper = upper
             self.lower = lower
         self.command_byte = (upper >> 24)
@@ -388,7 +390,10 @@ class TileDescriptor:
 class ModelBIN_DLSeg:
     HEADER_SIZE = 0x08
 
-    def __init__(self, file_data, file_offset):
+    def __init__(self):
+        self.valid = False
+
+    def populate_from_data(self, file_data, file_offset):
         if file_offset == 0:
             print("No DL Segment")
             self.valid = False
@@ -408,3 +413,120 @@ class ModelBIN_DLSeg:
 
         self.valid = True
         return
+
+    def get_bytes(self):
+        output = bytearray()
+        output += binjo_utils.int_to_bytes(self.command_cnt, 4)
+        output += binjo_utils.int_to_bytes(0x00000000, 4)
+        for cmd in self.command_list:
+            output += binjo_utils.int_to_bytes(cmd.full, 8)
+        return output
+
+
+    def build_setup_commands(tex_element):
+        command_list = []
+
+        if (tex_element.tex_type == Dicts.TEX_TYPES["CI4"]):
+            # general setup stuff
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_CLEARGEOMETRYMODE((
+                    Dicts.RSP_GEOMODE_FLAGS["G_SHADE"] |
+                    Dicts.RSP_GEOMODE_FLAGS["G_SHADING_SMOOTH"] |
+                    Dicts.RSP_GEOMODE_FLAGS["G_CULL_BOTH"] |
+                    Dicts.RSP_GEOMODE_FLAGS["G_FOG"] |
+                    Dicts.RSP_GEOMODE_FLAGS["G_LIGHTING"] |
+                    Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN"] |
+                    Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN_LINEAR"] |
+                    Dicts.RSP_GEOMODE_FLAGS["G_LOD"]
+                ))
+            ))
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_SETGEOMETRYMODE((
+                    Dicts.RSP_GEOMODE_FLAGS["G_SHADE"] |
+                    Dicts.RSP_GEOMODE_FLAGS["G_SHADING_SMOOTH"] |
+                    Dicts.RSP_GEOMODE_FLAGS["G_CULL_BACK"] |
+                    Dicts.RSP_GEOMODE_FLAGS["G_TEXTURE_GEN_LINEAR"]
+                ))
+            ))
+
+            # palette setup stuff
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_TEXTURE(0, 0, True, 0x8000, 0x8000)
+            ))
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_SETTIMG("RGBA", 16, tex_element.datasection_offset_data)
+            ))
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_SETTILE("RGBA", 4, tex_element.width, 0x0100, 1, 0, False, False, 0, 0, False, False, 0, 0)
+            ))
+
+            # tex-data setup stuff
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_LOADTLUT(1, 16)
+            ))
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_SetOtherMode_H(("G_MDSFT_TEXTLUT"), 2, 0x00008000)
+            ))
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_SETTIMG("CI", 16, (tex_element.datasection_offset_data + 0x20)) # NOTE: +0x20 for CI4, +0x200 for CI8...
+            ))
+            texel_cnt = (tex_element.width * tex_element.height)
+            texel_bitsize = 4
+
+            # we have to outplay the TMEM restriction of loading a max of 0x400 texels at a time
+            if (texel_cnt > 0x400):
+                # this should use the texel bitsize of the format instead of 4
+                fakeout_bitsize = 16
+                fakeout_factor = (fakeout_bitsize / texel_bitsize)
+
+                # this command is a really really hacky way of outplaying the TMEM restrictions...
+                # normally, G_LOADBLOCK can only load a maximum of 0x400 texels at a time, but if we set the bitsize to 16
+                # here before loading "0x400 texels", we juke the processor into actually loading 0x1000 texels of size 4b...
+                # BUT, we have to reset this hack with an additional G_SETTILE after the G_LOADBLOCK, that fixes the fake bitsize.
+                # That's also why this command works on descriptor-7 I guess.
+                command_list.append(DisplayList_Command(full=
+                    DisplayList_Command.G_SETTILE("CI", fakeout_bitsize, 0, 0x0000, 7, 0, False, False, 6, 0, False, False, 6, 0)
+                ))
+                # Note that we are providing some tempered-with params here
+                command_list.append(DisplayList_Command(full=
+                    DisplayList_Command.G_LOADBLOCK(
+                        0, 0, 7,
+                        (tex_element.width / fakeout_factor),
+                        tex_element.height,
+                        fakeout_bitsize
+                    )
+                ))
+                # restore the correct texel bitsize afterwards
+                command_list.append(DisplayList_Command(full=
+                    DisplayList_Command.G_SETTILE("CI", texel_bitsize, tex_element.width, 0x0000, 0, 0, False, False, 6, 0, False, False, 6, 0)
+                ))
+            # otherwise we can directly load to TMEM (and immediatly use descriptor-0)
+            else:
+                command_list.append(DisplayList_Command(full=
+                    DisplayList_Command.G_SETTILE("CI", texel_bitsize, 0, 0x0000, 0, 0, False, False, 6, 0, False, False, 6, 0)
+                ))
+                # set up the faked LOADBLOCK; note that we reduce the percieved width by the fakeout factor
+                command_list.append(DisplayList_Command(full=
+                    DisplayList_Command.G_LOADBLOCK(
+                        0, 0, 0,
+                        tex_element.width, 
+                        tex_element.height,
+                        Dicts.TEXEL_FMT_BITSIZE["CI4"]
+                    )
+                ))
+
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_SETTILESIZE(0, 0, 0, tex_element.width, tex_element.height)
+            ))
+
+            # more general setup stuff
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_RDPPIPESYNC()
+            ))
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_SETCOMBINE()
+            ))
+            command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_DL(False, "Mode", 0x20)
+            ))
+            return command_list
