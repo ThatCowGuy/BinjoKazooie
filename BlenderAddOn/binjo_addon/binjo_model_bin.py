@@ -21,17 +21,28 @@ class ModelBIN:
     def __init__(self):
         self.Header = ModelBIN_Header()
         self.TexSeg = ModelBIN_TexSeg()
+        self.VtxSeg = ModelBIN_VtxSeg()
+        # Bone
+        # Coll
         self.DLSeg  = ModelBIN_DLSeg()
+        # FX
+        # FX_END
+        # AnimTex
+        # Geo
 
     def populate_from_data(self, bin_data):
         self.Header = ModelBIN_Header(bin_data)
         self.TexSeg.populate_from_data(bin_data, self.Header.tex_offset)
-        self.VtxSeg = ModelBIN_VtxSeg(bin_data, self.Header.vtx_offset, vtx_cnt=self.Header.vtx_cnt)
-
+        self.VtxSeg.populate_from_data(bin_data, self.Header.vtx_offset, vtx_cnt=self.Header.vtx_cnt)
+        # Bone
         self.ColSeg = ModelBIN_ColSeg(bin_data, self.Header.coll_offset)
         self.ColSeg.link_vertex_objects_for_all_tris(self.VtxSeg.vtx_list)
-
         self.DLSeg.populate_from_data(bin_data, self.Header.DL_offset)
+        # FX
+        # FX_END
+        # AnimTex
+        # Geo
+
         self.build_complete_tri_list()
 
     def export_to_BIN(self, filename="default.bin"):
@@ -50,11 +61,26 @@ class ModelBIN:
             output += self.TexSeg.get_bytes()
             current_filesize = len(output)
 
+        if (self.VtxSeg.valid == True):
+            self.VtxSeg.file_offset = current_filesize
+            self.Header.vtx_offset = self.VtxSeg.file_offset
+            self.Header.vtx_cnt = self.VtxSeg.vtx_cnt
+            output += self.VtxSeg.get_bytes()
+            current_filesize = len(output)
+
+        # Bone
+        # Coll
+
         if (self.DLSeg.valid == True):
             self.DLSeg.file_offset = current_filesize
             self.Header.DL_offset = self.DLSeg.file_offset
             output += self.DLSeg.get_bytes()
             current_filesize = len(output)
+            
+        # FX
+        # FX_END
+        # AnimTex
+        # Geo
 
         # I need to overwrite the incomplete Header
         for (idx, byte) in enumerate(self.Header.get_bytes()):

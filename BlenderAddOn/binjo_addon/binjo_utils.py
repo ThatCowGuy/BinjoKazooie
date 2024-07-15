@@ -34,6 +34,8 @@ def get_bytes(data, offset, cnt):
     return data[offset:(offset+cnt)]
 
 def int_to_bytes(val, cnt, endianness="big"):
+    if (val < 0):
+        val = int(np.power(2.0, (cnt * 8)) - abs(val))
     return val.to_bytes(cnt, byteorder=endianness)
     
 def concat_bytes(src, dst):

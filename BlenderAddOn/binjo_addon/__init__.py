@@ -462,7 +462,8 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
         new_ModelBin.DLSeg.command_cnt = len(command_list)
         new_ModelBin.DLSeg.valid = True
 
-
+        # the vertex list is also fully complete now, so we can build the VTX-Seg
+        new_ModelBin.VtxSeg.populate_from_vtx_list(verts)
         
         print(len(verts), len(tris))
 
