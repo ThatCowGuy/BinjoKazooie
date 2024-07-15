@@ -167,7 +167,7 @@ class Dicts:
         # ...
         "AnTex":    0x0F,
     }
-    INTERNAL_SEG_NAMES = {
+    INTERNAL_SEG_NAMES_REV = {
         0x01:  "VTX",
         0x02:  "Tex",
         0x03:  "Mode",
@@ -180,4 +180,31 @@ class Dicts:
         0x0D:  "AnTex",
         0x0E:  "AnTex",
         0x0F:  "AnTex",
+    }
+
+    TEXEL_FMT_BITSIZE = {
+        "RGBA32": 32,       "RGBA32 (8888)": 32,
+        "RGBA16": 16,       "RGBA16 (5551)": 16,
+        "CI8": 8,           "CI8 (5551)": 8,
+        "CI4": 4,           "CI4 (5551)": 4,
+        "IA8": 8,           "IA8 (44)": 8
+    }
+
+    RSP_GEOMODE_FLAGS = {
+        "G_ZBUFFER":            0x00000001,
+        "G_SHADE":              0x00000004,
+
+        # F3DEX-1, not 2
+        "G_SHADING_SMOOTH":     0x00000200,
+
+        "G_CULL_FRONT":         0x00001000,
+        "G_CULL_BACK":          0x00002000,
+        "G_CULL_BOTH":          0x00003000,
+
+        "G_FOG":                0x00010000,
+        "G_LIGHTING":           0x00020000,
+        "G_TEXTURE_GEN":        0x00040000,
+        "G_TEXTURE_GEN_LINEAR": 0x00080000,
+        "G_LOD":                0x00100000,
+        "G_CLIPPING":           0x00800000,
     }

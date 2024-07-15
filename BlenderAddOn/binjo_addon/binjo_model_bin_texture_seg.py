@@ -113,7 +113,7 @@ class ModelBIN_TexElem:
         if (self.height != other.height):
             return False
         # then compare the actual pixel data
-        if (self.pixel_data != other.pixel_data):
+        if (self.image_formatted_data != other.image_formatted_data):
             return False
         return True
         
@@ -143,7 +143,7 @@ class ModelBIN_TexElem:
         # === 0x00 ===============================
         self.data_size = img_data_size
         self.img_data = binjo_utils.get_bytes(data, file_offset_data, self.data_size)
-        self.palette, self.pixel_data = binjo_utils.convert_img_data_to_pixels(
+        self.palette, self.image_formatted_data = binjo_utils.convert_img_data_to_pixels(
             self.img_data,
             self.tex_type,
             self.width, self.height
@@ -153,13 +153,13 @@ class ModelBIN_TexElem:
         try:
             self.IMG = bpy.data.images.new("tmp", width=self.width, height=self.height)
             # Blenders bpy.data.images expects the RGBA values to range inbetween (0.0, 1.0) instead of (0, 255)
-            pixel_data_floats = [float(val / 255.0) for val in self.pixel_data.flatten()]
-            self.IMG.pixels = pixel_data_floats
+            blender_pixels = [float(val / 255.0) for val in self.image_formatted_data.flatten()]
+            self.IMG.pixels = blender_pixels
             self.IMG.file_format = 'PNG'
             self.is_blender = True
         except:
             from PIL import Image
-            self.IMG = Image.frombytes("RGBA", (self.width, self.height), self.pixel_data.flatten())
+            self.IMG = Image.frombytes("RGBA", (self.width, self.height), self.image_formatted_data.flatten())
             self.IMG.save(f"exports/pic_{binjo_utils.to_decal_hex(self.datasection_offset_data, 4)}.png")
             self.is_blender = False
 
@@ -169,9 +169,9 @@ class ModelBIN_TexElem:
         tex.width, tex.height = IMG.size[0], IMG.size[1]
         tex.pixel_total = (tex.width * tex.height)
         # type + data
-        tex.tex_type = Dicts.tex_types["RGBA32"]
-        tex.pixel_data = [round(255 * val) for val in IMG.pixels]
-        tex.data_size = len(tex.pixel_data)
+        tex.tex_type = Dicts.TEX_TYPES["CI4"]
+        tex.image_formatted_data = binjo_utils.convert_RGBA32_IMG_to_bytes(IMG, tex.tex_type)
+        tex.data_size = len(tex.image_formatted_data)
         return tex
 
     def get_bytes_meta(self):
@@ -186,7 +186,7 @@ class ModelBIN_TexElem:
         return output
 
     def get_bytes_data(self):
-        return bytearray(self.pixel_data)
+        return bytearray(self.image_formatted_data)
         
 
 

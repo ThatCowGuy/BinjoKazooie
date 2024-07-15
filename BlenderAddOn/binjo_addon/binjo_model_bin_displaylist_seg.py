@@ -1,14 +1,20 @@
 
+import numpy as np
+
 from . import binjo_utils
 from . binjo_dicts import Dicts
 
 class DisplayList_Command:
 
-    def __init__(self, upper=0x00, lower=0x00):
-        self.upper = upper
-        self.lower = lower
+    def __init__(self, upper=0x00, lower=0x00, full=0x00):
+        if (full != 0x00):
+            self.upper = ((full >> 32) & 0xFFFFFFFF)
+            self.lower = ((full >>  0) & 0xFFFFFFFF)
+        else:
+            self.upper = upper
+            self.lower = lower
         self.command_byte = (upper >> 24)
-        self.command_name = Dicts.F3DEX_CMD_NAMES[self.command_byte]
+        self.command_name = Dicts.F3DEX_CMD_NAMES_REV[self.command_byte]
         # print(self.command_name)
         self.infer_parameters()
 
@@ -222,7 +228,7 @@ class DisplayList_Command:
         cmd = 0x00
         cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_SETTIMG"], 56, 8)
         cmd |= binjo_utils.shift_cut(Dicts.SETTILE_COLFORMAT[color_format], 53, 3)
-        bitsize_transformed = int(math.log(bitsize / 4, 2))
+        bitsize_transformed = int(np.log2(bitsize / 4))
         cmd |= binjo_utils.shift_cut(bitsize_transformed, 51, 2)
         addr_transformed = (Dicts.INTERNAL_SEG_NAMES["Tex"] << 24) + seg_address
         cmd |= binjo_utils.shift_cut(addr_transformed, 0, 32)
@@ -234,9 +240,9 @@ class DisplayList_Command:
         clamp_T, mirror_T, wrap_T, shift_T
     ):
         cmd = 0x00
-        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_SETTILE"], 56, 8)
-        cmd |= binjo_utils.shift_cut(SETTILE_COLFORMAT[color_format], 53, 3)
-        bitsize_transformed = int(math.log(bitsize / 4, 2))
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_SETTILE"], 56, 8)
+        cmd |= binjo_utils.shift_cut(Dicts.SETTILE_COLFORMAT[color_format], 53, 3)
+        bitsize_transformed = int(np.log2(bitsize / 4))
         cmd |= binjo_utils.shift_cut(bitsize_transformed, 51, 2)
         num64 = (width * bitsize) // 64
         cmd |= binjo_utils.shift_cut(num64, 41, 9)  # there is a bit of padding in front of this, so bit #50 is unused
@@ -257,7 +263,7 @@ class DisplayList_Command:
 
     def G_SETTILESIZE(ULx, ULy, descriptor_idx, width, height):
         cmd = 0x00
-        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_SETTILESIZE"], 56, 8)
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_SETTILESIZE"], 56, 8)
         cmd |= binjo_utils.shift_cut(ULx, 44, 12)  # 3 nibbles
         cmd |= binjo_utils.shift_cut(ULy, 32, 12)  # 3 nibbles
         cmd |= binjo_utils.shift_cut(descriptor_idx, 24, 8)
@@ -269,7 +275,7 @@ class DisplayList_Command:
 
     def G_LOADTLUT(descriptor_idx, color_cnt):
         cmd = 0x00
-        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_LOADTLUT"], 56, 8)
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_LOADTLUT"], 56, 8)
         cmd |= binjo_utils.shift_cut(descriptor_idx, 24, 8)
         cc_transformed = 4 * (color_cnt - 1)
         cmd |= binjo_utils.shift_cut(cc_transformed, 12, 12)  # 3 nibbles
@@ -277,15 +283,15 @@ class DisplayList_Command:
 
     def G_SetOtherMode_H(target, bitlen, modebits):
         cmd = 0x00
-        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_SetOtherMode_H"], 56, 8)
-        cmd |= binjo_utils.shift_cut(OTHERMODE_H_MDSFT[target], 40, 8)
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_SetOtherMode_H"], 56, 8)
+        cmd |= binjo_utils.shift_cut(Dicts.OTHERMODE_H_MDSFT[target], 40, 8)
         cmd |= binjo_utils.shift_cut(bitlen, 32, 8)
         cmd |= binjo_utils.shift_cut(modebits, 0, 32)
         return cmd
 
     def G_LOADBLOCK(ULx, ULy, descriptor_idx, width, height, texel_bitsize):
         cmd = 0x00
-        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_LOADBLOCK"], 56, 8)
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_LOADBLOCK"], 56, 8)
         cmd |= binjo_utils.shift_cut(ULx, 44, 12)  # 3 nibbles
         cmd |= binjo_utils.shift_cut(ULy, 32, 12)  # 3 nibbles
         cmd |= binjo_utils.shift_cut(descriptor_idx, 24, 8)
@@ -297,7 +303,7 @@ class DisplayList_Command:
 
     def G_RDPPIPESYNC():
         cmd = 0x00
-        cmd |= binjo_utils.shift_cut(F3DEX_CMD_NAMES["G_RDPPIPESYNC"], 56, 8)
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_RDPPIPESYNC"], 56, 8)
         return cmd
     
     def G_SETCOMBINE():
@@ -309,7 +315,7 @@ class DisplayList_Command:
 
     def G_DL(final, segment, seg_address):
         cmd = 0x00
-        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES_REV["G_DL"], 56, 8)
+        cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_DL"], 56, 8)
         cmd |= binjo_utils.shift_cut((1 if final else 0), 48, 8)
         cmd |= binjo_utils.shift_cut(Dicts.INTERNAL_SEG_NAMES[segment], 24, 8)
         cmd |= binjo_utils.shift_cut(seg_address, 0, 24)

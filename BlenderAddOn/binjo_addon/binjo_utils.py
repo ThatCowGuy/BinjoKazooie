@@ -54,10 +54,36 @@ def apply_bitmask(value, mask):
     return tmp_val
 
 # cut VALUE in the shape of BIT_LEN and shift it by BIT_OFFSET to the left
-def shift_cut(value, bit_offset, bit_len)
-    value = value & (np.pow(2, bit_len) - 1)
+def shift_cut(value, bit_offset, bit_len):
+    value = int(value) & int(np.power(2, bit_len) - 1)
     return (value << bit_offset)
 
+# DXT is a binary 12b fractional number with 11b for the mantissa
+# I return it as an int though, because its not neccessary to ever
+# interpret it as a float; We only ever need to write the raw data
+def calc_DXT(width, bit_size):
+    # DXT (this is a really messy one:
+    # "dxt is an unsigned fixed-point 1.11 [11 digit mantissa] number"
+    # "dxt is the RECIPROCAL of the number of 64-bit chunks it takes to get a row of texture"
+    # an example: Take a 32x32 px Tex with 16b colors;
+    # -> a row of that Tex takes 32x16b = 512b
+    # -> so it needs (512b/64b) = 8 chunks of 64b to create a row
+    # -> the reciprocal is 1/8, which in binary is 0.001_0000_0000 = 0x100
+    #
+    # since bitsize is divisble by 4, and width is divisible by 16,
+    # bits_per_row has to be divisible by 64; So this is lossless
+    bits_per_row = (width * bit_size)
+    chunks_per_row = (bits_per_row / 64.0)
+    # furthermore, this should result in a power of 2, say 16 eg.
+    # 16 = 0b10000, with only 1 bit set. The corresponding DXT should ALSO
+    # only set 1 bit: the 1/16th bit! So we can simply calculate the log2
+    # of the chunks_per_row result to get the set bit, and build the DXT
+    # in the correct binary encoding with that knowledge:
+    set_bit = int(np.log2(chunks_per_row))
+    DXT = (0b01 << (11 - set_bit))
+    # Console.WriteLine(String.Format("{0}", File_Handler.uint_to_string((uint) set_bit, 0b1)));
+    # Console.WriteLine(String.Format("{0}, {1}, {2}", width, bitsize, File_Handler.uint_to_string((uint) DXT, 0b1)));
+    return DXT
 
 
 # from decomp tools/rareunzip.py
@@ -204,6 +230,210 @@ def convert_img_data_to_pixels(bin_data, tex_type, w, h):
                 pixel_data[y, x, 2] = intensity  # B
                 pixel_data[y, x, 3] = alpha      # A
         return None, pixel_data
+
+
+
+
+
+class ColorPixel:
+    def __init__(self, r, g, b, a, occurences=1):
+        # map alpha to all-or-nothing
+        if (a < (255 / 2)):
+            self.r, self.g, self.b, self.a = 0xFF, 0xFF, 0xFF, 0x00
+        else:
+            self.r, self.g, self.b, self.a = r, g, b, 0xFF
+        self.occurences = occurences
+    def __eq__(self, other):
+        return (
+            self.r == other.r and \
+            self.g == other.g and \
+            self.b == other.b and \
+            self.a == other.a
+        )
+    def color_distance(self, other):
+        dr = self.r - other.r
+        dg = self.g - other.g
+        db = self.b - other.b
+        da = self.a - other.a
+        return np.sqrt(dr*dr + dg*dg + db*db + da*da)
+
+# From an input IMG, build a palette containing (color_cnt) colors, which best
+# represent the IMG. The most occuring colors will be selected at first, and then
+# close matches will be filtered out iteratively until the palette is acceptable;
+# finally, pull in more colors and try to merge them into the existing palette
+# until they stop mattering
+def approx_palette_by_most_used_with_diversity(IMG_color_pixels, color_cnt, diversity_threshold=3):
+    # first create a unique palette from the color-pixels, counting their occurences
+    palette = []
+    for cpx in IMG_color_pixels:
+        # collect unique colors, and count their occurences
+        if (cpx not in palette):
+            palette.append(cpx)
+        else:
+            palette[palette.index(cpx)].occurences += 1
+
+    # sort by occurences (high occurences == important color)
+    palette = sorted(palette, key=lambda color: color.occurences, reverse=True)
+    
+    # now build the reduced palette by using the top (color_cnt) colors
+    reduced_palette = []
+    for i in range(0, color_cnt):
+        reduced_palette.append(palette.pop(0))
+    while (len(reduced_palette) < color_cnt):
+        reduced_palette.append(ColorPixel(0, 0, 0, 0))
+        
+    # now check if the reduced palette contains colors that are less diverse than our
+    # diversity_threshold argument, merge them and pull in another color instead
+    while (len(palette) > 0):
+        # find the worst diversity match (ie. the closest 2 colors)
+        worst_diversity_match = 1e10
+        match_A = None
+        match_B = None
+        for idx_A in range(0, len(reduced_palette)):
+            for idx_B in range(idx_A + 1, len(reduced_palette)):
+                diversity = reduced_palette[idx_A].color_distance(reduced_palette[idx_B])
+                if (diversity == 0):
+                    continue
+                if (diversity < worst_diversity_match):
+                    worst_diversity_match = diversity
+                    match_A = reduced_palette[idx_A]
+                    match_B = reduced_palette[idx_B]
+        # if the worst diversity is acceptable, we can stop
+        if (worst_diversity_match > diversity_threshold):
+            break
+        
+        # otherwise, merge the matches into a new color
+        combined_occurences = (match_A.occurences + match_B.occurences)
+        merger_alpha = match_A.a if (match_A.occurences > match_B.occurences) else match_B.a
+        merged_color = ColorPixel(
+            ((match_A.r * match_A.occurences) + (match_B.r * match_B.occurences)) / combined_occurences,
+            ((match_A.g * match_A.occurences) + (match_B.g * match_B.occurences)) / combined_occurences,
+            ((match_A.b * match_A.occurences) + (match_B.b * match_B.occurences)) / combined_occurences,
+            merger_alpha,
+            occurences=combined_occurences
+        )
+        # remove the matches
+        reduced_palette.remove(match_A)
+        reduced_palette.remove(match_B)
+        # add the merger, and pull in another new color from the remaining palette
+        reduced_palette.append(merged_color)
+        reduced_palette.append(palette.pop(0))
+        
+    # second pass: get the next best colors (until they stop mattering) and merge them in aswell
+    while (len(palette) > 0):
+        # get the next best color
+        next_best_color = palette.pop(0)
+        # if the color is really meaningless (< 2.0% usage), stop
+        if (next_best_color.occurences < (len(IMG_color_pixels) * 2.0 / 100.0)):
+            break
+
+        # find the worst diversity match (ie. the closest 2 colors)
+        worst_diversity_match = 1e10
+        match_A = next_best_color
+        match_B = None
+        for idx_B in range(0, len(reduced_palette)):
+            diversity = next_best_color.color_distance(reduced_palette[idx_B])
+            if (diversity == 0):
+                continue
+            if (diversity < worst_diversity_match):
+                worst_diversity_match = diversity
+                match_B = reduced_palette[idx_B]
+        
+        # in this pass, definetely merge the colors
+        combined_occurences = (match_A.occurences + match_B.occurences)
+        merger_alpha = match_A.a if (match_A.occurences > match_B.occurences) else match_B.a
+        merged_color = ColorPixel(
+            ((match_A.r * match_A.occurences) + (match_B.r * match_B.occurences)) / combined_occurences,
+            ((match_A.g * match_A.occurences) + (match_B.g * match_B.occurences)) / combined_occurences,
+            ((match_A.b * match_A.occurences) + (match_B.b * match_B.occurences)) / combined_occurences,
+            merger_alpha,
+            occurences=combined_occurences
+        )
+        # replace the original with the merger
+        reduced_palette.remove(match_B)
+        reduced_palette.append(merged_color)
+    
+    # and we are finally done !
+    return reduced_palette
+
+# from an array of color-pixels and a palette, grab the palette-indices
+# that best approximate the IMG itself
+def convert_IMG_pixels_into_palette_indices(IMG_color_pixels, palette):
+    indices = []
+    for color in IMG_color_pixels:
+        # find the best fitting color from the palette
+        closest_diversity_match = 1e10
+        closest_idx = -1
+        for idx in range(0, len(palette)):
+            diversity = color.color_distance(palette[idx])
+            # in this case, a diversity of 0 is a perfect match !
+            if (diversity == 0):
+                closest_idx = idx
+                break
+            if (diversity < closest_diversity_match):
+                closest_diversity_match = diversity
+                closest_idx = idx
+        indices.append(closest_idx)
+    return indices
+
+
+
+def convert_RGBA32_IMG_to_bytes(IMG, tex_type):
+
+    if (tex_type == Dicts.TEX_TYPES["CI4"]): # C4 or CI4; 16 RGBA5551-colors, pixels are encoded per row as 4bit IDs
+        print("Converting IMG to CI4 palette + indices...")
+
+        # round every color value to 5-bit 
+        byte_pixels = [((round(255 * val) >> 3) << 3) for val in IMG.pixels]
+        color_pixels = []
+        for px in range(len(byte_pixels) // 4):
+            # unroll the next 4 values into RGBA
+            r, g, b, a = byte_pixels[(4 * px) + 0 : (4 * px) + 4]
+            cpx = ColorPixel(r, g, b, a)
+            color_pixels.append(cpx)
+
+        palette = approx_palette_by_most_used_with_diversity(color_pixels, 0x10, diversity_threshold=3)
+        indices = convert_IMG_pixels_into_palette_indices(color_pixels, palette)
+        # convert palette and indices into a bytearray
+        data = bytearray()
+        for color in palette:
+            data += int_to_bytes(int(color.r), 1)
+            data += int_to_bytes(int(color.g), 1)
+            data += int_to_bytes(int(color.b), 1)
+            data += int_to_bytes(int(color.a), 1)
+        for idx in range(0, (len(indices) // 2)):
+            concat_index = ((indices[2*idx + 0] & 0x0F) << 4) + ((indices[2*idx + 1] & 0x0F) << 0)
+            data += int_to_bytes(concat_index, 1)
+        return data
+
+    if (tex_type == Dicts.TEX_TYPES["CI8"]): # C8 or CI8; 256 RGBA5551-colors, pixels are encoded per row as 8bit IDs
+        print("Converting IMG to CI8 palette + indices...")
+        
+        # round every color value to 5-bit 
+        byte_pixels = [((round(255 * val) >> 3) << 3) for val in IMG.pixels]
+        color_pixels = []
+        for px in range(len(byte_pixels) // 4):
+            # unroll the next 4 values into RGBA
+            r, g, b, a = byte_pixels[(4 * px) + 0 : (4 * px) + 4]
+            cpx = ColorPixel(r, g, b, a)
+            color_pixels.append(cpx)
+
+        palette = approx_palette_by_most_used_with_diversity(color_pixels, 0x100, diversity_threshold=3)
+        indices = convert_IMG_pixels_into_palette_indices(color_pixels, palette)
+        # convert palette and indices into a bytearray
+        data = bytearray()
+        for color in palette:
+            data += int_to_bytes(int(color.r), 1)
+            data += int_to_bytes(int(color.g), 1)
+            data += int_to_bytes(int(color.b), 1)
+            data += int_to_bytes(int(color.a), 1)
+        for idx in range(0, len(indices)):
+            data += int_to_bytes(indices[idx], 1)
+        return data
+    
+    print("Unknown tex type in convert_IMG_to_palette_and_pixels() !")
+    return None, None
+
 
 
 
