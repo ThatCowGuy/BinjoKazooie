@@ -12,6 +12,7 @@ from . binjo_model_bin_vertex_seg import ModelBIN_VtxSeg, ModelBIN_VtxElem
 from . binjo_model_bin_collision_seg import ModelBIN_ColSeg, ModelBIN_TriElem
 from . binjo_model_bin_texture_seg import ModelBIN_TexSeg, ModelBIN_TexElem
 from . binjo_model_bin_displaylist_seg import ModelBIN_DLSeg, DisplayList_Command
+from . binjo_model_bin_geolayout_seg import ModelBIN_GeoSeg, ModelBIN_GeoCommandChain
 
 import bpy
 import bmesh
@@ -498,6 +499,18 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
         new_ModelBin.ColSeg.populate_from_collision_tri_list(collision_tris)
         print(f"=> {timer() - export_timer:.3f}s")
 
+        print(f"Building Geo-Seg...")
+        export_timer = timer()
+        # the vertex list is also fully complete now, so we can build the VTX-Seg
+        new_ModelBin.GeoSeg.build_from_minmax(
+            min_x=new_ModelBin.VtxSeg.min_x, 
+            min_y=new_ModelBin.VtxSeg.min_y,
+            min_z=new_ModelBin.VtxSeg.min_z,
+            max_x=new_ModelBin.VtxSeg.max_x,
+            max_y=new_ModelBin.VtxSeg.max_y,
+            max_z=new_ModelBin.VtxSeg.max_z
+        )
+        print(f"=> {timer() - export_timer:.3f}s")
 
         # reset object to original mode, export the collected data to BIN
         bpy.ops.object.mode_set(mode=original_mode)

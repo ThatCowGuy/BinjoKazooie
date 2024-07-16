@@ -208,3 +208,43 @@ class Dicts:
         "G_LOD":                0x00100000,
         "G_CLIPPING":           0x00800000,
     }
+
+    GEO_CMD_NAMES = {
+        "SORT":             0x01,
+        "BONE":             0x02,
+        "LOAD_DL":          0x03, # just starts running a DL (offset is defined in int[2])
+        "UNKNOWN_04":       0x04,
+        "SKINNING":         0x05,
+        "BRANCH":           0x06,
+        "UNKNOWN_07":       0x07,
+        "LOD":              0x08,
+        "UNKNOWN_09":       0x09,
+        "REFERENCE_POINT":  0x0A,
+        "UNKNOWN_0B":       0x0B,
+        "SELECTOR":         0x0C, # for model-swapping: int[2] holds short[0] child_count, short[1] selector index, then list of children
+        # 0000000C 00000060 00040001 00000020 00000030 00000040 00000050 00000000 00000003...
+        #                   ^ 4 children
+        #                       ^ selector ID = 1
+        #                            ^ 1st child: offset 0x20 bytes to next geolayout command
+        #                                     ^ 2nd child: offset 0x30 bytes to next geolayout command
+        "DRAW_DISTANCE":    0x0D,
+        "UNKNOWN_0E":       0x0E,
+        "UNKNOWN_0F":       0x0F,
+    }
+    GEO_CMD_NAMES_REV = {
+        0x01: "SORT",
+        0x02: "BONE",
+        0x03: "LOAD_DL",
+        0x04: "UNKNOWN_04",
+        0x05: "SKINNING",
+        0x06: "BRANCH",
+        0x07: "UNKNOWN_07",
+        0x08: "LOD",
+        0x09: "UNKNOWN_09",
+        0x0A: "REFERENCE_POINT",
+        0x0B: "UNKNOWN_0B",
+        0x0C: "SELECTOR",
+        0x0D: "DRAW_DISTANCE",
+        0x0E: "UNKNOWN_0E",
+        0x0F: "UNKNOWN_0F",
+    }

@@ -5,6 +5,7 @@ from . binjo_model_bin_texture_seg import ModelBIN_TexSeg
 from . binjo_model_bin_vertex_seg import ModelBIN_VtxSeg, ModelBIN_VtxElem
 from . binjo_model_bin_collision_seg import ModelBIN_ColSeg, ModelBIN_TriElem
 from . binjo_model_bin_displaylist_seg import ModelBIN_DLSeg, TileDescriptor
+from . binjo_model_bin_geolayout_seg import ModelBIN_GeoSeg, ModelBIN_GeoCommandChain
 
 class ModelBIN:
     # Header                done
@@ -28,7 +29,7 @@ class ModelBIN:
         # FX
         # FX_END
         # AnimTex
-        # Geo
+        self.GeoSeg = ModelBIN_GeoSeg()
 
     def populate_from_data(self, bin_data):
         self.Header = ModelBIN_Header(bin_data)
@@ -41,7 +42,7 @@ class ModelBIN:
         # FX
         # FX_END
         # AnimTex
-        # Geo
+        # Geo ---- NOTE: Im currently ignoring this when building from ROM data
 
         self.build_complete_tri_list()
 
@@ -85,7 +86,12 @@ class ModelBIN:
         # FX
         # FX_END
         # AnimTex
-        # Geo
+
+        if (self.GeoSeg.valid == True):
+            self.GeoSeg.file_offset = current_filesize
+            self.Header.geo_offset = self.GeoSeg.file_offset
+            output += self.GeoSeg.get_bytes()
+            current_filesize = len(output)
 
         # I need to overwrite the incomplete Header
         for (idx, byte) in enumerate(self.Header.get_bytes()):
