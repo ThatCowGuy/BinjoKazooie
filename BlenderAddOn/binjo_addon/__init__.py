@@ -1,6 +1,8 @@
 
 
 import os
+from timeit import default_timer as timer
+import re
 
 from . binjo_model_bin import ModelBIN
 from . binjo_bin_handler import BINjo_ModelBIN_Handler
@@ -296,6 +298,8 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
     bl_options = {'REGISTER'}
 
     def execute(self, context):                 # execute() is called when running the operator.
+        export_timer_start = timer()
+        export_timer = timer()
         scene = context.scene
         self.report({'INFO'}, "This Feature is a WIP; It only collects model Data for now! Check [Window] > [Toggle System Console]")
 
@@ -311,9 +315,10 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
         tex_list = []
         material_tex_index_dict = {}
         # scan through all available textures
+        print("Processing Textures assigned to Materials...")
         for mat in target_object.data.materials:
-            print(mat.name)
-            # skip materials that dont rock a texture
+            # print(mat.name)
+            # materials that dont rock a texture get (-1)
             if (mat.node_tree.nodes["TEX"].image == None):
                 material_tex_index_dict[mat.name] = -1
                 continue
@@ -324,16 +329,23 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                 tex_list.append(tex)
             # finally, add the material to our dictionary to find the tex-index easily later
             material_tex_index_dict[mat.name] = tex_list.index(tex)
+        
+        print(f"=> {timer() - export_timer:.3f}s ({(timer() - export_timer)/len(tex_list):.3f}s per Tex)")
 
+        print(f"Building Tex Segment...")
+        export_timer = timer()
         new_ModelBin.Header.tex_offset = 0x0038
         new_ModelBin.TexSeg.populate_from_elements(tex_list)
+        print(f"=> {timer() - export_timer:.3f}s")
 
 
 
+        print(f"Sorting Tris by Material...")
+        export_timer = timer()
         # for every texture that we extracted, create an empty list of tris,
         # into which we sort the entire model (+1 for no-texture)
         # (this is funky python list comprehension syntax to init a list of empty lists)
-        polygon_list_list = [ [] for __ in range(new_ModelBin.TexSeg.tex_cnt + 1)]
+        polygon_list_list = [ [] for __ in range(len(target_object.data.materials))]
 
         for face in target_object.data.polygons:
             # catch if the user tries to convert a non-triangulated model
@@ -344,13 +356,9 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
             # completely ignoring loose geometry (vtx_cnt < 3)
             if (len(face.vertices) < 3):
                 continue
-            
-            face_mat = target_object.data.materials[face.material_index]
-            mat_tex_index = material_tex_index_dict[face_mat.name]
-            if (mat_tex_index >= 0):
-                polygon_list_list[mat_tex_index].append(face)
-            else:
-                polygon_list_list[-1].append(face)
+
+            polygon_list_list[face.material_index].append(face)
+        print(f"=> {timer() - export_timer:.3f}s")
             
 
 
@@ -362,7 +370,10 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
         vtx_cnt = 0
 
         command_list = []
+        collision_tris = []
 
+        print(f"Extracting granular Tri Information for VTX-Seg + DL-Seg...")
+        export_timer = timer()
         # now we can iterate over the sorted lists
         for polygon_list in polygon_list_list:
             if (len(polygon_list) == 0):
@@ -370,12 +381,19 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
 
             rep_poly = polygon_list[0]
             assigned_mat = target_object.data.materials[rep_poly.material_index]
-            # 0x000050E0_0x00000100 => 0xTEX_OFFSET_0xCOLL_TYPE
-            # this is reaaaaaaaaaaaaaally ugly
+            
+            print(assigned_mat.name)
             if ("NOCOLL" in assigned_mat.name):
+                print("NOCOLL detected")
                 coll_type = None
             else:
-                coll_type = assigned_mat.name[13:19]
+                match = re.search(rf".*_.*(0x[0-9,A-F]+)", assigned_mat.name)
+                if (match == None):
+                    print(f"Couldnt parse coll_type from Material {assigned_mat.name}")
+                    coll_type = None
+                else:
+                    # group(1) is actually the first group, because group(0) is reserved for the full-match...
+                    coll_type = int(match.group(1), 0x10)
 
             # I can infer the tex_id through the material-dict I created above now;
             # if the ID is valid, create the setup commands
@@ -390,7 +408,7 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
             buffered_tris = []
             for polygon in polygon_list:
 
-                for (vertex_idx, loop_idx) in zip(face.vertices, face.loop_indices):
+                for (vertex_idx, loop_idx) in zip(polygon.vertices, polygon.loop_indices):
                     # get the XYZ coord containers, RGBA shade containers and UV coord containers
                     coords = target_object.data.vertices[vertex_idx].co
                     rgba =  color_attribute.data[loop_idx].color
@@ -401,6 +419,8 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                     u_transf, v_transf = uvs.x, uvs.y
                     # to build a vertex from them
                     vtx = ModelBIN_VtxElem.build_from_model_data(x, y, z, r, g, b, a, u_transf, v_transf)
+                    if (tex_id >= 0):
+                        vtx.reverse_UV_transforms(tex.width, tex.height)
                     verts.append(vtx)
                     vtx_cnt += 1
                 
@@ -411,6 +431,9 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                 tri.vtx_2 = verts[(vtx_cnt - 2)]
                 tri.vtx_3 = verts[(vtx_cnt - 1)]
                 tris.append(tri)
+
+                if (coll_type is not None):
+                    collision_tris.append(tri)
 
                 if (tex_id >= 0):
                     buffered_tris.append(tri)
@@ -461,15 +484,28 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
         new_ModelBin.DLSeg.command_list = command_list
         new_ModelBin.DLSeg.command_cnt = len(command_list)
         new_ModelBin.DLSeg.valid = True
+        print(f"=> {timer() - export_timer:.3f}s")
 
+        print(f"Building VTX-Seg...")
+        export_timer = timer()
         # the vertex list is also fully complete now, so we can build the VTX-Seg
         new_ModelBin.VtxSeg.populate_from_vtx_list(verts)
-        
-        print(len(verts), len(tris))
+        print(f"=> {timer() - export_timer:.3f}s")
+
+        print(f"Building Coll-Seg...")
+        export_timer = timer()
+        # the vertex list is also fully complete now, so we can build the VTX-Seg
+        new_ModelBin.ColSeg.populate_from_collision_tri_list(collision_tris)
+        print(f"=> {timer() - export_timer:.3f}s")
+
 
         # reset object to original mode, export the collected data to BIN
         bpy.ops.object.mode_set(mode=original_mode)
+        print(f"Writing Output-File...")
+        export_timer = timer()
         new_ModelBin.export_to_BIN(filename=f"{context.scene.binjo_props.export_path}/test.bin")
+        print(f"=> {timer() - export_timer:.3f}s")
+        print(f"FULL TIME: {timer() - export_timer_start:.3f}s")
         return { 'FINISHED' }
 
 

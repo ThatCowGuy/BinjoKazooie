@@ -1,12 +1,102 @@
 
+import numpy as np
+
 from . import binjo_utils
 
 class ModelBIN_ColSeg:
     HEADER_SIZE = 0x18
 
-    # it's not guaranteed that there is a proper VTX count inside this segment,
-    # so pass over the one from the BIN Header segment instead
-    def __init__(self, file_data, file_offset):
+    def __init__(self):
+        self.valid = False
+
+    def populate_from_collision_tri_list(self, tri_list, cube_scale=1000):
+        x_coords = []
+        y_coords = []
+        z_coords = []
+        for tri in tri_list:
+            x_coords.extend([tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x])
+            y_coords.extend([tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y])
+            z_coords.extend([tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z])
+
+        # using floor() for both min and max, because I consider the cubes to start in the lower-left corner
+        self.geo_cube_scale = cube_scale
+        self.min_geo_cube_x = int(np.floor(np.min(x_coords) / cube_scale))
+        self.min_geo_cube_y = int(np.floor(np.min(y_coords) / cube_scale))
+        self.min_geo_cube_z = int(np.floor(np.min(z_coords) / cube_scale))
+        self.max_geo_cube_x = int(np.floor(np.max(x_coords) / cube_scale))
+        self.max_geo_cube_y = int(np.floor(np.max(y_coords) / cube_scale))
+        self.max_geo_cube_z = int(np.floor(np.max(z_coords) / cube_scale))
+        print(np.min(x_coords), np.min(y_coords), np.min(z_coords))
+        print(self.min_geo_cube_x, self.min_geo_cube_y, self.min_geo_cube_z)
+        print(np.max(x_coords), np.max(y_coords), np.max(z_coords))
+        print(self.max_geo_cube_x, self.max_geo_cube_y, self.max_geo_cube_z)
+        # the strides determine how many indices we need to jump if we jump along another axis than the x axis
+        x_count = (self.max_geo_cube_x - self.min_geo_cube_x + 1)
+        y_count = (self.max_geo_cube_y - self.min_geo_cube_y + 1)
+        z_count = (self.max_geo_cube_z - self.min_geo_cube_z + 1)
+        self.stride_y = x_count
+        self.stride_z = (x_count * y_count)
+        # trivial
+        self.geo_cube_cnt = (x_count * y_count * z_count)
+        
+        self.geo_cube_list = []
+        # initiating the cubes in z-y-x order, so that x has the lowest stride (of 1)
+        for z_id in range(self.min_geo_cube_z, self.max_geo_cube_z + 1):
+            for y_id in range(self.min_geo_cube_y, self.max_geo_cube_y + 1):
+                for x_id in range(self.min_geo_cube_x, self.max_geo_cube_x + 1):
+                    self.geo_cube_list.append(ModelBIN_GeoCubeElem(x_id=x_id, y_id=y_id, z_id=z_id, cube_scale=cube_scale))
+
+        # now comes the hard part: sort EVERY collision tri into EVERY intersected geocube...
+        self.tri_cnt = 0
+        for tri in tri_list:
+            # find the bounding cube IDs for the tri; using these to drastically limit the search space
+            # of possible containing cube candidates in the next step
+            x_coords = [tri.vtx_1.x, tri.vtx_2.x, tri.vtx_3.x]
+            y_coords = [tri.vtx_1.y, tri.vtx_2.y, tri.vtx_3.y]
+            z_coords = [tri.vtx_1.z, tri.vtx_2.z, tri.vtx_3.z]
+            tri_min_geo_cube_x = int(np.floor(np.min(x_coords) / cube_scale))
+            tri_min_geo_cube_y = int(np.floor(np.min(y_coords) / cube_scale))
+            tri_min_geo_cube_z = int(np.floor(np.min(z_coords) / cube_scale))
+            tri_max_geo_cube_x = int(np.floor(np.max(x_coords) / cube_scale))
+            tri_max_geo_cube_y = int(np.floor(np.max(y_coords) / cube_scale))
+            tri_max_geo_cube_z = int(np.floor(np.max(z_coords) / cube_scale))
+            
+            for z_id in range(tri_min_geo_cube_z, tri_max_geo_cube_z + 1):
+                enum_z_id = (z_id - self.min_geo_cube_z)
+
+                for y_id in range(tri_min_geo_cube_y, tri_max_geo_cube_y + 1):
+                    enum_y_id = (y_id - self.min_geo_cube_y)
+
+                    for x_id in range(tri_min_geo_cube_x, tri_max_geo_cube_x + 1):
+                        enum_x_id = (x_id - self.min_geo_cube_x)
+                        cube_id = (enum_x_id + (enum_y_id * self.stride_y) + (enum_z_id * self.stride_z))
+
+                        if (binjo_utils.tri_intersects_cube(tri, self.geo_cube_list[cube_id]) == True):
+                            self.geo_cube_list[cube_id].intersecting_tri_list.append(tri)
+                            self.tri_cnt += 1
+
+        # now all the tris are signed in into their respective lists;
+        # next, write all the tris into a long list (with duplicates) to index into, and set the starting indices
+        self.tri_list = []
+        listed_tris = 0
+        for cube in self.geo_cube_list:
+            # set starting ID to current count
+            cube.starting_tri_ID = listed_tris
+            cube.tri_cnt = len(cube.intersecting_tri_list)
+
+            for tri in cube.intersecting_tri_list:
+                self.tri_list.append(tri)
+                listed_tris += 1
+
+        if (self.tri_cnt != listed_tris):
+            print(f"Something went wrong within ColSeg() building; listed_tri_cnt != assigned tri_cnt")
+            self.valid = False
+            return
+        self.valid = True
+        return
+
+
+    def populate_from_data(self, file_data, file_offset):
         if file_offset == 0:
             print("No Collision Segment")
             self.valid = False
@@ -36,7 +126,8 @@ class ModelBIN_ColSeg:
         self.geo_cube_list = []
         for idx in range(0, self.geo_cube_cnt):
             file_offset_geo_cube = self.file_offset_cubes + (idx * ModelBIN_GeoCubeElem.SIZE)
-            cube = ModelBIN_GeoCubeElem(file_data, file_offset_geo_cube)
+            cube = ModelBIN_GeoCubeElem()
+            cube.populate_from_data(file_data, file_offset_geo_cube)
             self.geo_cube_list.append(cube)
 
         self.tri_list = []
@@ -55,6 +146,26 @@ class ModelBIN_ColSeg:
         self.valid = True
         return
 
+    def get_bytes(self):
+        output = bytearray()
+        output += binjo_utils.int_to_bytes(self.min_geo_cube_x, 2)
+        output += binjo_utils.int_to_bytes(self.min_geo_cube_y, 2)
+        output += binjo_utils.int_to_bytes(self.min_geo_cube_z, 2)
+        output += binjo_utils.int_to_bytes(self.max_geo_cube_x, 2)
+        output += binjo_utils.int_to_bytes(self.max_geo_cube_y, 2)
+        output += binjo_utils.int_to_bytes(self.max_geo_cube_z, 2)
+        output += binjo_utils.int_to_bytes(self.stride_y, 2)
+        output += binjo_utils.int_to_bytes(self.stride_z, 2)
+        output += binjo_utils.int_to_bytes(self.geo_cube_cnt, 2)
+        output += binjo_utils.int_to_bytes(self.geo_cube_scale, 2)
+        output += binjo_utils.int_to_bytes(self.tri_cnt, 2)
+        output += binjo_utils.int_to_bytes(0x0000, 2)
+        for cube in self.geo_cube_list:
+            output += cube.get_bytes()
+        for tri in self.tri_list:
+            output += tri.get_bytes()
+        return output
+
     # link the VTX objects in the given VTX-list to the TRI objects in our tri-list via their indices
     def link_vertex_objects_for_all_tris(self, vtx_list):
         if (self.valid == False):
@@ -68,15 +179,28 @@ class ModelBIN_ColSeg:
 
 
 
-
 class ModelBIN_GeoCubeElem:
     SIZE = 0x04
 
-    def __init__(self, file_data, file_offset):
+    def __init__(self, x_id=0, y_id=0, z_id=0, cube_scale=1000):
+        self.scale = cube_scale
+        self.center_x = cube_scale * (x_id + 0.5)
+        self.center_y = cube_scale * (y_id + 0.5)
+        self.center_z = cube_scale * (z_id + 0.5)
+        self.center = np.array([self.center_x, self.center_y, self.center_z])
+        self.intersecting_tri_list = []
+
+    def populate_from_data(self, file_data, file_offset):
         # parsing properties
         self.starting_tri_ID    = binjo_utils.read_bytes(file_data, file_offset + 0x00, 2)
         self.tri_cnt            = binjo_utils.read_bytes(file_data, file_offset + 0x02, 2)
         return
+
+    def get_bytes(self):
+        output = bytearray()
+        output += binjo_utils.int_to_bytes(self.starting_tri_ID, 2)
+        output += binjo_utils.int_to_bytes(self.tri_cnt, 2)
+        return output
 
 
 
@@ -102,6 +226,15 @@ class ModelBIN_TriElem:
         self.tex_idx        = None
         self.visible        = False
         return
+
+    def get_bytes(self):
+        output = bytearray()
+        output += binjo_utils.int_to_bytes(self.index_1, 2)
+        output += binjo_utils.int_to_bytes(self.index_2, 2)
+        output += binjo_utils.int_to_bytes(self.index_3, 2)
+        output += binjo_utils.int_to_bytes(0x0000, 2)
+        output += binjo_utils.int_to_bytes(self.collision_type, 4)
+        return output
 
     def build_from_parameters(self, idx1, idx2, idx3, coll_type=None, tex_id=None):
         # parsing properties

@@ -23,7 +23,7 @@ class ModelBIN:
         self.TexSeg = ModelBIN_TexSeg()
         self.VtxSeg = ModelBIN_VtxSeg()
         # Bone
-        # Coll
+        self.ColSeg = ModelBIN_ColSeg()
         self.DLSeg  = ModelBIN_DLSeg()
         # FX
         # FX_END
@@ -35,7 +35,7 @@ class ModelBIN:
         self.TexSeg.populate_from_data(bin_data, self.Header.tex_offset)
         self.VtxSeg.populate_from_data(bin_data, self.Header.vtx_offset, vtx_cnt=self.Header.vtx_cnt)
         # Bone
-        self.ColSeg = ModelBIN_ColSeg(bin_data, self.Header.coll_offset)
+        self.ColSeg.populate_from_data(bin_data, self.Header.coll_offset)
         self.ColSeg.link_vertex_objects_for_all_tris(self.VtxSeg.vtx_list)
         self.DLSeg.populate_from_data(bin_data, self.Header.DL_offset)
         # FX
@@ -69,7 +69,12 @@ class ModelBIN:
             current_filesize = len(output)
 
         # Bone
-        # Coll
+
+        if (self.ColSeg.valid == True):
+            self.ColSeg.file_offset = current_filesize
+            self.Header.coll_offset = self.ColSeg.file_offset
+            output += self.ColSeg.get_bytes()
+            current_filesize = len(output)
 
         if (self.DLSeg.valid == True):
             self.DLSeg.file_offset = current_filesize

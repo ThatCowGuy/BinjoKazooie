@@ -83,8 +83,8 @@ def calc_DXT(width, bit_size):
     # in the correct binary encoding with that knowledge:
     set_bit = int(np.log2(chunks_per_row))
     DXT = (0b01 << (11 - set_bit))
-    # Console.WriteLine(String.Format("{0}", File_Handler.uint_to_string((uint) set_bit, 0b1)));
-    # Console.WriteLine(String.Format("{0}, {1}, {2}", width, bitsize, File_Handler.uint_to_string((uint) DXT, 0b1)));
+    # Console.WriteLine(String.Format("{0}", File_Handler.uint_to_string((uint) set_bit, 0b1))])
+    # Console.WriteLine(String.Format("{0}, {1}, {2}", width, bitsize, File_Handler.uint_to_string((uint) DXT, 0b1))])
     return DXT
 
 
@@ -390,7 +390,7 @@ def convert_IMG_pixels_into_palette_indices(IMG_color_pixels, palette):
 def convert_RGBA32_IMG_to_bytes(IMG, tex_type):
 
     if (tex_type == Dicts.TEX_TYPES["CI4"]): # C4 or CI4; 16 RGBA5551-colors, pixels are encoded per row as 4bit IDs
-        print("Converting IMG to CI4 palette + indices...")
+        # print("Converting IMG to CI4 palette + indices...")
 
         # round every color value to 5-bit 
         byte_pixels = [((round(255 * val) >> 3) << 3) for val in IMG.pixels]
@@ -417,7 +417,7 @@ def convert_RGBA32_IMG_to_bytes(IMG, tex_type):
         return data, pixels
 
     if (tex_type == Dicts.TEX_TYPES["CI8"]): # C8 or CI8; 256 RGBA5551-colors, pixels are encoded per row as 8bit IDs
-        print("Converting IMG to CI8 palette + indices...")
+        # print("Converting IMG to CI8 palette + indices...")
         
         # round every color value to 5-bit 
         byte_pixels = [((round(255 * val) >> 3) << 3) for val in IMG.pixels]
@@ -446,6 +446,80 @@ def convert_RGBA32_IMG_to_bytes(IMG, tex_type):
     return None, None
 
 
+
+# determine if a given tri is intersecting a cube volume through SAT (Separating Axis Theorem)
+# https://dyn4j.org/2010/01/sat/
+# NOTE: Tris and Cubes are always convex; Cubes are always axis-aligned and rasterized
+def tri_intersects_cube(tri, cube):
+    # put the vertex coords into np arrays for speed
+    A = np.array([tri.vtx_1.x, tri.vtx_1.y, tri.vtx_1.z])
+    B = np.array([tri.vtx_2.x, tri.vtx_2.y, tri.vtx_2.z])
+    C = np.array([tri.vtx_3.x, tri.vtx_3.y, tri.vtx_3.z])
+
+    # shift both bodies so that the cube's center sits at origin
+    # (the cube doesnt actually need to be shifted, bc it's relative)
+    A = A - cube.center
+    B = B - cube.center
+    C = C - cube.center
+    # obviously dont need to recalc tri-sidelengths a,b,c and tri-norm n because those are all relative to cube-sides A,B,C
+
+    # now we can check all 13 SA's; Starting with the 3 cube normals, because those are the softest computationally
+    # NOTE: because the cube normals are always the carthesian unit vectors, I know the results here a priori, so
+    # I can skip ahead in the projection-calculation; example for cube nx:
+    # pA = np.dot(tri.A, cube_nx) == tri.A.x
+    # pB = np.dot(tri.B, cube_nx) == tri.B.x
+    # pC = np.dot(tri.C, cube_nx) == tri.C.x
+    #
+    # NOTE: the projected extent of the cube is always L if projected along a cube normal
+    #       --> cube_extent = cube_L
+    if (
+        # nx
+        -1.0 * np.max([A[0], B[0], C[0]]) > cube.scale or \
+        +1.0 * np.min([A[0], B[0], C[0]]) > cube.scale or \
+        # ny
+        -1.0 * np.max([A[1], B[1], C[1]]) > cube.scale or \
+        +1.0 * np.min([A[1], B[1], C[1]]) > cube.scale or \
+        # nz
+        -1.0 * np.max([A[2], B[2], C[2]]) > cube.scale or \
+        +1.0 * np.min([A[2], B[2], C[2]]) > cube.scale
+    ):
+        print("ni SAT axis trigger")
+        return False
+        
+    # now, find the 9 cross-product sepperation-axes and check those
+    sepperation_axes = [None] * 9
+    # I can skip calculating these properly, because I know nx,ny,nz of the cube a priori
+    # nx, ny, nz cross tri edge a
+    sepperation_axes[0] = np.array([0,     -A[2], +A[1]])
+    sepperation_axes[1] = np.array([+A[2], 0,     -A[0]])
+    sepperation_axes[2] = np.array([-A[1], +A[0], 0    ])
+    # nx, ny, nz cross tri edge b
+    sepperation_axes[3] = np.array([0,     -B[2], +B[1]])
+    sepperation_axes[4] = np.array([+B[2], 0,     -B[0]])
+    sepperation_axes[5] = np.array([-B[1], +B[0], 0    ])
+    # nx, ny, nz cross tri edge c
+    sepperation_axes[6] = np.array([0,     -C[2], +C[1]])
+    sepperation_axes[7] = np.array([+C[2], 0,     -C[0]])
+    sepperation_axes[8] = np.array([-C[1], +C[0], 0    ])
+
+    # now project the vertices A,B,C of the tri onto the SAs, and compare to the projected cube extent
+    for sep_axis in sepperation_axes:
+        pA = np.dot(A, sep_axis)
+        pB = np.dot(B, sep_axis)
+        pC = np.dot(C, sep_axis)
+        # the projected extent of the cube can be simplified a lot too:
+        cube_extent = cube.scale * np.sum(abs(sep_axis))
+
+        # and repeat the check from earlier:
+        if (
+            -1.0 * np.max([pA, pB, pC]) > cube_extent or \
+            +1.0 * np.min([pA, pB, pC]) > cube_extent
+        ):
+            print("cross-prod SAT axis trigger")
+            return False
+
+    # if none of the 13 SA's triggered, the bodies don't overlap on any of the SA's, and according to the SAT, they therefor dont intersect
+    return True
 
 
 

@@ -136,7 +136,7 @@ namespace Binjo
             // obviously dont need to recalc a,b,c,n because those are all relative to A,B,C
 
             // now we can check all 13 SA's; Starting with the 3 cube normals, because those are the softest computationally
-            // NOTE: because the cube normals are always the unit vectors, I now the results here apriori, so Im unrolling
+            // NOTE: because the cube normals are always the unit vectors, I know the results here a priori, so Im unrolling
             // example for cube nx:
             // double pA = Vec3.dot_prod(tri.A, cube_nx) = tri.A.x
             // double pB = Vec3.dot_prod(tri.B, cube_nx) = tri.B.x
