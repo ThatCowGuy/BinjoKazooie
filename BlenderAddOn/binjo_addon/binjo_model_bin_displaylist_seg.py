@@ -236,6 +236,7 @@ class DisplayList_Command:
         cmd |= binjo_utils.shift_cut(addr_transformed, 0, 32)
         return cmd
     
+    # The warp_ and shift_ values are interpreted as 2^N; So a wrap of 6 means show 2^6=64px
     def G_SETTILE(
         color_format, bitsize, width, TMEM, descriptor_idx, pal,
         clamp_S, mirror_S, wrap_S, shift_S,
@@ -467,16 +468,15 @@ class ModelBIN_DLSeg:
             command_list.append(DisplayList_Command(full=
                 DisplayList_Command.G_SetOtherMode_H(("G_MDSFT_TEXTLUT"), 2, 0x00008000)
             ))
-            command_list.append(DisplayList_Command(full=
-                DisplayList_Command.G_SETTIMG("CI", 16, (tex_element.datasection_offset_data + 0x20)) # NOTE: +0x20 for CI4, +0x200 for CI8...
-            ))
-            texel_cnt = (tex_element.width * tex_element.height)
-            texel_bitsize = 4
 
+            texel_cnt = (tex_element.width * tex_element.height)
+            texel_bitsize = Dicts.TEXEL_FMT_BITSIZE["CI4"]
+            S_wrap = int(np.log2(tex_element.width))
+            T_wrap = int(np.log2(tex_element.height))
             # we have to outplay the TMEM restriction of loading a max of 0x400 texels at a time
             if (texel_cnt > 0x400):
                 # this should use the texel bitsize of the format instead of 4
-                fakeout_bitsize = 16
+                fakeout_bitsize = (texel_bitsize * 4)
                 fakeout_factor = (fakeout_bitsize / texel_bitsize)
 
                 # this command is a really really hacky way of outplaying the TMEM restrictions...
@@ -485,7 +485,10 @@ class ModelBIN_DLSeg:
                 # BUT, we have to reset this hack with an additional G_SETTILE after the G_LOADBLOCK, that fixes the fake bitsize.
                 # That's also why this command works on descriptor-7 I guess.
                 command_list.append(DisplayList_Command(full=
-                    DisplayList_Command.G_SETTILE("CI", fakeout_bitsize, 0, 0x0000, 7, 0, False, False, 6, 0, False, False, 6, 0)
+                    DisplayList_Command.G_SETTIMG("CI", fakeout_bitsize, (tex_element.datasection_offset_data + 0x20)) # NOTE: +0x20 for CI4, +0x200 for CI8...
+                ))
+                command_list.append(DisplayList_Command(full=
+                    DisplayList_Command.G_SETTILE("CI", fakeout_bitsize, 0, 0x0000, 7, 0, False, False, S_wrap, 0, False, False, T_wrap, 0)
                 ))
                 # Note that we are providing some tempered-with params here
                 command_list.append(DisplayList_Command(full=
@@ -498,21 +501,27 @@ class ModelBIN_DLSeg:
                 ))
                 # restore the correct texel bitsize afterwards
                 command_list.append(DisplayList_Command(full=
-                    DisplayList_Command.G_SETTILE("CI", texel_bitsize, tex_element.width, 0x0000, 0, 0, False, False, 6, 0, False, False, 6, 0)
+                    DisplayList_Command.G_SETTILE("CI", texel_bitsize, tex_element.width, 0x0000, 0, 0, False, False, S_wrap, 0, False, False, T_wrap, 0)
                 ))
             # otherwise we can directly load to TMEM (and immediatly use descriptor-0)
             else:
                 command_list.append(DisplayList_Command(full=
-                    DisplayList_Command.G_SETTILE("CI", texel_bitsize, 0, 0x0000, 0, 0, False, False, 6, 0, False, False, 6, 0)
+                    DisplayList_Command.G_SETTIMG("CI", texel_bitsize, (tex_element.datasection_offset_data + 0x20)) # NOTE: +0x20 for CI4, +0x200 for CI8...
+                ))
+                command_list.append(DisplayList_Command(full=
+                    DisplayList_Command.G_SETTILE("CI", texel_bitsize, 0, 0x0000, 7, 0, False, False, S_wrap, 0, False, False, T_wrap, 0)
                 ))
                 # set up the faked LOADBLOCK; note that we reduce the percieved width by the fakeout factor
                 command_list.append(DisplayList_Command(full=
                     DisplayList_Command.G_LOADBLOCK(
-                        0, 0, 0,
+                        0, 0, 7,
                         tex_element.width, 
                         tex_element.height,
                         Dicts.TEXEL_FMT_BITSIZE["CI4"]
                     )
+                ))
+                command_list.append(DisplayList_Command(full=
+                    DisplayList_Command.G_SETTILE("CI", texel_bitsize, tex_element.width, 0x0000, 0, 0, False, False, S_wrap, 0, False, False, T_wrap, 0)
                 ))
 
             command_list.append(DisplayList_Command(full=

@@ -247,7 +247,7 @@ class ColorPixel:
         if (a < (255 / 2)):
             self.r, self.g, self.b, self.a = 0xFF, 0xFF, 0xFF, 0x00
         else:
-            self.r, self.g, self.b, self.a = r, g, b, 0xFF
+            self.r, self.g, self.b, self.a = round(r), round(g), round(b), 0xFF
         self.occurences = occurences
     def __eq__(self, other):
         return (
@@ -261,7 +261,7 @@ class ColorPixel:
         dg = self.g - other.g
         db = self.b - other.b
         da = self.a - other.a
-        return np.sqrt(dr*dr + dg*dg + db*db + da*da)
+        return np.floor(np.sqrt(dr*dr + dg*dg + db*db + da*da))
 
     def convert_8888_to_5551(self):
         r = (self.r >> 3) & 0b11111
@@ -299,7 +299,7 @@ def approx_palette_by_most_used_with_diversity(IMG_color_pixels, color_cnt, dive
     # diversity_threshold argument, merge them and pull in another color instead
     while (len(palette) > 0):
         # find the worst diversity match (ie. the closest 2 colors)
-        worst_diversity_match = 1e10
+        worst_diversity_match = 1e+10
         match_A = None
         match_B = None
         for idx_A in range(0, len(reduced_palette)):
@@ -336,13 +336,12 @@ def approx_palette_by_most_used_with_diversity(IMG_color_pixels, color_cnt, dive
     while (len(palette) > 0):
         # get the next best color
         next_best_color = palette.pop(0)
-        # if the color is really meaningless (< 2.0% usage), stop
-        if (next_best_color.occurences < (len(IMG_color_pixels) * 2.0 / 100.0)):
+        # if the color is really meaningless (< 0.3% usage), stop
+        if (next_best_color.occurences < (len(IMG_color_pixels) * 0.3 / 100.0)):
             break
 
         # find the worst diversity match (ie. the closest 2 colors)
-        worst_diversity_match = 1e10
-        match_A = next_best_color
+        worst_diversity_match = 1e+10
         match_B = None
         for idx_B in range(0, len(reduced_palette)):
             diversity = next_best_color.color_distance(reduced_palette[idx_B])
@@ -353,12 +352,12 @@ def approx_palette_by_most_used_with_diversity(IMG_color_pixels, color_cnt, dive
                 match_B = reduced_palette[idx_B]
         
         # in this pass, definetely merge the colors
-        combined_occurences = (match_A.occurences + match_B.occurences)
-        merger_alpha = match_A.a if (match_A.occurences > match_B.occurences) else match_B.a
+        combined_occurences = (next_best_color.occurences + match_B.occurences)
+        merger_alpha = next_best_color.a if (next_best_color.occurences > match_B.occurences) else match_B.a
         merged_color = ColorPixel(
-            ((match_A.r * match_A.occurences) + (match_B.r * match_B.occurences)) / combined_occurences,
-            ((match_A.g * match_A.occurences) + (match_B.g * match_B.occurences)) / combined_occurences,
-            ((match_A.b * match_A.occurences) + (match_B.b * match_B.occurences)) / combined_occurences,
+            ((next_best_color.r * next_best_color.occurences) + (match_B.r * match_B.occurences)) / combined_occurences,
+            ((next_best_color.g * next_best_color.occurences) + (match_B.g * match_B.occurences)) / combined_occurences,
+            ((next_best_color.b * next_best_color.occurences) + (match_B.b * match_B.occurences)) / combined_occurences,
             merger_alpha,
             occurences=combined_occurences
         )

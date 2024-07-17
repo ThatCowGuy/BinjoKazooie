@@ -1194,11 +1194,12 @@ namespace Binjo
                 uint i = 0;
                 foreach (DisplayList_Command cmd in this.DL_seg.command_list)
                 {
-                    output_txt.WriteLine(String.Format("{0} | {1} {2} -- {3}",
+                    output_txt.WriteLine(String.Format("{0} | {1} {2} -- {3} ==> {4}",
                         File_Handler.uint_to_string(i, 0xFFFF),
                         File_Handler.uint_to_string(cmd.raw_content[0], 0xFFFFFFFF),
                         File_Handler.uint_to_string(cmd.raw_content[1], 0xFFFFFFFF),
-                        cmd.command_name
+                        cmd.command_name,
+                        DisplayList_Segment.get_cmd_details(cmd)
                     ));
                     i += 0x08;
                 }

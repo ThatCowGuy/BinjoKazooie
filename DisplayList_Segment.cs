@@ -892,11 +892,8 @@ namespace Binjo
             return content;
         }
 
-        public List<string[]> get_cmd_content(int id)
+        public static String get_cmd_details(DisplayList_Command cmd)
         {
-            DisplayList_Command cmd = this.command_list[id];
-            List<string[]> content = new List<string[]>();
-
             // building the info string at the end.. ughhh
             String details = "";
             switch (cmd.command_name)
@@ -1062,6 +1059,13 @@ namespace Binjo
                     details = "Waiting for RDP entirely...";
                     break;
             }
+            return details;
+        }
+        public List<string[]> get_cmd_content(int id)
+        {
+            DisplayList_Command cmd = this.command_list[id];
+            List<string[]> content = new List<string[]>();
+            String details = get_cmd_details(cmd);
 
             content.Add(new string[] {
                 File_Handler.uint_to_string(cmd.command_byte, 0xFF),

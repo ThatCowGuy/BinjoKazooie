@@ -414,8 +414,9 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                     coords = target_object.data.vertices[vertex_idx].co
                     rgba =  color_attribute.data[loop_idx].color
                     uvs = uv_layer.data[loop_idx].uv
-                    # and extract the individual values
+                    # and extract the individual values (and correct the coordinate system)
                     x, y, z = [round(coord) for coord in coords]
+                    x, y, z = x, z, -y
                     r, g, b, a = [round(255 * channel) for channel in rgba]
                     u_transf, v_transf = uvs.x, uvs.y
                     # to build a vertex from them

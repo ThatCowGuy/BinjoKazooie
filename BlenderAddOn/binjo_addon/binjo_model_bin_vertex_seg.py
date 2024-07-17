@@ -179,8 +179,8 @@ class ModelBIN_VtxElem:
             self.transformed_V = ((self.v / 64.0) + 0 + 0.5) / 32.0
 
     def reverse_UV_transforms(self, w_factor, h_factor):
-        self.u = int(64.0 * ((+1 * self.transformed_U * w_factor) - 0.5))
-        self.v = int(64.0 * ((+1 * self.transformed_V * h_factor) - 0.5))
+        self.u = int(64.0 * ((self.transformed_U * w_factor) - 0.5))
+        self.v = int(64.0 * ((self.transformed_V * h_factor) - 0.5))
 
     def clone(self):
         return self.__class__(
