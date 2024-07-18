@@ -28,8 +28,8 @@ class ModelBIN_Header:
 
         self.valid = True
         if (bin_data == None):
-            print("initializing empty ModelBIN_Header OBJ...")
             return        
+            
         # parsed properties
         # === 0x00 ========================================================
         self.start_identifier   = binjo_utils.read_bytes(bin_data, 0x00, 4)

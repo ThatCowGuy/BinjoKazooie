@@ -1,7 +1,9 @@
 
 import numpy as np
+import re
 
 from . import binjo_utils
+from . binjo_dicts import Dicts
 
 class ModelBIN_ColSeg:
     HEADER_SIZE = 0x18
@@ -26,10 +28,6 @@ class ModelBIN_ColSeg:
         self.max_geo_cube_x = int(np.floor(np.max(x_coords) / cube_scale))
         self.max_geo_cube_y = int(np.floor(np.max(y_coords) / cube_scale))
         self.max_geo_cube_z = int(np.floor(np.max(z_coords) / cube_scale))
-        print(np.min(x_coords), np.min(y_coords), np.min(z_coords))
-        print(self.min_geo_cube_x, self.min_geo_cube_y, self.min_geo_cube_z)
-        print(np.max(x_coords), np.max(y_coords), np.max(z_coords))
-        print(self.max_geo_cube_x, self.max_geo_cube_y, self.max_geo_cube_z)
         # the strides determine how many indices we need to jump if we jump along another axis than the x axis
         x_count = (self.max_geo_cube_x - self.min_geo_cube_x + 1)
         y_count = (self.max_geo_cube_y - self.min_geo_cube_y + 1)
@@ -177,6 +175,22 @@ class ModelBIN_ColSeg:
             tri.vtx_2 = vtx_list[tri.index_2]
             tri.vtx_3 = vtx_list[tri.index_3]
 
+    def get_colltype_from_mat_name(mat_name):
+        if ("NOCOLL" in mat_name):
+            return None
+        # try getting a regex match from the material name (should be an attribute later)
+        match = re.search(rf".*_.*(0x[0-9,A-F]+)", mat_name)
+        if (match == None):
+            print(f"Couldnt parse coll_type from Material {mat_name}")
+            return None
+        # group(1) is actually the first group, because group(0) is reserved for the full-match...
+        return int(match.group(1), 0x10)
+
+    def get_collision_flag_dict(initial_value=0x0000_0000):
+        coll_dict = {}
+        for key in Dicts.COLLISION_FLAGS.keys():
+            coll_dict[key] = (initial_value & Dicts.COLLISION_FLAGS[key])
+        return coll_dict
 
 
 class ModelBIN_GeoCubeElem:

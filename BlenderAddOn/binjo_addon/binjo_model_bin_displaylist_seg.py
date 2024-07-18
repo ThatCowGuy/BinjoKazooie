@@ -191,6 +191,7 @@ class DisplayList_Command:
 
         # these dont contain any parameters
         if self.command_name in {
+            "G_SPNOOP",
             "G_ENDDL",
             "G_RDPLOADSYNC",
             "G_RDPPIPESYNC",
@@ -415,6 +416,16 @@ class ModelBIN_DLSeg:
         self.valid = True
         return
 
+    def populate_from_command_list(self, command_list):
+        self.command_list = command_list
+        # check if the list is terminated and terminate it if it wasn't
+        if (self.command_list[-1].command_name != "G_ENDDL"):
+            self.command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_ENDDL()
+            ))
+        self.command_cnt = len(self.command_list)
+        self.valid = True
+
     def get_bytes(self):
         output = bytearray()
         output += binjo_utils.int_to_bytes(self.command_cnt, 4)
@@ -422,6 +433,30 @@ class ModelBIN_DLSeg:
         for cmd in self.command_list:
             output += binjo_utils.int_to_bytes(cmd.full, 8)
         return output
+
+    # build the command-chunk that first loads the corresponding VTXs and then draws the TRIs
+    # NOTE: A maximum of 0x20 = 32 VTXs can be loaded at once !
+    #       This also assumes that all VTX IDs are ordered and unique for now <-- bad !
+    def build_tri_drawing_commands(tri_list):
+        DL_command_chunk = []
+        # the smallest index should probably be calculated as the actual min later
+        smallest_index = tri_list[0].index_1
+        DL_command_chunk.append(DisplayList_Command(full=
+            DisplayList_Command.G_VTX(0, (3 * len(tri_list)), smallest_index)
+        ))
+        for tri in tri_list:
+            # its guaranteed that I have an even number of tris at this point
+            DL_command_chunk.append(DisplayList_Command(full=
+                DisplayList_Command.G_TRI2(
+                    (tri.index_1 - smallest_index),
+                    (tri.index_2 - smallest_index),
+                    (tri.index_3 - smallest_index),
+                    (tri.index_1 - smallest_index),
+                    (tri.index_2 - smallest_index),
+                    (tri.index_3 - smallest_index)
+                )
+            ))
+        return DL_command_chunk
 
 
     def build_setup_commands(tex_element):
