@@ -186,10 +186,21 @@ class ModelBIN_ColSeg:
         # group(1) is actually the first group, because group(0) is reserved for the full-match...
         return int(match.group(1), 0x10)
 
+    def get_colltype_from_mat(mat):
+        if ("NOCOLL" in mat.name):
+            return None
+        coll_type = 0x0000_0000
+        for key in mat["Collision"].keys():
+            if (mat["Collision"][key] == True):
+                coll_type += Dicts.COLLISION_FLAGS[key]
+        return coll_type
+
     def get_collision_flag_dict(initial_value=0x0000_0000):
         coll_dict = {}
+        if (initial_value is None):
+            initial_value = 0x0000_0000
         for key in Dicts.COLLISION_FLAGS.keys():
-            coll_dict[key] = (initial_value & Dicts.COLLISION_FLAGS[key])
+            coll_dict[key] = bool(initial_value & Dicts.COLLISION_FLAGS[key])
         return coll_dict
 
 

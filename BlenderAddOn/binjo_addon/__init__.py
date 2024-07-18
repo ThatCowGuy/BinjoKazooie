@@ -47,6 +47,35 @@ def highlight_invis_changed(self, context):
                 color_attribute.data[face.loop_indices[1]].color = (0.7, 0.7, 0.7, 0.0)
                 color_attribute.data[face.loop_indices[2]].color = (0.7, 0.7, 0.7, 0.0)
 
+disable_coll_checkbox_updates = False
+def collision_checkboxes_changed(self, context):
+    # only update the materials collision dict, if this wasnt disabled
+    global disable_coll_checkbox_updates
+    if (disable_coll_checkbox_updates == False):
+        # and check for object and active-mat existence
+        if ("import_Object" in context.scene.collection.objects.keys()):
+            target_object = context.scene.collection.objects["import_Object"]
+            mat = target_object.active_material
+            if (mat is not None):
+                for idx, key in enumerate(mat["Collision"].keys()):
+                    mat["Collision"][key] = bool(context.scene.binjo_props.collision_checkboxes[idx])
+
+def update_collision_dict_hidden(context):
+    # this update has to be hidden, to not trigger infinite-loops
+    global disable_coll_checkbox_updates
+    disable_coll_checkbox_updates = True
+
+    if ("import_Object" in context.scene.collection.objects.keys()):
+        target_object = context.scene.collection.objects["import_Object"]
+        mat = target_object.active_material
+        if (mat is not None):
+            for idx, key in enumerate(mat["Collision"].keys()):
+                context.scene.binjo_props.collision_checkboxes[idx] = bool(mat["Collision"][key])
+
+    disable_coll_checkbox_updates = False
+
+
+
 # Properties are data elements that show up in the GUI Panel
 class BINJO_Properties(bpy.types.PropertyGroup):
     rom_path: bpy.props.StringProperty(
@@ -75,7 +104,7 @@ class BINJO_Properties(bpy.types.PropertyGroup):
         description="Highlight all the INVIS materials in magenta. Those are usually collision only.",
         default = False,
         update = highlight_invis_changed
-    ) 
+    )
     model_filename_enum : bpy.props.EnumProperty(
         name="Model File Name Enum",
         description="Internal Model Filename Enum",
@@ -257,6 +286,13 @@ class BINJO_Properties(bpy.types.PropertyGroup):
             ("(0xAD) GL - Boss B", "(0xAD) GL - Boss B", "")
         ]
     )
+    collision_checkboxes : bpy.props.BoolVectorProperty(
+        name="Collision Flags",
+        description="Set the Collision Flags of the Selected Material.",
+        size=len(Dicts.COLLISION_FLAGS.keys()),
+        default = (False,)*len(Dicts.COLLISION_FLAGS.keys()),
+        update = collision_checkboxes_changed
+    )
 
 # PT elements are GUI Panels to collect and arrange Features + Props
 class BINJO_PT_main_panel(bpy.types.Panel):
@@ -310,18 +346,28 @@ class BINJO_PT_material_panel(bpy.types.Panel):
 
         box = layout.box()
         row = box.row()
+
+        update_collision_dict_hidden(context)
         if ("import_Object" in context.scene.collection.objects.keys()):
+            
             target_object = context.scene.collection.objects["import_Object"]
             mat = target_object.active_material
+            flag_cnt = len(Dicts.COLLISION_FLAGS.keys())
+
             if (mat is not None):
-                row.label(text=mat.name)
-                for key in mat["Collision"].keys():
-                    row = box.row()
-                    row.label(text=f"{key}: {mat['Collision'][key]}")
+
+                row.label(text=f"Selected Material: {mat.name}")
+                rows = [box.row() for __ in range(flag_cnt // 2)]
+                
+                for idx, key in enumerate(mat["Collision"].keys()):
+                    row = rows[idx % (flag_cnt // 2)]
+                    row.prop(context.scene.binjo_props, "collision_checkboxes", index=idx, text=key)
+                
             else:
                 row.label(text="No Selection")
         else:
             row.label(text="No Selection")
+
 
 
 class BINJO_OT_add_val(bpy.types.Operator):
@@ -444,7 +490,7 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
             assigned_mat = target_object.data.materials[rep_poly.material_index]
             
             # and gather the collision-type from it
-            coll_type = ModelBIN_ColSeg.get_colltype_from_mat_name(assigned_mat.name)
+            coll_type = ModelBIN_ColSeg.get_colltype_from_mat(assigned_mat)
 
             # as well as the tex_id through the material-dict from before
             tex_id = material_tex_index_dict[assigned_mat.name]
@@ -605,7 +651,9 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
                 # and link color node's alpha output to mat alpha input
                 mat.node_tree.links.new(color_node.outputs["Alpha"], mat.node_tree.nodes[0].inputs["Alpha"])
 
-                mat["Collision"] = ModelBIN_ColSeg.get_collision_flag_dict()
+                mat["Collision"] = ModelBIN_ColSeg.get_collision_flag_dict(
+                    initial_value=ModelBIN_ColSeg.get_colltype_from_mat_name(mat.name)
+                )
                 imported_object.data.materials.append(mat)
 
             loop_ids = []
