@@ -183,38 +183,100 @@ class Dicts:
     }
 
     COLLISION_FLAGS = {
-        "UNK_00":           0b00000000_00000000_00000000_00000001,
-        "UNK_01":           0b00000000_00000000_00000000_00000010,
-        "UNK_02":           0b00000000_00000000_00000000_00000100,
-        "Water":            0b00000000_00000000_00000000_00001000,
-        "Slippery":         0b00000000_00000000_00000000_00010000,
-        "Disc-Rim":         0b00000000_00000000_00000000_00100000,
-        "Super-Slippery":   0b00000000_00000000_00000000_01000000,
-        "UNK_07":           0b00000000_00000000_00000000_10000000,
-        "UNK_08":           0b00000000_00000000_00000001_00000000, # ~ footstep sfx
-        "UNK_09":           0b00000000_00000000_00000010_00000000, # ~ footstep sfx
-        "UNK_0A":           0b00000000_00000000_00000100_00000000, # ~ footstep sfx
-        "UNK_0B":           0b00000000_00000000_00001000_00000000, # ~ footstep sfx
-        "UNK_0C":           0b00000000_00000000_00010000_00000000, # ~ footstep sfx
-        "Damage":           0b00000000_00000000_00100000_00000000,
-        "UNK_0E":           0b00000000_00000000_01000000_00000000, # ~ Damage func
-        "UNK_0F":           0b00000000_00000000_10000000_00000000, # ~ Damage func
-        "GV Tree Leaves":   0b00000000_00000001_00000000_00000000,
-        "UNK_11":           0b00000000_00000010_00000000_00000000,
-        "UNK_12":           0b00000000_00000100_00000000_00000000,
-        "UNK_13":           0b00000000_00001000_00000000_00000000,
-        "UNK_14":           0b00000000_00010000_00000000_00000000,
-        "UNK_15":           0b00000000_00100000_00000000_00000000,
-        "UNK_16":           0b00000000_01000000_00000000_00000000,
-        "UNK_17":           0b00000000_10000000_00000000_00000000,
-        "SFX Tall Grass":   0b00000001_00000000_00000000_00000000,
-        "UNK_19":           0b00000010_00000000_00000000_00000000,
-        "UNK_1A":           0b00000100_00000000_00000000_00000000,
-        "SFX Metallic":     0b00001000_00000000_00000000_00000000,
-        "UNK_1C":           0b00010000_00000000_00000000_00000000,
-        "UNK_1D":           0b00100000_00000000_00000000_00000000,
-        "UNK_1E":           0b01000000_00000000_00000000_00000000,
-        "SFX Extern":       0b10000000_00000000_00000000_00000000,
+        "UNK_00":               0b00000000_00000000_00000000_00000001,
+        "UNK_01":               0b00000000_00000000_00000000_00000010,
+        "UNK_02":               0b00000000_00000000_00000000_00000100,
+        "UNK_03":               0b00000000_00000000_00000000_00001000,
+        "Trottable Slope":      0b00000000_00000000_00000000_00010000,
+        "UNK_05":               0b00000000_00000000_00000000_00100000,
+        "Untrottable Slope":    0b00000000_00000000_00000000_01000000,
+        "UNK_07":               0b00000000_00000000_00000000_10000000,
+        "SFX Value":            0b00000000_00000000_00011111_00000000, # 5b Integer that references a list of SFXs
+        "Damage":               0b00000000_00000000_00100000_00000000,
+        "(0E) DMG rel. 1":      0b00000000_00000000_01000000_00000000, # used by damage func "core2/code_16010.c/func_8029D968"
+        "(0F) DMG rel. 2":      0b00000000_00000000_10000000_00000000, # used by damage func "core2/code_16010.c/func_8029D968"
+        "Double Sided":         0b00000000_00000001_00000000_00000000,
+        "Water":                0b00000000_00000010_00000000_00000000,
+        "UNK_12":               0b00000000_00000100_00000000_00000000,
+        "UNK_13":               0b00000000_00001000_00000000_00000000,
+        "UNK_14":               0b00000000_00010000_00000000_00000000,
+        "Reflective":           0b00000000_00100000_00000000_00000000,
+        "Non-Impeding":         0b00000000_01000000_00000000_00000000,
+        "(17) TTC Brdwlk rel":  0b00000000_10000000_00000000_00000000,
+        "(18) SFX related":     0b00000001_00000000_00000000_00000000,
+        "(19) FF related":      0b00000010_00000000_00000000_00000000,
+        "(1A) Snarebear":       0b00000100_00000000_00000000_00000000,
+        "Script Target":        0b00001000_00000000_00000000_00000000,
+        "UNK_1C":               0b00010000_00000000_00000000_00000000,
+        "UNK_1D":               0b00100000_00000000_00000000_00000000,
+        "(1E) Jinjo St. rel.":  0b01000000_00000000_00000000_00000000,
+        "Use Default SFXs":     0b10000000_00000000_00000000_00000000,
+    }
+    COLLISION_FLAG_DESCRIPTIONS = {
+        "UNK_00":               "",
+        "UNK_01":               "",
+        "UNK_02":               "",
+        "UNK_03":               "",
+        "Trottable Slope":      "Makes Banjo slip after 1s; Kazooie can move freely with TalonTrot",
+        "UNK_05":               "",
+        "Untrottable Slope":    "Makes BK slip after 1s regardless of Movestate; Transformations are unaffected",
+        "UNK_07":               "",
+        "SFX Value":            "A 5b Integer Value used to index into a Table of SFXs", # 5b Integer that references a list of SFXs
+        "Damage":               "BK take Damage on this Surface in intervals; Makes you move slowly aswell (Map constrained !)",
+        "(0E) DMG rel. 1":      "used by the Damaging-Func in some fashion", # used by damage func "core2/code_16010.c/func_8029D968"
+        "(0F) DMG rel. 2":      "used by the Damaging-Func in some fashion", # used by damage func "core2/code_16010.c/func_8029D968"
+        "Double Sided":         "Can collide with this Surface from both Sides; Doesn't affect Drawing of Surface !",
+        "Water":                "Lets BK swim in and underneath; Transformations are unaffected",
+        "UNK_12":               "",
+        "UNK_13":               "",
+        "UNK_14":               "",
+        "Reflective":           "Reflective Surfaces use this; unknown why it's part of Collision",
+        "Non-Impeding":         "Can pass through this surface freely, but the Collision is still detected (eg. Tall Grass)",
+        "(17) TTC Brdwlk rel":  "TTC Boardwalk uses this; unknown purpose",
+        "(18) SFX related":     "Has something to do with SFXs (maybe)",
+        "(19) FF related":      "Furnace Fun uses this; unknown purpose",
+        "(1A) Snarebear":       "Snearbears use this; unknown purpose",
+        "Script Target":        "Map-Event Scripts target this Surface (eg. Sandcastle Floor, RBB Moving Paths)",
+        "UNK_1C":               "",
+        "UNK_1D":               "",
+        "(1E) Jinjo St. rel.":  "Jinjo Statues use this; unknown purpose",
+        "Use Default SFXs":     "If this is set, the SFX Value indexes into the Default Table; If not, use a different local Table",
+    }
+    COLLISION_SFX = {
+        "Normal"   : 0b0000,
+        "Metallic" : 0b0001,
+        "Hollow"   : 0b0010,
+        "Stone"    : 0b0011,
+        "Woodden"  : 0b0100,
+        "Snowy"    : 0b0101,
+        "Rustling" : 0b0110,
+        "Swampy"   : 0b0111,
+        "Sandy"    : 0b1000,
+        "Slushy"   : 0b1001,
+        "UNK_0A"   : 0b1010,
+        "UNK_0B"   : 0b1011,
+        "UNK_0C"   : 0b1100,
+        "UNK_0D"   : 0b1101,
+        "UNK_0E"   : 0b1110,
+        "UNK_0F"   : 0b1111
+    }
+    COLLISION_SFX_REV = {
+        0b0000: "Normal",
+        0b0001: "Metallic",
+        0b0010: "Hollow",
+        0b0011: "Stone",
+        0b0100: "Woodden",
+        0b0101: "Snowy",
+        0b0110: "Rustling",
+        0b0111: "Swampy",
+        0b1000: "Sandy",
+        0b1001: "Slushy",
+        0b1010: "UNK_0A",
+        0b1011: "UNK_0B",
+        0b1100: "UNK_0C",
+        0b1101: "UNK_0D",
+        0b1110: "UNK_0E",
+        0b1111: "UNK_0F"
     }
 
     TEXEL_FMT_BITSIZE = {

@@ -14,6 +14,7 @@ from . binjo_model_bin_displaylist_seg import ModelBIN_DLSeg, DisplayList_Comman
 from . binjo_model_bin_geolayout_seg import ModelBIN_GeoSeg, ModelBIN_GeoCommandChain
 
 import bpy
+from bpy.app.handlers import persistent
 # https://docs.blender.org/api/current/bpy_types_enum_items/operator_return_items.html
 # https://docs.blender.org/api/current/bpy_types_enum_items/wm_report_items.html#rna-enum-wm-report-items
 import bmesh
@@ -31,7 +32,11 @@ bl_info = {
 bin_handler = None
 
 def highlight_invis_changed(self, context):
-    target_object = context.scene.collection.objects["import_Object"]
+    # and check for object and active-mat existence
+    if (context.active_object is None):
+        return
+    
+    target_object = context.active_object
     color_attribute = target_object.data.color_attributes["import_Color"]
     for face in target_object.data.polygons:
         if ("INVIS" in target_object.data.materials[face.material_index].name):
@@ -47,33 +52,64 @@ def highlight_invis_changed(self, context):
                 color_attribute.data[face.loop_indices[1]].color = (0.7, 0.7, 0.7, 0.0)
                 color_attribute.data[face.loop_indices[2]].color = (0.7, 0.7, 0.7, 0.0)
 
-disable_coll_checkbox_updates = False
+disable_collision_update_function = False
 def collision_checkboxes_changed(self, context):
     # only update the materials collision dict, if this wasnt disabled
-    global disable_coll_checkbox_updates
-    if (disable_coll_checkbox_updates == False):
+    global disable_collision_update_function
+    if (disable_collision_update_function == False):
         # and check for object and active-mat existence
-        if ("import_Object" in context.scene.collection.objects.keys()):
-            target_object = context.scene.collection.objects["import_Object"]
-            mat = target_object.active_material
+        if (context.active_object is not None):
+            mat = context.active_object.active_material
             if (mat is not None):
-                for idx, key in enumerate(mat["Collision"].keys()):
-                    mat["Collision"][key] = bool(context.scene.binjo_props.collision_checkboxes[idx])
+                for idx, key in enumerate(mat["Collision_Flags"].keys()):
+                    mat["Collision_Flags"][key] = bool(context.scene.binjo_props.collision_checkboxes[idx])
+
+def collision_disabled_changed(self, context):
+    # only update the materials collision dict, if this wasnt disabled
+    global disable_collision_update_function
+    if (disable_collision_update_function == False):
+        # and check for object and active-mat existence
+        if (context.active_object is not None):
+            mat = context.active_object.active_material
+            if (mat is not None):
+                mat["Collision_Disabled"] = bool(context.scene.binjo_props.collision_disabled[0])
+
+def collision_SFX_changed(self, context):
+    # only update the materials collision dict, if this wasnt disabled
+    global disable_collision_update_function
+    if (disable_collision_update_function == False):
+        # and check for object and active-mat existence
+        if (context.active_object is not None):
+            mat = context.active_object.active_material
+            if (mat is not None):
+                mat["Collision_SFX"] = context.scene.binjo_props.SFX_value_enum
+
+
+@persistent
+def general_update_function(scene):
+    context = bpy.context
+
+    # this update has to be hidden, to not trigger infinite-loops
+    global disable_collision_update_function
+    disable_collision_update_function = True
+
+    if (context.active_object is not None):
+        mat = context.active_object.active_material
+        if (mat is not None):
+            # update all the flags
+            for idx, key in enumerate(mat["Collision_Flags"].keys()):
+                context.scene.binjo_props.collision_checkboxes[idx] = bool(mat["Collision_Flags"][key])
+            # as well as the collision-enabled state
+            context.scene.binjo_props.collision_disabled[0] = bool(mat["Collision_Disabled"])
+            # and the collision SFX
+            context.scene.binjo_props.SFX_value_enum = Dicts.COLLISION_SFX_REV[mat["Collision_SFX"]]
+
+    disable_collision_update_function = False
+    
+    
 
 def update_collision_dict_hidden(context):
-    # this update has to be hidden, to not trigger infinite-loops
-    global disable_coll_checkbox_updates
-    disable_coll_checkbox_updates = True
-
-    if ("import_Object" in context.scene.collection.objects.keys()):
-        target_object = context.scene.collection.objects["import_Object"]
-        mat = target_object.active_material
-        if (mat is not None):
-            for idx, key in enumerate(mat["Collision"].keys()):
-                context.scene.binjo_props.collision_checkboxes[idx] = bool(mat["Collision"][key])
-
-    disable_coll_checkbox_updates = False
-
+    pass
 
 
 # Properties are data elements that show up in the GUI Panel
@@ -101,9 +137,35 @@ class BINJO_Properties(bpy.types.PropertyGroup):
     )
     highlight_invis : bpy.props.BoolProperty(
         name="Highlight INVIS Mats",
-        description="Highlight all the INVIS materials in magenta. Those are usually collision only.",
+        description="Highlight all the INVIS materials in Magenta; Those are usually Collision only.",
         default = False,
         update = highlight_invis_changed
+    )
+    collision_disabled : bpy.props.BoolVectorProperty(
+        name="Collision Disabled",
+        description="Materials with disabled collision will not be part of the Collision-Model at all; They're strictly visual-only.",
+        size=1,
+        default = (False,) * 1,
+        update = collision_disabled_changed
+    )
+    collision_SFX : bpy.props.IntVectorProperty(
+        name="Collision SFX",
+        description="Determines the Sound Effect that plays when BK collides with this Surface",
+        size=1,
+        default = (False,) * 1,
+        update = collision_SFX_changed
+    )
+    collision_checkboxes : bpy.props.BoolVectorProperty(
+        name="Collision Flags",
+        description="Set the Collision Flags of the Selected Material.",
+        size=len(Dicts.COLLISION_FLAGS.keys()),
+        default = (False,) * len(Dicts.COLLISION_FLAGS.keys()),
+        update = collision_checkboxes_changed
+    )
+    show_all_coll_flags : bpy.props.BoolProperty(
+        name="Show all Coll Flags",
+        description="Show ALL Collision Flags, including unknown ones and guesses.",
+        default = False
     )
     model_filename_enum : bpy.props.EnumProperty(
         name="Model File Name Enum",
@@ -278,21 +340,33 @@ class BINJO_Properties(bpy.types.PropertyGroup):
             ("(0xA5) GL - Floor 3 - Pipe Room B", "(0xA5) GL - Floor 3 - Pipe Room B", ""),
             ("(0xA6) GL - Floor 4 B", "(0xA6) GL - Floor 4 B", ""),
             ("(0xA7) GL - First Cutscene Inside", "(0xA7) GL - First Cutscene Inside", ""),
-            ("(0xA8) GL - Floor 3 - BGS Entrance B", "(0xA8) GL - Floor 3 - BGS Entrance B", ""),
-            ("(0xA9) GL - Floor 4 - TTC Entrance B", "(0xA9) GL - Floor 4 - TTC Entrance B", ""),
+            ("(0xA8) GL - Floor 4 - TTC Entrance B", "(0xA8) GL - Floor 4 - TTC Entrance B", ""),
+            ("(0xA9) GL - Floor 3 - BGS Entrance B", "(0xA9) GL - Floor 3 - BGS Entrance B", ""),
             ("(0xAA) GL - Floor 3 B", "(0xAA) GL - Floor 3 B", ""),
             ("(0xAB) GL - Floor 9 B", "(0xAB) GL - Floor 9 B", ""),
             ("(0xAC) GL - Floor 8 - Path to Quiz B", "(0xAC) GL - Floor 8 - Path to Quiz B", ""),
             ("(0xAD) GL - Boss B", "(0xAD) GL - Boss B", "")
         ]
     )
-    collision_checkboxes : bpy.props.BoolVectorProperty(
-        name="Collision Flags",
-        description="Set the Collision Flags of the Selected Material.",
-        size=len(Dicts.COLLISION_FLAGS.keys()),
-        default = (False,)*len(Dicts.COLLISION_FLAGS.keys()),
-        update = collision_checkboxes_changed
+    SFX_value_enum : bpy.props.EnumProperty(
+        name="SFX Value",
+        description="SFX Value Enum to determine Surface Sound",
+        default="Normal",
+        items = [(key, key, "") for key in Dicts.COLLISION_SFX.keys()]
     )
+
+# RNA subscription thingy; Subscribe to some object/param and get notified if it changes
+# (unfortunately only detects changes from GUI-panels or py-API; NOT VIEWPORT !)
+
+# def msgbus_callback(*args):
+#     print("CHANGE in mat")
+
+# bpy.msgbus.subscribe_rna(
+#     key=(bpy.types.Object, "active_material_index"),
+#     owner=object(),
+#     args=(),
+#     notify=msgbus_callback
+# )
 
 # PT elements are GUI Panels to collect and arrange Features + Props
 class BINJO_PT_main_panel(bpy.types.Panel):
@@ -328,6 +402,7 @@ class BINJO_PT_main_panel(bpy.types.Panel):
         row = layout.row()
         row.prop(context.scene.binjo_props, "highlight_invis")
 
+
 # PT elements are GUI Panels to collect and arrange Features + Props
 class BINJO_PT_material_panel(bpy.types.Panel):
     bl_label = "BINjo Tools"
@@ -335,68 +410,64 @@ class BINJO_PT_material_panel(bpy.types.Panel):
     bl_region_type = "WINDOW"
     bl_context = 'material'
     bl_options = {"HIDE_HEADER"} # this forces the panel to the top in the stack as a side-effect
-    
+
+
+
     def draw(self, context):
+        # update_collision_dict_hidden(context)
         layout = self.layout
 
-        row = layout.row()
-        row.operator("material.add_val")
-        row = layout.row()
-        row.operator("material.get_val")
-
         box = layout.box()
-        row = box.row()
+        
+        inner_box = box.box()
+        head_row = inner_box.row()
+        head_row.label(text=f"BINjo Material Collision Editor")
 
-        update_collision_dict_hidden(context)
-        if ("import_Object" in context.scene.collection.objects.keys()):
-            
-            target_object = context.scene.collection.objects["import_Object"]
-            mat = target_object.active_material
-            flag_cnt = len(Dicts.COLLISION_FLAGS.keys())
+        row = box.row()
+        row.prop(context.scene.binjo_props, "show_all_coll_flags", text="Show all Collision Flags")
+        
+        mat = None
+        if (context.active_object is not None):
+            mat = context.active_object.active_material
 
             if (mat is not None):
 
+                row = box.row()
+                row.prop(context.scene.binjo_props, "collision_disabled", index=0, text="Collision disabled entirely")
+
+                sfx_row = box.row()
+                sfx_row.prop(context.scene.binjo_props, "SFX_value_enum", text="Sound Effect")
+
+                element_row = box.row()
+                element_columns = (element_row.column(), element_row.column())
+                
+                # determine how many rows will be needed for the display
+                if (context.scene.binjo_props.show_all_coll_flags == True):
+                    display_row_cnt = (len(Dicts.COLLISION_FLAGS.keys()) // 2)
+                if (context.scene.binjo_props.show_all_coll_flags == False):
+                    display_row_cnt = 5
+
+                displayed_elements = 0
+                for idx, key in enumerate(mat["Collision_Flags"].keys()):
+                    # if the toggle to show all flags is OFF, skip those that should be skipped
+                    if ((context.scene.binjo_props.show_all_coll_flags == False) and ("UNK" in key or "(" in key)):
+                        continue
+                    # if the element is the SFX value, skip it (handled further up in sfx_row)
+                    if (key == "SFX Value"):
+                        continue
+                    # draw the element
+                    element_columns[displayed_elements // display_row_cnt].prop(
+                        context.scene.binjo_props, "collision_checkboxes",
+                        index=idx, text=key
+                    )
+                    displayed_elements += 1
+
+        if (context.scene.binjo_props.show_all_coll_flags == True):
+            row = box.row()
+            if (mat is not None):
                 row.label(text=f"Selected Material: {mat.name}")
-                rows = [box.row() for __ in range(flag_cnt // 2)]
-                
-                for idx, key in enumerate(mat["Collision"].keys()):
-                    row = rows[idx % (flag_cnt // 2)]
-                    row.prop(context.scene.binjo_props, "collision_checkboxes", index=idx, text=key)
-                
             else:
-                row.label(text="No Selection")
-        else:
-            row.label(text="No Selection")
-
-
-
-class BINJO_OT_add_val(bpy.types.Operator):
-    """Export the model to a BIN File"""
-    bl_idname = "material.add_val"
-    bl_label = "ADD"
-    bl_options = {'REGISTER'}
-
-    def execute(self, context):                 # execute() is called when running the operator.
-        target_object = context.scene.collection.objects["import_Object"]
-        mat = target_object.active_material
-        if (mat is not None):
-            mat["Collision"]["Slippery"] = True
-        return {'FINISHED'}
-
-class BINJO_OT_get_val(bpy.types.Operator):
-    """Export the model to a BIN File"""
-    bl_idname = "material.get_val"
-    bl_label = "GET"
-    bl_options = {'REGISTER'}
-
-    def execute(self, context):                 # execute() is called when running the operator.
-        target_object = context.scene.collection.objects["import_Object"]
-        mat = target_object.active_material
-        if (mat is not None):
-            for key in mat["Collision"].keys():
-                print(f"{key}: {mat['Collision'][key]}")
-                
-        return {'FINISHED'}
+                row.label(text="No Material Selected")
 
 
 
@@ -415,7 +486,11 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
         new_ModelBin = ModelBIN()
 
         # grab the targetted object (NOTE: should grab every object later... ugh)
-        target_object = context.scene.collection.objects["import_Object"]
+        if (context.active_object is None):
+            self.report({'ERROR'}, f"No Object selected to be exported !")
+            return {'CANCELLED'}
+
+        target_object = context.active_object
         color_attribute = target_object.data.color_attributes["import_Color"]
         uv_layer = target_object.data.uv_layers["import_UV"]
         # remember current mode, and set it to OBJECT for the time being
@@ -623,7 +698,10 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
                 tex_node = mat.node_tree.nodes.new("ShaderNodeTexImage")
                 tex_node.name = "TEX"
                 tex_node.location = [-600, +300]
-                tex_node.image = binjo_mat.IMG
+                tex_node.image = binjo_mat.Blender_IMG
+                if (tex_node.image is not None):
+                    tex_node.image.filepath_raw = f"{context.scene.binjo_props.export_path}/{tex_node.image.name}"
+                    tex_node.image.save()
             
                 # color node (RGB+A)
                 color_node = mat.node_tree.nodes.new("ShaderNodeVertexColor")
@@ -651,9 +729,11 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
                 # and link color node's alpha output to mat alpha input
                 mat.node_tree.links.new(color_node.outputs["Alpha"], mat.node_tree.nodes[0].inputs["Alpha"])
 
-                mat["Collision"] = ModelBIN_ColSeg.get_collision_flag_dict(
+                mat["Collision_Disabled"] = bool("NOCOLL" in mat.name)
+                mat["Collision_Flags"] = ModelBIN_ColSeg.get_collision_flag_dict(
                     initial_value=ModelBIN_ColSeg.get_colltype_from_mat_name(mat.name)
                 )
+                mat["Collision_SFX"] = ModelBIN_ColSeg.get_SFX_from_mat_name(mat.name)
                 imported_object.data.materials.append(mat)
 
             loop_ids = []
@@ -719,9 +799,7 @@ classes = [
     BINJO_PT_material_panel,
     BINJO_OT_import_from_ROM,
     BINJO_OT_export_to_BIN,
-    BINJO_OT_dump_images,
-    BINJO_OT_add_val,
-    BINJO_OT_get_val
+    BINJO_OT_dump_images
 ]
 
 def register():
@@ -733,6 +811,7 @@ def register():
             bpy.utils.register_class(entry)
     # and create a props object
     bpy.types.Scene.binjo_props = bpy.props.PointerProperty(type=BINJO_Properties)
+    bpy.app.handlers.depsgraph_update_pre.append(general_update_function)
 
 def unregister():
     for entry in reversed(classes):
@@ -742,6 +821,7 @@ def unregister():
             pass
     # and delete the props object
     del bpy.types.Scene.binjo_props
+    bpy.app.handlers.depsgraph_update_pre.remove(general_update_function)
 
 # This allows you to run the script directly from Blender's Text editor
 # to test the add-on without having to install it.

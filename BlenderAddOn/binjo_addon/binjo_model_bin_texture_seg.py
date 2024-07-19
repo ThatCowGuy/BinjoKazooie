@@ -149,19 +149,13 @@ class ModelBIN_TexElem:
             self.width, self.height
         )
 
-        # to see if this is ran from blenders API or not, just use a try-catch block that will throw if bpy is inexistent
-        try:
-            self.IMG = bpy.data.images.new("tmp", width=self.width, height=self.height)
-            # Blenders bpy.data.images expects the RGBA values to range inbetween (0.0, 1.0) instead of (0, 255)
-            blender_pixels = [float(val / 255.0) for val in self.color_pixels.flatten()]
-            self.IMG.pixels = blender_pixels
-            self.IMG.file_format = 'PNG'
-            self.is_blender = True
-        except:
-            from PIL import Image
-            self.IMG = Image.frombytes("RGBA", (self.width, self.height), self.color_pixels.flatten())
-            self.IMG.save(f"exports/pic_{binjo_utils.to_decal_hex(self.datasection_offset_data, 4)}.png")
-            self.is_blender = False
+        self.Blender_IMG = bpy.data.images.new("tmp", width=self.width, height=self.height)
+        self.Blender_IMG.file_format = 'PNG'
+        # Blenders bpy.data.images expects the RGBA values to range inbetween (0.0, 1.0) instead of (0, 255)
+        blender_pixels = [float(val / 255.0) for val in self.color_pixels.flatten()]
+        self.Blender_IMG.pixels = blender_pixels
+
+        
 
     def build_from_IMG(IMG):
         tex = ModelBIN_TexElem()

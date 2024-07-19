@@ -186,13 +186,28 @@ class ModelBIN_ColSeg:
         # group(1) is actually the first group, because group(0) is reserved for the full-match...
         return int(match.group(1), 0x10)
 
+    def get_SFX_from_mat_name(mat_name):
+        coll_type = ModelBIN_ColSeg.get_colltype_from_mat_name(mat_name)
+        if (coll_type is None):
+            return 0
+
+        SFX_val = binjo_utils.apply_bitmask(coll_type, 0b00000000_00000000_00001111_00000000)
+        print(binjo_utils.to_decal_hex(coll_type, 4), SFX_val, Dicts.COLLISION_SFX_REV[SFX_val])
+        return SFX_val
+
+
     def get_colltype_from_mat(mat):
-        if ("NOCOLL" in mat.name):
+        if (mat["Collision_Disabled"] == True):
             return None
+            
         coll_type = 0x0000_0000
-        for key in mat["Collision"].keys():
-            if (mat["Collision"][key] == True):
+
+        # add all the set flags to the coll_type
+        for key in mat["Collision_Flags"].keys():
+            if (mat["Collision_Flags"][key] == True):
                 coll_type += Dicts.COLLISION_FLAGS[key]
+        # as well as the SFX value
+        coll_type += (mat["Collision_SFX"] << 8)
         return coll_type
 
     def get_collision_flag_dict(initial_value=0x0000_0000):

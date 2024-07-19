@@ -257,13 +257,13 @@ class BinjoMaterial:
     
     def link_image_object(self, TexSeg):
         if (self.img_alias == "INVIS"):
-            self.IMG = None
+            self.Blender_IMG = None
             return
         if (self.img_alias == "FLAT"):
-            self.IMG = None
+            self.Blender_IMG = None
             return
         tex_id = TexSeg.get_tex_ID_from_datasection_offset(int(self.img_alias, base=16))
-        self.IMG = TexSeg.tex_elements[tex_id].IMG
+        self.Blender_IMG = TexSeg.tex_elements[tex_id].Blender_IMG
 
     def __eq__(self, other):
         return (self.name == other.name)
