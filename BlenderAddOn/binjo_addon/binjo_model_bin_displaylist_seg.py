@@ -6,6 +6,9 @@ from . binjo_dicts import Dicts
 
 class DisplayList_Command:
 
+    OtherMode_SET = 0x00008000
+    OtherMode_CLEAR = 0x00000000
+
     def __init__(self, upper=0x00, lower=0x00, full=0x00):
         if (full != 0x00):
             self.full = full
@@ -310,11 +313,20 @@ class DisplayList_Command:
         cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_RDPPIPESYNC"], 56, 8)
         return cmd
     
-    def G_SETCOMBINE():
+    def G_SETCOMBINE(mode=0):
         cmd = 0x00
         cmd |= binjo_utils.shift_cut(Dicts.F3DEX_CMD_NAMES["G_SETCOMBINE"], 56, 8)
-        cmd |= binjo_utils.shift_cut(0x00129804, 32, 24)
-        cmd |= binjo_utils.shift_cut(0x3F15FFFF, 0, 32)
+        if (mode == 0):
+            cmd |= binjo_utils.shift_cut(0x00129804, 32, 24)
+            cmd |= binjo_utils.shift_cut(0x3F15FFFF, 0, 32)
+        # no clue what the difference is (yet) but MMM and GV use these aswell,
+        # probably for transparency drawing
+        if (mode == 1):
+            cmd |= binjo_utils.shift_cut(0x00269804, 32, 24)
+            cmd |= binjo_utils.shift_cut(0x1F14FFFF, 0, 32)
+        if (mode == 2):
+            cmd |= binjo_utils.shift_cut(0x0062FE04, 32, 24)
+            cmd |= binjo_utils.shift_cut(0x3F15F9FF, 0, 32)
         return cmd
 
     def G_DL(final, segment, seg_address):
@@ -420,6 +432,10 @@ class ModelBIN_DLSeg:
         self.command_list = command_list
         # check if the list is terminated and terminate it if it wasn't
         if (self.command_list[-1].command_name != "G_ENDDL"):
+            # unset the OtherMode bits...
+            self.command_list.append(DisplayList_Command(full=
+                DisplayList_Command.G_SetOtherMode_H(("G_MDSFT_TEXTLUT"), 2, DisplayList_Command.DisplayList_Command.OtherMode_CLEAR)
+            ))
             self.command_list.append(DisplayList_Command(full=
                 DisplayList_Command.G_ENDDL()
             ))
@@ -459,7 +475,7 @@ class ModelBIN_DLSeg:
         return DL_command_chunk
 
 
-    def build_setup_commands(tex_element):
+    def build_setup_commands(tex_element, mode=0):
         command_list = []
 
         if (tex_element.tex_type == Dicts.TEX_TYPES["CI4"]):
@@ -501,7 +517,7 @@ class ModelBIN_DLSeg:
                 DisplayList_Command.G_LOADTLUT(1, 16)
             ))
             command_list.append(DisplayList_Command(full=
-                DisplayList_Command.G_SetOtherMode_H(("G_MDSFT_TEXTLUT"), 2, 0x00008000)
+                DisplayList_Command.G_SetOtherMode_H(("G_MDSFT_TEXTLUT"), 2, DisplayList_Command.OtherMode_SET)
             ))
 
             texel_cnt = (tex_element.width * tex_element.height)
@@ -568,7 +584,7 @@ class ModelBIN_DLSeg:
                 DisplayList_Command.G_RDPPIPESYNC()
             ))
             command_list.append(DisplayList_Command(full=
-                DisplayList_Command.G_SETCOMBINE()
+                DisplayList_Command.G_SETCOMBINE(mode=0)
             ))
             command_list.append(DisplayList_Command(full=
                 DisplayList_Command.G_DL(False, "Mode", 0x20)

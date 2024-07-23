@@ -143,6 +143,7 @@ class ModelBIN_TexElem:
         # === 0x00 ===============================
         self.data_size = img_data_size
         self.img_data = binjo_utils.get_bytes(data, file_offset_data, self.data_size)
+        self.contains_transparency = binjo_utils.check_IMG_data_for_transparency(self.img_data, self.tex_type)
         self.palette, self.color_pixels = binjo_utils.convert_img_data_to_pixels(
             self.img_data,
             self.tex_type,
@@ -165,6 +166,7 @@ class ModelBIN_TexElem:
         # type + data
         tex.tex_type = Dicts.TEX_TYPES["CI4"]
         tex.image_formatted_data, tex.color_pixels = binjo_utils.convert_RGBA32_IMG_to_bytes(IMG, tex.tex_type)
+        tex.contains_transparency = binjo_utils.check_IMG_data_for_transparency(tex.image_formatted_data, tex.tex_type)
         tex.data_size = len(tex.image_formatted_data)
         return tex
 

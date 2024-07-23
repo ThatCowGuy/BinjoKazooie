@@ -390,6 +390,22 @@ def convert_IMG_pixels_into_palette_indices(IMG_color_pixels, palette):
 
 
 
+def check_IMG_data_for_transparency(IMG_data, tex_type):
+    # in both CI formats, it suffices to check the palette for an alpha entry;
+    # all colors are RGBA8888 in CI palettes, and we only need to check the A component
+    if (tex_type == "CI4"):
+        for i in range(0, 0x10):
+            if (IMG_data[int((i*4) + 3)] < 0xFF):
+                return True
+        return False
+    if (tex_type == "CI8"):
+        for i in range(0, 0x100):
+            if (IMG_data[int((i*4) + 3)] < 0xFF):
+                return True
+        return False
+    # unsupported tex_types...
+    return False
+
 def convert_RGBA32_IMG_to_bytes(IMG, tex_type):
 
     if (tex_type == Dicts.TEX_TYPES["CI4"]): # C4 or CI4; 16 RGBA5551-colors, pixels are encoded per row as 4bit IDs

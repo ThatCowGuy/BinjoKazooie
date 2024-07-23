@@ -17,25 +17,30 @@ import bpy
 from bpy.app.handlers import persistent
 # https://docs.blender.org/api/current/bpy_types_enum_items/operator_return_items.html
 # https://docs.blender.org/api/current/bpy_types_enum_items/wm_report_items.html#rna-enum-wm-report-items
-import bmesh
-
-# multi file addon workflow
-# https:#b3d.interplanety.org/en/creating-multifile-add-on-for-blender/ <-- looks promising
-# https:#blender.stackexchange.com/questions/202570/multi-files-to-addon
+# http://www.network-science.de/ascii/
 
 bl_info = {
     "name": "BINjo-Kazooie",
     "blender": (3, 4, 1),
     "category": "Object",
 }
-
 bin_handler = None
+
+
+
+#===========================================================================================================
+#    __  __            __        __           ______                     __   _                    
+#   / / / /____   ____/ /____ _ / /_ ___     / ____/__  __ ____   _____ / /_ (_)____   ____   _____
+#  / / / // __ \ / __  // __ `// __// _ \   / /_   / / / // __ \ / ___// __// // __ \ / __ \ / ___/
+# / /_/ // /_/ // /_/ // /_/ // /_ /  __/  / __/  / /_/ // / / // /__ / /_ / // /_/ // / / /(__  ) 
+# \____// .___/ \__,_/ \__,_/ \__/ \___/  /_/     \__,_//_/ /_/ \___/ \__//_/ \____//_/ /_//____/  
+#      /_/  
+#===========================================================================================================
 
 def highlight_invis_changed(self, context):
     # and check for object and active-mat existence
     if (context.active_object is None):
         return
-    
     target_object = context.active_object
     color_attribute = target_object.data.color_attributes["import_Color"]
     for face in target_object.data.polygons:
@@ -107,12 +112,17 @@ def general_update_function(scene):
             context.scene.binjo_props.SFX_value_enum = Dicts.COLLISION_SFX_REV[mat["Collision_SFX"]]
 
     disable_collision_update_function = False
-    
-    
 
-def update_collision_dict_hidden(context):
-    pass
 
+
+#===========================================================================================================
+#     ____   ____ __  __            ____                                   __   _            
+#    / __ ) / __ \\ \/ /           / __ \ _____ ____   ____   ___   _____ / /_ (_)___   _____
+#   / __  |/ /_/ / \  /  ______   / /_/ // ___// __ \ / __ \ / _ \ / ___// __// // _ \ / ___/
+#  / /_/ // ____/  / /  /_____/  / ____// /   / /_/ // /_/ //  __// /   / /_ / //  __/(__  ) 
+# /_____//_/      /_/           /_/    /_/    \____// .___/ \___//_/    \__//_/ \___//____/  
+#                                                  /_/                                    
+#===========================================================================================================
 
 # Properties are data elements that show up in the GUI Panel
 class BINJO_Properties(bpy.types.PropertyGroup):
@@ -136,6 +146,11 @@ class BINJO_Properties(bpy.types.PropertyGroup):
         default="",
         maxlen=1024,
         subtype='NONE'
+    )
+    force_model_A : bpy.props.BoolProperty(
+        name="Enforce Model-A Only",
+        description="Force everything to export only to Model-A.",
+        default = False
     )
     highlight_invis : bpy.props.BoolProperty(
         name="Highlight INVIS Mats",
@@ -350,19 +365,17 @@ class BINJO_Properties(bpy.types.PropertyGroup):
         items = [(key, key, "") for key in Dicts.COLLISION_SFX.keys()],
         update = collision_SFX_changed
     )
+    
 
-# RNA subscription thingy; Subscribe to some object/param and get notified if it changes
-# (unfortunately only detects changes from GUI-panels or py-API; NOT VIEWPORT !)
 
-# def msgbus_callback(*args):
-#     print("CHANGE in mat")
-
-# bpy.msgbus.subscribe_rna(
-#     key=(bpy.types.Object, "active_material_index"),
-#     owner=object(),
-#     args=(),
-#     notify=msgbus_callback
-# )
+#===========================================================================================================
+#     ____   ____ __  __            ____                       __     
+#    / __ ) / __ \\ \/ /           / __ \ ____ _ ____   ___   / /_____
+#   / __  |/ /_/ / \  /  ______   / /_/ // __ `// __ \ / _ \ / // ___/
+#  / /_/ // ____/  / /  /_____/  / ____// /_/ // / / //  __// /(__  ) 
+# /_____//_/      /_/           /_/     \__,_//_/ /_/ \___//_//____/  
+#                                                             
+#===========================================================================================================
 
 # PT elements are GUI Panels to collect and arrange Features + Props
 class BINJO_PT_main_panel(bpy.types.Panel):
@@ -396,8 +409,10 @@ class BINJO_PT_main_panel(bpy.types.Panel):
         row.operator("export.dump_images")
 
         row = layout.row()
-        row.prop(context.scene.binjo_props, "highlight_invis")
+        row.prop(context.scene.binjo_props, "force_model_A")
 
+        row = layout.row()
+        row.prop(context.scene.binjo_props, "highlight_invis")
 
 # PT elements are GUI Panels to collect and arrange Features + Props
 class BINJO_PT_material_panel(bpy.types.Panel):
@@ -406,8 +421,6 @@ class BINJO_PT_material_panel(bpy.types.Panel):
     bl_region_type = "WINDOW"
     bl_context = 'material'
     bl_options = {"HIDE_HEADER"} # this forces the panel to the top in the stack as a side-effect
-
-
 
     def draw(self, context):
         # update_collision_dict_hidden(context)
@@ -468,6 +481,15 @@ class BINJO_PT_material_panel(bpy.types.Panel):
 
 
 
+#===========================================================================================================
+#     ______                           __ 
+#    / ____/_  __ ____   ____   _____ / /_
+#   / __/  | |/_// __ \ / __ \ / ___// __/
+#  / /___ _>  < / /_/ // /_/ // /   / /_  
+# /_____//_/|_|/ .___/ \____//_/    \__/  
+#             /_/    
+#===========================================================================================================
+
 class BINJO_OT_export_to_BIN(bpy.types.Operator):
     """Export the model to a BIN File"""
     bl_idname = "export.to_bin"
@@ -480,7 +502,8 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
         scene = context.scene
 
         global bin_handler
-        new_ModelBin = ModelBIN()
+        new_ModelBin_A = ModelBIN()
+        new_ModelBin_B = ModelBIN()
 
         # grab the targetted object (NOTE: should grab every object later... ugh)
         if (context.active_object is None):
@@ -502,6 +525,11 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
         loaded_mat_cnt = len(loaded_materials)
         material_is_used = [False] * loaded_mat_cnt
         for face in target_object.data.polygons:
+            # filter out materials that are not BINjo-related
+            binjo_version = loaded_materials[face.material_index].get("BINjo_Version", None)
+            if (binjo_version is None):
+                continue
+            # otherwise mark the material as being used
             material_is_used[face.material_index] = True
 
         tex_list = []
@@ -522,7 +550,9 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                 tex_list.append(tex)
             # finally, add the material to our dictionary to find the tex-index easily later
             material_tex_index_dict[mat.name] = tex_list.index(tex)
-        new_ModelBin.TexSeg.populate_from_elements(tex_list)
+        # this is also kinda stupid for A/B Model split but can be fixed later
+        new_ModelBin_A.TexSeg.populate_from_elements(tex_list)
+        new_ModelBin_B.TexSeg.populate_from_elements(tex_list)
         
         print(f"({timer() - export_timer:.3f}s) -- Done.")
         export_timer = timer()
@@ -546,17 +576,26 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
             # otherwise we are good
             polygon_list_list[face.material_index].append(face)
             
-        extracted_vertices = []
-        extracted_tris = []
-        DL_command_list = []
-        collision_tris = []
+        extracted_vertices_A = []
+        extracted_vertices_B = []
+        DL_command_list_A = []
+        DL_command_list_B = []
+        collision_tris_A = []
+        collision_tris_B = []
+
         # now we can iterate over the sorted lists
         for polygon_list in polygon_list_list:
             # if the list is empty, it features an unused material
             if (len(polygon_list) == 0):
                 continue
-            # figure out which mat is assigned to this list
             rep_poly = polygon_list[0]
+
+            # filter out materials that are not actually being used
+            # (Non-Binjo Materials will also be fitlered out here as a side-effect)
+            if (material_is_used[rep_poly.material_index] == False):
+                continue
+
+            # figure out which mat is assigned to this list
             assigned_mat = target_object.data.materials[rep_poly.material_index]
             
             # and gather the collision-type from it
@@ -564,16 +603,24 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
 
             # as well as the tex_id through the material-dict from before
             tex_id = material_tex_index_dict[assigned_mat.name]
+            tex_contains_transparency = False
             if (tex_id >= 0):
-                tex = new_ModelBin.TexSeg.tex_elements[tex_id]
-                setup_commands = ModelBIN_DLSeg.build_setup_commands(tex)
-                DL_command_list.extend(setup_commands)
+                # ATTENTION: this will 100% break when I clean up the A/B split some more...
+                tex = new_ModelBin_A.TexSeg.tex_elements[tex_id]
+                tex_contains_transparency = tex.contains_transparency
+                # this is stupid, but good enough for now
+                setup_commands_A = ModelBIN_DLSeg.build_setup_commands(tex, mode=0)
+                setup_commands_B = ModelBIN_DLSeg.build_setup_commands(tex, mode=0)
+                DL_command_list_A.extend(setup_commands_A)
+                DL_command_list_B.extend(setup_commands_B)
 
             # this list will hold just a couple of same-tex tris, so I can bunch them
             # up and send them to the DL one big VTX-load + TRI-N command-chunk
-            buffered_tris = []
+            buffered_tris_A = []
+            buffered_tris_B = []
             for polygon in polygon_list:
 
+                vtx_triplet = []
                 for (vertex_idx, loop_idx) in zip(polygon.vertices, polygon.loop_indices):
                     # get the XYZ coord containers, RGBA shade containers and UV coord containers
                     coords = target_object.data.vertices[vertex_idx].co
@@ -588,64 +635,124 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                     vtx = ModelBIN_VtxElem.build_from_model_data(x, y, z, r, g, b, a, u_transf, v_transf)
                     if (tex_id >= 0):
                         vtx.reverse_UV_transforms(tex.width, tex.height)
-                    extracted_vertices.append(vtx)
-                
-                # then build a tri from the newest 3 vertices
-                tri = ModelBIN_TriElem()
-                vtx_cnt = len(extracted_vertices)
-                tri.build_from_parameters((vtx_cnt - 3), (vtx_cnt - 2), (vtx_cnt - 1), coll_type=coll_type, tex_id=tex_id)
-                tri.vtx_1 = extracted_vertices[(vtx_cnt - 3)]
-                tri.vtx_2 = extracted_vertices[(vtx_cnt - 2)]
-                tri.vtx_3 = extracted_vertices[(vtx_cnt - 1)]
-                extracted_tris.append(tri)
+                    vtx_triplet.append(vtx)
 
-                # if the previously determined coll-type is not None, add it to the collision tris
-                if (coll_type is not None):
-                    collision_tris.append(tri)
-                # and if it has a valid tex_id, create the aforementioned DL command chunk for the buffered tris
-                if (tex_id >= 0):
-                    buffered_tris.append(tri)
-                    # if we reached 10 buffered tris, we dump them into a tri-drawing chunk and flush it
-                    # (the DL VTX-Buffer can hold 0x20==32 verts; 10 tris have 30 verts)
-                    if (len(buffered_tris) == 10): 
-                        DL_command_list.extend(ModelBIN_DLSeg.build_tri_drawing_commands(buffered_tris))
-                        buffered_tris = []
+                face_contains_transparency = False
+                for vtx in vtx_triplet:
+                    if (vtx.a < 0xFF):
+                        face_contains_transparency = True
+                        break
+                
+                if (
+                    context.scene.binjo_props.force_model_A == True or \
+                    (tex_contains_transparency == False and face_contains_transparency == False)
+                ):
+                    # add the triplet to the list of extracted verts
+                    extracted_vertices_A.extend(vtx_triplet)
+
+                    # then build a tri from the newest 3 vertices
+                    tri = ModelBIN_TriElem()
+                    vtx_cnt_A = len(extracted_vertices_A)
+                    tri.build_from_parameters((vtx_cnt_A - 3), (vtx_cnt_A - 2), (vtx_cnt_A - 1), coll_type=coll_type, tex_id=tex_id)
+                    tri.vtx_1 = vtx_triplet[0]
+                    tri.vtx_2 = vtx_triplet[1]
+                    tri.vtx_3 = vtx_triplet[2]
+
+                    # if the previously determined coll-type is not None, add it to the collision tris
+                    if (coll_type is not None):
+                        collision_tris_A.append(tri)
+                    # and if it has a valid tex_id, create the aforementioned DL command chunk for the buffered tris
+                    if (tex_id >= 0):
+                        buffered_tris_A.append(tri)
+                        # if we reached 10 buffered tris, we dump them into a tri-drawing chunk and flush it
+                        # (the DL VTX-Buffer can hold 0x20==32 verts; 10 tris have 30 verts)
+                        if (len(buffered_tris_A) == 10): 
+                            DL_command_list_A.extend(ModelBIN_DLSeg.build_tri_drawing_commands(buffered_tris_A))
+                            buffered_tris_A = []
+                else:
+                    # add the triplet to the list of extracted verts
+                    extracted_vertices_B.extend(vtx_triplet)
+
+                    # then build a tri from the newest 3 vertices
+                    tri = ModelBIN_TriElem()
+                    vtx_cnt_B = len(extracted_vertices_B)
+                    tri.build_from_parameters((vtx_cnt_B - 3), (vtx_cnt_B - 2), (vtx_cnt_B - 1), coll_type=coll_type, tex_id=tex_id)
+                    tri.vtx_1 = vtx_triplet[0]
+                    tri.vtx_2 = vtx_triplet[1]
+                    tri.vtx_3 = vtx_triplet[2]
+
+                    # if the previously determined coll-type is not None, add it to the collision tris
+                    if (coll_type is not None):
+                        collision_tris_B.append(tri)
+                    # and if it has a valid tex_id, create the aforementioned DL command chunk for the buffered tris
+                    if (tex_id >= 0):
+                        buffered_tris_B.append(tri)
+                        # if we reached 10 buffered tris, we dump them into a tri-drawing chunk and flush it
+                        # (the DL VTX-Buffer can hold 0x20==32 verts; 10 tris have 30 verts)
+                        if (len(buffered_tris_B) == 10): 
+                            DL_command_list_B.extend(ModelBIN_DLSeg.build_tri_drawing_commands(buffered_tris_B))
+                            buffered_tris_B = []
 
             # now the polygon loop is over; check if some buffered tris are left over
-            if (tex_id >= 0 and len(buffered_tris) > 0):
-                DL_command_list.extend(ModelBIN_DLSeg.build_tri_drawing_commands(buffered_tris))
+            if (tex_id >= 0 and len(buffered_tris_A) > 0):
+                DL_command_list_A.extend(ModelBIN_DLSeg.build_tri_drawing_commands(buffered_tris_A))
+            if (tex_id >= 0 and len(buffered_tris_B) > 0):
+                DL_command_list_B.extend(ModelBIN_DLSeg.build_tri_drawing_commands(buffered_tris_B))
         
-        # build the VTX-Seg from the extracted vertices
-        new_ModelBin.VtxSeg.populate_from_vtx_list(extracted_vertices)
+        # use the count of extracted A-model VTXs to determine if we need a A-Model at all
+        # (this is moreso just a sanity check incase some User tries something silly like creating an only-alpha map...)
+        if (len(extracted_vertices_A) > 0):
+            # build the VTX-Seg from the extracted vertices
+            new_ModelBin_A.VtxSeg.populate_from_vtx_list(extracted_vertices_A)
+            # + the Collision-Seg from the collected collision tris
+            new_ModelBin_A.ColSeg.populate_from_collision_tri_list(collision_tris_A)
+            # + the DL-Seg from the constructed DL-command list
+            new_ModelBin_A.DLSeg.populate_from_command_list(DL_command_list_A)
+            # we can also build the GeoLayout Segment in this very crude default way...
+            new_ModelBin_A.GeoSeg.build_from_minmax(
+                min_x=new_ModelBin_A.VtxSeg.min_x, 
+                min_y=new_ModelBin_A.VtxSeg.min_y,
+                min_z=new_ModelBin_A.VtxSeg.min_z,
+                max_x=new_ModelBin_A.VtxSeg.max_x,
+                max_y=new_ModelBin_A.VtxSeg.max_y,
+                max_z=new_ModelBin_A.VtxSeg.max_z
+            )
+            # and export Model-A
+            new_ModelBin_A.export_to_BIN(filename=f"{context.scene.binjo_props.export_path}/test_A.bin")
 
-        # + the Collision-Seg from the collected collision tris
-        new_ModelBin.ColSeg.populate_from_collision_tri_list(collision_tris)
-
-        # + the DL-Seg from the constructed DL-command list
-        new_ModelBin.DLSeg.populate_from_command_list(DL_command_list)
-
-        # we can also build the GeoLayout Segment in this very crude default way...
-        new_ModelBin.GeoSeg.build_from_minmax(
-            min_x=new_ModelBin.VtxSeg.min_x, 
-            min_y=new_ModelBin.VtxSeg.min_y,
-            min_z=new_ModelBin.VtxSeg.min_z,
-            max_x=new_ModelBin.VtxSeg.max_x,
-            max_y=new_ModelBin.VtxSeg.max_y,
-            max_z=new_ModelBin.VtxSeg.max_z
-        )
+        # use the count of extracted B-model VTXs to determine if we need a B-Model at all
+        if (len(extracted_vertices_B) > 0):
+            new_ModelBin_B.VtxSeg.populate_from_vtx_list(extracted_vertices_B)
+            new_ModelBin_B.ColSeg.populate_from_collision_tri_list(collision_tris_B)
+            new_ModelBin_B.DLSeg.populate_from_command_list(DL_command_list_B)
+            new_ModelBin_B.GeoSeg.build_from_minmax(
+                min_x=new_ModelBin_B.VtxSeg.min_x, 
+                min_y=new_ModelBin_B.VtxSeg.min_y,
+                min_z=new_ModelBin_B.VtxSeg.min_z,
+                max_x=new_ModelBin_B.VtxSeg.max_x,
+                max_y=new_ModelBin_B.VtxSeg.max_y,
+                max_z=new_ModelBin_B.VtxSeg.max_z
+            )
+            new_ModelBin_B.export_to_BIN(filename=f"{context.scene.binjo_props.export_path}/test_B.bin")
 
         print(f"({timer() - export_timer:.3f}s) -- Done.")
         export_timer = timer()
 
-
-
         # reset object to original mode, export the collected data to BIN
         bpy.ops.object.mode_set(mode=original_mode)
-        new_ModelBin.export_to_BIN(filename=f"{context.scene.binjo_props.export_path}/test.bin")
         print(f"FULL TIME: {timer() - export_timer_start:.3f}s")
         return { 'FINISHED' }
 
 
+
+#===========================================================================================================
+#     ____                                __ 
+#    /  _/____ ___   ____   ____   _____ / /_
+#    / / / __ `__ \ / __ \ / __ \ / ___// __/
+#  _/ / / / / / / // /_/ // /_/ // /   / /_  
+# /___//_/ /_/ /_// .___/ \____//_/    \__/  
+#                /_/  
+#===========================================================================================================
 
 # OT elements are Operators, which basically are callable Blender-Commands
 class BINJO_OT_import_from_ROM(bpy.types.Operator):
@@ -730,6 +837,7 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
                 )
                 mat["Collision_SFX"] = ModelBIN_ColSeg.get_SFX_from_mat_name(mat.name)
                 imported_object.data.materials.append(mat)
+                mat["BINjo_Version"] = "0.1.0"
 
             loop_ids = []
             for (face, tri) in zip(imported_mesh.polygons, bin_handler.model_object.complete_tri_list):
@@ -784,6 +892,17 @@ class BINJO_OT_dump_images(bpy.types.Operator):
         bin_handler.dump_image_files_to(path=path)
         return {'FINISHED'}
 
+
+
+
+#===========================================================================================================
+#     ____   ____ __  __            ____                             __                    
+#    / __ ) / __ \\ \/ /           / __ \ ____   ___   _____ ____ _ / /_ ____   _____ _____
+#   / __  |/ /_/ / \  /  ______   / / / // __ \ / _ \ / ___// __ `// __// __ \ / ___// ___/
+#  / /_/ // ____/  / /  /_____/  / /_/ // /_/ //  __// /   / /_/ // /_ / /_/ // /   (__  ) 
+# /_____//_/      /_/            \____// .___/ \___//_/    \__,_/ \__/ \____//_/   /____/  
+#                                     /_/           
+#===========================================================================================================
 
 
 
