@@ -191,7 +191,8 @@ class Dicts:
         "UNK_05":               0b00000000_00000000_00000000_00100000,
         "Untrottable Slope":    0b00000000_00000000_00000000_01000000,
         "UNK_07":               0b00000000_00000000_00000000_10000000,
-        "SFX Value":            0b00000000_00000000_00011111_00000000, # 5b Integer that references a list of SFXs
+        # "SFX Value":          0b00000000_00000000_00001111_00000000, # 4b Integer that references a list of SFXs
+        "UNK_0C":               0b00000000_00000000_00010000_00000000,
         "Damage":               0b00000000_00000000_00100000_00000000,
         "(0E) DMG rel. 1":      0b00000000_00000000_01000000_00000000, # used by damage func "core2/code_16010.c/func_8029D968"
         "(0F) DMG rel. 2":      0b00000000_00000000_10000000_00000000, # used by damage func "core2/code_16010.c/func_8029D968"
@@ -221,7 +222,8 @@ class Dicts:
         "UNK_05":               "",
         "Untrottable Slope":    "Makes BK slip after 1s regardless of Movestate; Transformations are unaffected",
         "UNK_07":               "",
-        "SFX Value":            "A 5b Integer Value used to index into a Table of SFXs", # 5b Integer that references a list of SFXs
+        # "SFX Value":            "A 4b Integer Value used to index into a Table of SFXs", # 4b Integer that references a list of SFXs
+        "UNK_0C":               "",
         "Damage":               "BK take Damage on this Surface in intervals; Makes you move slowly aswell (Map constrained !)",
         "(0E) DMG rel. 1":      "used by the Damaging-Func in some fashion", # used by damage func "core2/code_16010.c/func_8029D968"
         "(0F) DMG rel. 2":      "used by the Damaging-Func in some fashion", # used by damage func "core2/code_16010.c/func_8029D968"
@@ -243,40 +245,40 @@ class Dicts:
         "Use Default SFXs":     "If this is set, the SFX Value indexes into the Default Table; If not, use a different local Table",
     }
     COLLISION_SFX = {
-        "Normal"   : 0b0000,
-        "Metallic" : 0b0001,
-        "Hollow"   : 0b0010,
-        "Stone"    : 0b0011,
-        "Woodden"  : 0b0100,
-        "Snowy"    : 0b0101,
-        "Rustling" : 0b0110,
-        "Swampy"   : 0b0111,
-        "Sandy"    : 0b1000,
-        "Slushy"   : 0b1001,
-        "UNK_0A"   : 0b1010,
-        "UNK_0B"   : 0b1011,
-        "UNK_0C"   : 0b1100,
-        "UNK_0D"   : 0b1101,
-        "UNK_0E"   : 0b1110,
-        "UNK_0F"   : 0b1111
+        "Normal"    : 0b0000,
+        "Metal"     : 0b0001,
+        "Hollow"    : 0b0010,
+        "Stone"     : 0b0011,
+        "Wood"      : 0b0100,
+        "Snow"      : 0b0101, # AND slippy !
+        "Rustling"  : 0b0110,
+        "Mud"       : 0b0111,
+        "Sand"      : 0b1000,
+        "Slushy"    : 0b1001,
+        "unused_0A" : 0b1010,
+        "unused_0B" : 0b1011,
+        "unused_0C" : 0b1100,
+        "unused_0D" : 0b1101,
+        "unused_0E" : 0b1110,
+        "unused_0F" : 0b1111
     }
     COLLISION_SFX_REV = {
         0b0000: "Normal",
-        0b0001: "Metallic",
+        0b0001: "Metal",
         0b0010: "Hollow",
         0b0011: "Stone",
-        0b0100: "Woodden",
-        0b0101: "Snowy",
+        0b0100: "Woodn",
+        0b0101: "Snow",
         0b0110: "Rustling",
-        0b0111: "Swampy",
-        0b1000: "Sandy",
+        0b0111: "Mud",
+        0b1000: "Sand",
         0b1001: "Slushy",
-        0b1010: "UNK_0A",
-        0b1011: "UNK_0B",
-        0b1100: "UNK_0C",
-        0b1101: "UNK_0D",
-        0b1110: "UNK_0E",
-        0b1111: "UNK_0F"
+        0b1010: "unused_0A",
+        0b1011: "unused_0B",
+        0b1100: "unused_0C",
+        0b1101: "unused_0D",
+        0b1110: "unused_0E",
+        0b1111: "unused_0F"
     }
 
     TEXEL_FMT_BITSIZE = {

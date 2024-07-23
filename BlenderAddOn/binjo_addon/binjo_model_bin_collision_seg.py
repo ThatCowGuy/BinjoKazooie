@@ -204,6 +204,9 @@ class ModelBIN_ColSeg:
 
         # add all the set flags to the coll_type
         for key in mat["Collision_Flags"].keys():
+            if (key == "SFX Value"):
+                print(mat["Collision_Flags"][key])
+                continue
             if (mat["Collision_Flags"][key] == True):
                 coll_type += Dicts.COLLISION_FLAGS[key]
         # as well as the SFX value

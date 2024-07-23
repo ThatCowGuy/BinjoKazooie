@@ -82,7 +82,8 @@ def collision_SFX_changed(self, context):
         if (context.active_object is not None):
             mat = context.active_object.active_material
             if (mat is not None):
-                mat["Collision_SFX"] = context.scene.binjo_props.SFX_value_enum
+                print(mat["Collision_SFX"], "<<<", context.scene.binjo_props.SFX_value_enum, Dicts.COLLISION_SFX[context.scene.binjo_props.SFX_value_enum])
+                mat["Collision_SFX"] = Dicts.COLLISION_SFX[context.scene.binjo_props.SFX_value_enum]
 
 
 @persistent
@@ -102,6 +103,7 @@ def general_update_function(scene):
             # as well as the collision-enabled state
             context.scene.binjo_props.collision_disabled[0] = bool(mat["Collision_Disabled"])
             # and the collision SFX
+            print(mat["Collision_SFX"], Dicts.COLLISION_SFX_REV[mat["Collision_SFX"]], ">>>", context.scene.binjo_props.SFX_value_enum, Dicts.COLLISION_SFX[context.scene.binjo_props.SFX_value_enum])
             context.scene.binjo_props.SFX_value_enum = Dicts.COLLISION_SFX_REV[mat["Collision_SFX"]]
 
     disable_collision_update_function = False
@@ -147,13 +149,6 @@ class BINJO_Properties(bpy.types.PropertyGroup):
         size=1,
         default = (False,) * 1,
         update = collision_disabled_changed
-    )
-    collision_SFX : bpy.props.IntVectorProperty(
-        name="Collision SFX",
-        description="Determines the Sound Effect that plays when BK collides with this Surface",
-        size=1,
-        default = (False,) * 1,
-        update = collision_SFX_changed
     )
     collision_checkboxes : bpy.props.BoolVectorProperty(
         name="Collision Flags",
@@ -352,7 +347,8 @@ class BINJO_Properties(bpy.types.PropertyGroup):
         name="SFX Value",
         description="SFX Value Enum to determine Surface Sound",
         default="Normal",
-        items = [(key, key, "") for key in Dicts.COLLISION_SFX.keys()]
+        items = [(key, key, "") for key in Dicts.COLLISION_SFX.keys()],
+        update = collision_SFX_changed
     )
 
 # RNA subscription thingy; Subscribe to some object/param and get notified if it changes
@@ -443,7 +439,8 @@ class BINJO_PT_material_panel(bpy.types.Panel):
                 
                 # determine how many rows will be needed for the display
                 if (context.scene.binjo_props.show_all_coll_flags == True):
-                    display_row_cnt = (len(Dicts.COLLISION_FLAGS.keys()) // 2)
+                    # the +1 is basically like calling ceil() except without calling it
+                    display_row_cnt = ((len(Dicts.COLLISION_FLAGS.keys()) + 1) // 2)
                 if (context.scene.binjo_props.show_all_coll_flags == False):
                     display_row_cnt = 5
 
@@ -500,22 +497,20 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
 
 
         print("Converting Material-Textures into TexSeg Data + Building TexSeg...")
-        # first, create a list of actually used materials within the model to avoid unneccessary exports
-        used_materials = []
+        # first, create a list that tracks actually used materials within the model to avoid unneccessary exports
         loaded_materials = target_object.data.materials
-        full_material_cnt = len(loaded_materials)
+        loaded_mat_cnt = len(loaded_materials)
+        material_is_used = [False] * loaded_mat_cnt
         for face in target_object.data.polygons:
-            if loaded_materials[face.material_index] not in used_materials:
-                used_materials.append(loaded_materials[face.material_index])
-                # if we added all materials like this, there is nothing else to check
-                if len(used_materials) == len(loaded_materials):
-                    break
+            material_is_used[face.material_index] = True
 
         tex_list = []
         material_tex_index_dict = {}
         # Create a BK Texture for every used Material (if it has an Image assigned) and create a Dict
-        for mat in used_materials:
-            # print(mat.name)
+        for idx, mat in enumerate(loaded_materials):
+            # skip it, if it's not actually being used
+            if (material_is_used[idx] == False):
+                continue
             # materials that dont rock a texture get (-1)
             if (mat.node_tree.nodes["TEX"].image == None):
                 material_tex_index_dict[mat.name] = -1
@@ -537,7 +532,7 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
         print(f"Extracting granular Model Information + Building VtxSeg, DLSeg, ColSeg...")
         # sort every face into its own sub-list, to sepperate them by Material
         # (this makes building the DLs easier)
-        polygon_list_list = [ [] for __ in range(len(used_materials))]
+        polygon_list_list = [ [] for __ in range(loaded_mat_cnt)]
 
         for face in target_object.data.polygons:
             # catch if the user tries to convert a non-triangulated model
@@ -557,10 +552,10 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
         collision_tris = []
         # now we can iterate over the sorted lists
         for polygon_list in polygon_list_list:
-
-            # figure out which mat is assigned to this list
+            # if the list is empty, it features an unused material
             if (len(polygon_list) == 0):
                 continue
+            # figure out which mat is assigned to this list
             rep_poly = polygon_list[0]
             assigned_mat = target_object.data.materials[rep_poly.material_index]
             
