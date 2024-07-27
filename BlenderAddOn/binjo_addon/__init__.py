@@ -14,6 +14,7 @@ from . binjo_model_bin_displaylist_seg import ModelBIN_DLSeg, DisplayList_Comman
 from . binjo_model_bin_geolayout_seg import ModelBIN_GeoSeg, ModelBIN_GeoCommandChain
 
 import bpy
+from bpy_extras.io_utils import ImportHelper
 from bpy.app.handlers import persistent
 # https://docs.blender.org/api/current/bpy_types_enum_items/operator_return_items.html
 # https://docs.blender.org/api/current/bpy_types_enum_items/wm_report_items.html#rna-enum-wm-report-items
@@ -87,7 +88,6 @@ def collision_SFX_changed(self, context):
         if (context.active_object is not None):
             mat = context.active_object.active_material
             if (mat is not None):
-                print(mat["Collision_SFX"], "<<<", context.scene.binjo_props.SFX_value_enum, Dicts.COLLISION_SFX[context.scene.binjo_props.SFX_value_enum])
                 mat["Collision_SFX"] = Dicts.COLLISION_SFX[context.scene.binjo_props.SFX_value_enum]
 
 
@@ -108,7 +108,6 @@ def general_update_function(scene):
             # as well as the collision-enabled state
             context.scene.binjo_props.collision_disabled[0] = bool(mat["Collision_Disabled"])
             # and the collision SFX
-            print(mat["Collision_SFX"], Dicts.COLLISION_SFX_REV[mat["Collision_SFX"]], ">>>", context.scene.binjo_props.SFX_value_enum, Dicts.COLLISION_SFX[context.scene.binjo_props.SFX_value_enum])
             context.scene.binjo_props.SFX_value_enum = Dicts.COLLISION_SFX_REV[mat["Collision_SFX"]]
 
     disable_collision_update_function = False
@@ -149,12 +148,12 @@ class BINJO_Properties(bpy.types.PropertyGroup):
     )
     force_model_A : bpy.props.BoolProperty(
         name="Enforce Model-A Only",
-        description="Force everything to export only to Model-A.",
+        description="Force everything to export into a singular Model-BIN.",
         default = False
     )
     highlight_invis : bpy.props.BoolProperty(
         name="Highlight INVIS Mats",
-        description="Highlight all the INVIS materials in Magenta; Those are usually Collision only.",
+        description="Highlight all the INVIS Materials in Magenta; Those are usually Collision only.",
         default = False,
         update = highlight_invis_changed
     )
@@ -254,8 +253,8 @@ class BINJO_Properties(bpy.types.PropertyGroup):
             ("(0x45) Unknown 04", "(0x45) Unknown 04", ""),
             ("(0x46) RBB - Rusty Bucket Bay A", "(0x46) RBB - Rusty Bucket Bay A", ""),
             ("(0x47) RBB - Rusty Bucket Bay B", "(0x47) RBB - Rusty Bucket Bay B", ""),
-            ("(0x48) RBB - Machine Room", "(0x48) RBB - Machine Room", ""),
-            ("(0x49) MISSING", "(0x49) MISSING", ""),
+            ("(0x48) RBB - Machine Room A", "(0x48) RBB - Machine Room A", ""),
+            ("(0x49) RBB - Machine Room B", "(0x48) RBB - Machine Room B", ""),
             ("(0x4A) RBB - Big Fish Warehouse A", "(0x4A) RBB - Big Fish Warehouse A", ""),
             ("(0x4B) RBB - Big Fish Warehouse B", "(0x4B) RBB - Big Fish Warehouse B", ""),
             ("(0x4C) RBB - Boat Room A", "(0x4C) RBB - Boat Room A", ""),
@@ -380,7 +379,7 @@ class BINJO_Properties(bpy.types.PropertyGroup):
 # PT elements are GUI Panels to collect and arrange Features + Props
 class BINJO_PT_main_panel(bpy.types.Panel):
     """ GUI Panel for stuff """
-    bl_label = "BINjo Tools"                # Panel Headline
+    bl_label = "BINjo Control Panel"        # Panel Headline
     bl_space_type = "VIEW_3D"               # Editting View under which to find the Panel
     bl_region_type = "UI"                   #
     bl_category = 'Tool'                    # Which Tab the Panel is located under
@@ -389,30 +388,53 @@ class BINJO_PT_main_panel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
 
+        # import from ROM
         row = layout.row()
-        row.prop(context.scene.binjo_props, "rom_path", text="ROM")
+        row.label(text="Source ROM :")
+        row = layout.row()
+        row.prop(context.scene.binjo_props, "rom_path", text="")
 
         row = layout.row()
-        row.label(text="Active Map:")
+        row.label(text="Targetted Map :")
         row = layout.row()
         row.prop(context.scene.binjo_props, "model_filename_enum", text="")
+
         row = layout.row()
         row.operator("import.from_rom")
+        row = layout.row()
+        row.operator("import.from_bin")
 
-        row = layout.row()
-        row.label(text="Export Path:")
-        row = layout.row()
-        row.prop(context.scene.binjo_props, "export_path")
+        # import from BIN
+        layout.split()
+        layout.split()
+
+        # export
+        # row = layout.row()
+        # row.label(text="Export Path:")
+        # row = layout.row()
+        # row.prop(context.scene.binjo_props, "export_path")
         row = layout.row()
         row.operator("export.to_bin")
-        row = layout.row()
-        row.operator("export.dump_images")
-
         row = layout.row()
         row.prop(context.scene.binjo_props, "force_model_A")
 
         row = layout.row()
+        row.operator("export.dump_images")
+
+        # control elements
+        row = layout.row()
+        row.operator("material.create_mat")
+        layout.split()
+        row = layout.row()
+        row.operator("material.change_mat_img")
+        layout.split()
+        layout.split()
+        row = layout.row()
+        row.operator("material.change_mat_img")
+
+        row = layout.row()
         row.prop(context.scene.binjo_props, "highlight_invis")
+
 
 # PT elements are GUI Panels to collect and arrange Features + Props
 class BINJO_PT_material_panel(bpy.types.Panel):
@@ -762,117 +784,263 @@ class BINJO_OT_import_from_ROM(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}           # Enable undo for the operator.
 
     def execute(self, context):                 # execute() is called when running the operator.
+        export_timer_start = timer()
+        export_timer = timer()
         scene = context.scene
 
         global bin_handler
-        bin_handler = BINjo_ModelBIN_Handler(scene.binjo_props.rom_path)
-        bin_handler.load_model_file(scene.binjo_props.model_filename_enum)
+        if (bin_handler is None or bin_handler.ROM_name != scene.binjo_props.rom_path):
+            bin_handler = BINjo_ModelBIN_Handler(rom_filename=scene.binjo_props.rom_path)
+        bin_handler.load_model_file_from_ROM(scene.binjo_props.model_filename_enum)
 
-        if (bin_handler.model_object is not None):
-            print("creating new object")
+        if (bin_handler.model_object is None):
+            self.report({'ERROR'}, f"No Model-Object could be pulled from the ROM !")
+            return {'CANCELLED'}
 
-            # setting up a new mesh for the scene
-            imported_mesh = bpy.data.meshes.new("import_Mesh")
-            imported_object = bpy.data.objects.new("import_Object", imported_mesh)
+        print("Creating new Object...")
+        # setting up a new mesh for the scene
+        imported_mesh = bpy.data.meshes.new("import_Mesh")
+        imported_object = bpy.data.objects.new("import_Object", imported_mesh)
+        
+        vertices    = bin_handler.model_object.vertex_coord_list
+        edges       = []
+        faces       = bin_handler.model_object.face_idx_list
+        imported_mesh.from_pydata(vertices, edges, faces)
+
+        # create over-arching layer/attribute elements
+        import_UV = imported_object.data.uv_layers.new(name="import_UV")
+        color_attribute = imported_mesh.attributes.new(name='import_Color', domain='CORNER', type='BYTE_COLOR')
+
+        # now create actual materials from the mat-names
+        for binjo_mat in bin_handler.model_object.mat_list:
+            mat = bpy.data.materials.new(binjo_mat.name)
             
-            vertices    = bin_handler.model_object.vertex_coord_list
-            edges       = []
-            faces       = bin_handler.model_object.face_idx_list
-            imported_mesh.from_pydata(vertices, edges, faces)
-
-            # create over-arching layer/attribute elements
-            import_UV = imported_object.data.uv_layers.new(name="import_UV")
-            color_attribute = imported_mesh.attributes.new(name='import_Color', domain='CORNER', type='BYTE_COLOR')
-
-            # now create actual materials from the mat-names
-            for binjo_mat in bin_handler.model_object.mat_list:
-                mat = bpy.data.materials.new(binjo_mat.name)
-                
-                # setting internal parameters within the mat
-                mat.use_nodes = True
-                mat.blend_method = "HASHED" # "HASHED" == Dithered Transparency
-                mat.shadow_method = "NONE"
-                mat.use_backface_culling = True
-                # setting exposed parameters within the mat
-                mat.node_tree.nodes["Principled BSDF"].inputs["Specular"].default_value = 0
-                
-                # texture node (NOTE that this will also assign "None" if the mat doesnt have an image)
-                tex_node = mat.node_tree.nodes.new("ShaderNodeTexImage")
-                tex_node.name = "TEX"
-                tex_node.location = [-600, +300]
-                tex_node.image = binjo_mat.Blender_IMG
-                if (tex_node.image is not None):
-                    tex_node.image.filepath_raw = f"{context.scene.binjo_props.export_path}/{tex_node.image.name}"
-                    tex_node.image.save()
+            # setting internal parameters within the mat
+            mat.use_nodes = True
+            mat.blend_method = "HASHED" # "HASHED" == Dithered Transparency
+            mat.shadow_method = "NONE"
+            mat.use_backface_culling = True
+            # setting exposed parameters within the mat
+            mat.node_tree.nodes["Principled BSDF"].inputs["Specular"].default_value = 0
             
-                # color node (RGB+A)
-                color_node = mat.node_tree.nodes.new("ShaderNodeVertexColor")
-                color_node.name = "RGBA"
-                new_x = (tex_node.location[0] + tex_node.width - color_node.width)
-                color_node.location = (new_x, 0)
-                color_node.layer_name = "import_Color" # this name is what's connecting the node to the attribute
+            # texture node (NOTE that this will also assign "None" if the mat doesnt have an image)
+            tex_node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+            tex_node.name = "TEX"
+            tex_node.location = [-600, +300]
+            tex_node.image = binjo_mat.Blender_IMG
+            if (tex_node.image is not None):
+                tex_node.image.filepath_raw = f"{context.scene.binjo_props.export_path}/{tex_node.image.name}"
+                tex_node.image.save()
+        
+            # color node (RGB+A)
+            color_node = mat.node_tree.nodes.new("ShaderNodeVertexColor")
+            color_node.name = "RGBA"
+            new_x = (tex_node.location[0] + tex_node.width - color_node.width)
+            color_node.location = (new_x, 0)
+            color_node.layer_name = "import_Color" # this name is what's connecting the node to the attribute
 
-                # mixer-node (texture * RGB)                  
-                mix_node_1 = mat.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_node_1.blend_type = "MULTIPLY"
-                mix_node_1.location = (-275, +300)
-                mix_node_1.inputs["Fac"].default_value = 1.0
+            # mixer-node (texture * RGB)                  
+            mix_node_1 = mat.node_tree.nodes.new("ShaderNodeMixRGB")
+            mix_node_1.blend_type = "MULTIPLY"
+            mix_node_1.location = (-275, +300)
+            mix_node_1.inputs["Fac"].default_value = 1.0
 
-                if ("INVIS" not in mat.name):
-                    # link tex and color nodes to mixer
-                    mat.node_tree.links.new(tex_node.outputs["Color"], mix_node_1.inputs["Color1"])
-                    mat.node_tree.links.new(color_node.outputs["Color"], mix_node_1.inputs["Color2"])
-                    # link mixer to base-color input in main-material node
-                    mat.node_tree.links.new(mix_node_1.outputs["Color"], mat.node_tree.nodes[0].inputs["Base Color"])
+            if ("INVIS" not in mat.name):
+                # link tex and color nodes to mixer
+                mat.node_tree.links.new(tex_node.outputs["Color"], mix_node_1.inputs["Color1"])
+                mat.node_tree.links.new(color_node.outputs["Color"], mix_node_1.inputs["Color2"])
+                # link mixer to base-color input in main-material node
+                mat.node_tree.links.new(mix_node_1.outputs["Color"], mat.node_tree.nodes[0].inputs["Base Color"])
+            else:
+                # and link the color node directly to the material
+                mat.node_tree.links.new(color_node.outputs["Color"], mat.node_tree.nodes[0].inputs["Base Color"])
+            
+            # and link color node's alpha output to mat alpha input
+            mat.node_tree.links.new(color_node.outputs["Alpha"], mat.node_tree.nodes[0].inputs["Alpha"])
+
+            mat["Collision_Disabled"] = bool("NOCOLL" in mat.name)
+            mat["Collision_Flags"] = ModelBIN_ColSeg.get_collision_flag_dict(
+                initial_value=ModelBIN_ColSeg.get_colltype_from_mat_name(mat.name)
+            )
+            mat["Collision_SFX"] = ModelBIN_ColSeg.get_SFX_from_mat_name(mat.name)
+            imported_object.data.materials.append(mat)
+            mat["BINjo_Version"] = "0.1.0"
+
+        loop_ids = []
+        for (face, tri) in zip(imported_mesh.polygons, bin_handler.model_object.complete_tri_list):
+            # set material index of the face according to the data within tri
+            face.material_index = tri.mat_index
+            # and set the UV coords of the face through the loop indices
+            import_UV.data[face.loop_indices[0]].uv = (tri.vtx_1.transformed_U, tri.vtx_1.transformed_V)
+            import_UV.data[face.loop_indices[1]].uv = (tri.vtx_2.transformed_U, tri.vtx_2.transformed_V)
+            import_UV.data[face.loop_indices[2]].uv = (tri.vtx_3.transformed_U, tri.vtx_3.transformed_V)
+            
+            # aswell as the RGBA shades
+            if ("INVIS" in imported_object.data.materials[face.material_index].name):
+                # if the toggle is active
+                if (context.scene.binjo_props.highlight_invis == True):
+                    # pure collision tris will be drawn in magenta
+                    color_attribute.data[face.loop_indices[0]].color = (1.0, 0, 1.0, 1.0)
+                    color_attribute.data[face.loop_indices[1]].color = (1.0, 0, 1.0, 1.0)
+                    color_attribute.data[face.loop_indices[2]].color = (1.0, 0, 1.0, 1.0)
                 else:
-                    # and link the color node directly to the material
-                    mat.node_tree.links.new(color_node.outputs["Color"], mat.node_tree.nodes[0].inputs["Base Color"])
-                
-                # and link color node's alpha output to mat alpha input
-                mat.node_tree.links.new(color_node.outputs["Alpha"], mat.node_tree.nodes[0].inputs["Alpha"])
+                    # otherwise make them gray and fully transparent
+                    color_attribute.data[face.loop_indices[0]].color = (0.7, 0.7, 0.7, 0.0)
+                    color_attribute.data[face.loop_indices[1]].color = (0.7, 0.7, 0.7, 0.0)
+                    color_attribute.data[face.loop_indices[2]].color = (0.7, 0.7, 0.7, 0.0)
+            else:
+                # others get their vertex RGBA values assigned (regardless of textured or not)
+                color_attribute.data[face.loop_indices[0]].color = (tri.vtx_1.r/255, tri.vtx_1.g/255, tri.vtx_1.b/255, tri.vtx_1.a/255)
+                color_attribute.data[face.loop_indices[1]].color = (tri.vtx_2.r/255, tri.vtx_2.g/255, tri.vtx_2.b/255, tri.vtx_2.a/255)
+                color_attribute.data[face.loop_indices[2]].color = (tri.vtx_3.r/255, tri.vtx_3.g/255, tri.vtx_3.b/255, tri.vtx_3.a/255)
 
-                mat["Collision_Disabled"] = bool("NOCOLL" in mat.name)
-                mat["Collision_Flags"] = ModelBIN_ColSeg.get_collision_flag_dict(
-                    initial_value=ModelBIN_ColSeg.get_colltype_from_mat_name(mat.name)
-                )
-                mat["Collision_SFX"] = ModelBIN_ColSeg.get_SFX_from_mat_name(mat.name)
-                imported_object.data.materials.append(mat)
-                mat["BINjo_Version"] = "0.1.0"
+        scene.collection.objects.link(imported_object)
 
-            loop_ids = []
-            for (face, tri) in zip(imported_mesh.polygons, bin_handler.model_object.complete_tri_list):
-                # set material index of the face according to the data within tri
-                face.material_index = tri.mat_index
-                # and set the UV coords of the face through the loop indices
-                import_UV.data[face.loop_indices[0]].uv = (tri.vtx_1.transformed_U, tri.vtx_1.transformed_V)
-                import_UV.data[face.loop_indices[1]].uv = (tri.vtx_2.transformed_U, tri.vtx_2.transformed_V)
-                import_UV.data[face.loop_indices[2]].uv = (tri.vtx_3.transformed_U, tri.vtx_3.transformed_V)
-                
-                # aswell as the RGBA shades
-                if ("INVIS" in imported_object.data.materials[face.material_index].name):
-                    # if the toggle is active
-                    if (context.scene.binjo_props.highlight_invis == True):
-                        # pure collision tris will be drawn in magenta
-                        color_attribute.data[face.loop_indices[0]].color = (1.0, 0, 1.0, 1.0)
-                        color_attribute.data[face.loop_indices[1]].color = (1.0, 0, 1.0, 1.0)
-                        color_attribute.data[face.loop_indices[2]].color = (1.0, 0, 1.0, 1.0)
-                    else:
-                        # otherwise make them gray and fully transparent
-                        color_attribute.data[face.loop_indices[0]].color = (0.7, 0.7, 0.7, 0.0)
-                        color_attribute.data[face.loop_indices[1]].color = (0.7, 0.7, 0.7, 0.0)
-                        color_attribute.data[face.loop_indices[2]].color = (0.7, 0.7, 0.7, 0.0)
-                else:
-                    # others get their vertex RGBA values assigned (regardless of textured or not)
-                    color_attribute.data[face.loop_indices[0]].color = (tri.vtx_1.r/255, tri.vtx_1.g/255, tri.vtx_1.b/255, tri.vtx_1.a/255)
-                    color_attribute.data[face.loop_indices[1]].color = (tri.vtx_2.r/255, tri.vtx_2.g/255, tri.vtx_2.b/255, tri.vtx_2.a/255)
-                    color_attribute.data[face.loop_indices[2]].color = (tri.vtx_3.r/255, tri.vtx_3.g/255, tri.vtx_3.b/255, tri.vtx_3.a/255)
-
-            scene.collection.objects.link(imported_object)
-
-            # just some names to check if neccessary
-            print([e.name for e in bpy.data.materials[0].node_tree.nodes["Principled BSDF"].inputs])
+        # just some names to check if neccessary
+        print([e.name for e in bpy.data.materials[0].node_tree.nodes["Principled BSDF"].inputs])
+        print(f"({timer() - export_timer:.3f}s) -- Done.")
+        export_timer = timer()
 
         return { 'FINISHED' }
+
+# OT elements are Operators, which basically are callable Blender-Commands
+class BINJO_OT_import_from_BIN(bpy.types.Operator, ImportHelper):
+    """Import a model from a selected BIN directly"""
+    bl_idname = "import.from_bin"
+    bl_label = "Import from BIN"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):                 # execute() is called when running the operator.
+        export_timer_start = timer()
+        export_timer = timer()
+        scene = context.scene
+
+        global bin_handler
+        if (bin_handler is None):
+            bin_handler = BINjo_ModelBIN_Handler(rom_filename=None)
+        bin_handler.load_model_file_from_BIN(self.filepath)
+
+        if (bin_handler.model_object is None):
+            self.report({'ERROR'}, f"No Model-Object could be pulled from the ROM !")
+            return {'CANCELLED'}
+
+        print("Creating new Object...")
+        # setting up a new mesh for the scene
+        imported_mesh = bpy.data.meshes.new("import_Mesh")
+        imported_object = bpy.data.objects.new("import_Object", imported_mesh)
+        
+        vertices    = bin_handler.model_object.vertex_coord_list
+        edges       = []
+        faces       = bin_handler.model_object.face_idx_list
+        imported_mesh.from_pydata(vertices, edges, faces)
+
+        # create over-arching layer/attribute elements
+        import_UV = imported_object.data.uv_layers.new(name="import_UV")
+        color_attribute = imported_mesh.attributes.new(name='import_Color', domain='CORNER', type='BYTE_COLOR')
+
+        # now create actual materials from the mat-names
+        for binjo_mat in bin_handler.model_object.mat_list:
+            mat = bpy.data.materials.new(binjo_mat.name)
+            
+            # setting internal parameters within the mat
+            mat.use_nodes = True
+            mat.blend_method = "HASHED" # "HASHED" == Dithered Transparency
+            mat.shadow_method = "NONE"
+            mat.use_backface_culling = True
+            # setting exposed parameters within the mat
+            mat.node_tree.nodes["Principled BSDF"].inputs["Specular"].default_value = 0
+            
+            # texture node (NOTE that this will also assign "None" if the mat doesnt have an image)
+            tex_node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+            tex_node.name = "TEX"
+            tex_node.location = [-600, +300]
+            tex_node.image = binjo_mat.Blender_IMG
+            if (tex_node.image is not None):
+                tex_node.image.filepath_raw = f"{context.scene.binjo_props.export_path}/{tex_node.image.name}"
+                tex_node.image.save()
+        
+            # color node (RGB+A)
+            color_node = mat.node_tree.nodes.new("ShaderNodeVertexColor")
+            color_node.name = "RGBA"
+            new_x = (tex_node.location[0] + tex_node.width - color_node.width)
+            color_node.location = (new_x, 0)
+            color_node.layer_name = "import_Color" # this name is what's connecting the node to the attribute
+
+            # mixer-node (texture * RGB)                  
+            mix_node_1 = mat.node_tree.nodes.new("ShaderNodeMixRGB")
+            mix_node_1.blend_type = "MULTIPLY"
+            mix_node_1.location = (-275, +300)
+            mix_node_1.inputs["Fac"].default_value = 1.0
+
+            if ("INVIS" not in mat.name):
+                # link tex and color nodes to mixer
+                mat.node_tree.links.new(tex_node.outputs["Color"], mix_node_1.inputs["Color1"])
+                mat.node_tree.links.new(color_node.outputs["Color"], mix_node_1.inputs["Color2"])
+                # link mixer to base-color input in main-material node
+                mat.node_tree.links.new(mix_node_1.outputs["Color"], mat.node_tree.nodes[0].inputs["Base Color"])
+            else:
+                # and link the color node directly to the material
+                mat.node_tree.links.new(color_node.outputs["Color"], mat.node_tree.nodes[0].inputs["Base Color"])
+            
+            # and link color node's alpha output to mat alpha input
+            mat.node_tree.links.new(color_node.outputs["Alpha"], mat.node_tree.nodes[0].inputs["Alpha"])
+
+            mat["Collision_Disabled"] = bool("NOCOLL" in mat.name)
+            mat["Collision_Flags"] = ModelBIN_ColSeg.get_collision_flag_dict(
+                initial_value=ModelBIN_ColSeg.get_colltype_from_mat_name(mat.name)
+            )
+            mat["Collision_SFX"] = ModelBIN_ColSeg.get_SFX_from_mat_name(mat.name)
+            imported_object.data.materials.append(mat)
+            mat["BINjo_Version"] = "0.1.0"
+
+        loop_ids = []
+        for (face, tri) in zip(imported_mesh.polygons, bin_handler.model_object.complete_tri_list):
+            # set material index of the face according to the data within tri
+            face.material_index = tri.mat_index
+            # and set the UV coords of the face through the loop indices
+            import_UV.data[face.loop_indices[0]].uv = (tri.vtx_1.transformed_U, tri.vtx_1.transformed_V)
+            import_UV.data[face.loop_indices[1]].uv = (tri.vtx_2.transformed_U, tri.vtx_2.transformed_V)
+            import_UV.data[face.loop_indices[2]].uv = (tri.vtx_3.transformed_U, tri.vtx_3.transformed_V)
+            
+            # aswell as the RGBA shades
+            if ("INVIS" in imported_object.data.materials[face.material_index].name):
+                # if the toggle is active
+                if (context.scene.binjo_props.highlight_invis == True):
+                    # pure collision tris will be drawn in magenta
+                    color_attribute.data[face.loop_indices[0]].color = (1.0, 0, 1.0, 1.0)
+                    color_attribute.data[face.loop_indices[1]].color = (1.0, 0, 1.0, 1.0)
+                    color_attribute.data[face.loop_indices[2]].color = (1.0, 0, 1.0, 1.0)
+                else:
+                    # otherwise make them gray and fully transparent
+                    color_attribute.data[face.loop_indices[0]].color = (0.7, 0.7, 0.7, 0.0)
+                    color_attribute.data[face.loop_indices[1]].color = (0.7, 0.7, 0.7, 0.0)
+                    color_attribute.data[face.loop_indices[2]].color = (0.7, 0.7, 0.7, 0.0)
+            else:
+                # others get their vertex RGBA values assigned (regardless of textured or not)
+                color_attribute.data[face.loop_indices[0]].color = (tri.vtx_1.r/255, tri.vtx_1.g/255, tri.vtx_1.b/255, tri.vtx_1.a/255)
+                color_attribute.data[face.loop_indices[1]].color = (tri.vtx_2.r/255, tri.vtx_2.g/255, tri.vtx_2.b/255, tri.vtx_2.a/255)
+                color_attribute.data[face.loop_indices[2]].color = (tri.vtx_3.r/255, tri.vtx_3.g/255, tri.vtx_3.b/255, tri.vtx_3.a/255)
+
+        scene.collection.objects.link(imported_object)
+
+        # just some names to check if neccessary
+        print([e.name for e in bpy.data.materials[0].node_tree.nodes["Principled BSDF"].inputs])
+        print(f"({timer() - export_timer:.3f}s) -- Done.")
+        export_timer = timer()
+
+        return { 'FINISHED' }
+
+
+
+
+#===========================================================================================================
+#     ____   ____ __  __            ____                             __                    
+#    / __ ) / __ \\ \/ /           / __ \ ____   ___   _____ ____ _ / /_ ____   _____ _____
+#   / __  |/ /_/ / \  /  ______   / / / // __ \ / _ \ / ___// __ `// __// __ \ / ___// ___/
+#  / /_/ // ____/  / /  /_____/  / /_/ // /_/ //  __// /   / /_/ // /_ / /_/ // /   (__  ) 
+# /_____//_/      /_/            \____// .___/ \___//_/    \__,_/ \__/ \____//_/   /____/  
+#                                     /_/           
+#===========================================================================================================
 
 class BINJO_OT_dump_images(bpy.types.Operator):
     """Dump all the currently loaded Image Objects"""
@@ -892,18 +1060,105 @@ class BINJO_OT_dump_images(bpy.types.Operator):
         bin_handler.dump_image_files_to(path=path)
         return {'FINISHED'}
 
+# class BINJO_OT_change_mat_img(bpy.types.Operator):
+#     """Change the Image of the currently selected Material"""
+#     bl_idname = "material.change_mat_img"
+#     bl_label = "Change Mat IMG"
+#     bl_options = {'REGISTER', 'UNDO'}
 
+#     def execute(self, context):
+#         # check for object and active-mat existence
+#         if (context.active_object is not None):
+#             mat = context.active_object.active_material
+#             if (mat is not None):
+#                 IH = ImportHelper()
+#                 IH.invoke(context)
+#                 print(IH.filepath)
+#                 pass
 
+class BINJO_OT_change_mat_img(bpy.types.Operator, ImportHelper):
+    """Change the Image of the currently selected Material"""
+    bl_idname = "material.change_mat_img"
+    bl_label = "Change Material Image"
+    bl_options = {'REGISTER', 'UNDO'}
 
-#===========================================================================================================
-#     ____   ____ __  __            ____                             __                    
-#    / __ ) / __ \\ \/ /           / __ \ ____   ___   _____ ____ _ / /_ ____   _____ _____
-#   / __  |/ /_/ / \  /  ______   / / / // __ \ / _ \ / ___// __ `// __// __ \ / ___// ___/
-#  / /_/ // ____/  / /  /_____/  / /_/ // /_/ //  __// /   / /_/ // /_ / /_/ // /   (__  ) 
-# /_____//_/      /_/            \____// .___/ \___//_/    \__,_/ \__/ \____//_/   /____/  
-#                                     /_/           
-#===========================================================================================================
+    def execute(self, context):
+        # check for object and active-mat existence
+        if (context.active_object is None):
+            self.report({'ERROR'}, f"No Object selected !")
+            return {'CANCELLED'}
+        mat = context.active_object.active_material
+        if (mat is None):
+            self.report({'ERROR'}, f"No Material selected !")
+            return {'CANCELLED'}
+            
+        mat.node_tree.nodes["TEX"].image = bpy.data.images.load(self.filepath)
+        mat.node_tree.nodes["TEX"].image.filepath_raw = f"{self.filepath}"
 
+        print(self.filepath)
+        return {'FINISHED'}
+
+class BINJO_OT_create_mat(bpy.types.Operator, ImportHelper):
+    """Create a new BINjo Material"""
+    bl_idname = "material.create_mat"
+    bl_label = "Create new Material"
+    bl_options = {'REGISTER'}
+
+    def execute(self, context):
+        # check for object and active-mat existence
+        target_object = context.active_object
+        if (target_object is None):
+            self.report({'ERROR'}, f"No Object selected !")
+            return {'CANCELLED'}
+
+        mat = bpy.data.materials.new("new_mat")
+                
+        # setting internal parameters within the mat
+        mat.use_nodes = True
+        mat.blend_method = "HASHED" # "HASHED" == Dithered Transparency
+        mat.shadow_method = "NONE"
+        mat.use_backface_culling = True
+        # setting exposed parameters within the mat
+        mat.node_tree.nodes["Principled BSDF"].inputs["Specular"].default_value = 0
+                
+        # texture node (NOTE that this will also assign "None" if the mat doesnt have an image)
+        tex_node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+        tex_node.name = "TEX"
+        tex_node.location = [-600, +300]
+        tex_node.image = bpy.data.images.load(self.filepath)
+        if (tex_node.image is not None):
+            tex_node.image.filepath_raw = f"{self.filepath}"
+            
+        # color node (RGB+A)
+        color_node = mat.node_tree.nodes.new("ShaderNodeVertexColor")
+        color_node.name = "RGBA"
+        new_x = (tex_node.location[0] + tex_node.width - color_node.width)
+        color_node.location = (new_x, 0)
+        color_node.layer_name = "import_Color" # this name is what's connecting the node to the attribute
+
+        # mixer-node (texture * RGB)                  
+        mix_node_1 = mat.node_tree.nodes.new("ShaderNodeMixRGB")
+        mix_node_1.blend_type = "MULTIPLY"
+        mix_node_1.location = (-275, +300)
+        mix_node_1.inputs["Fac"].default_value = 1.0
+
+        # link tex and color nodes to mixer
+        mat.node_tree.links.new(tex_node.outputs["Color"], mix_node_1.inputs["Color1"])
+        mat.node_tree.links.new(color_node.outputs["Color"], mix_node_1.inputs["Color2"])
+        # link mixer to base-color input in main-material node
+        mat.node_tree.links.new(mix_node_1.outputs["Color"], mat.node_tree.nodes[0].inputs["Base Color"])
+        
+        # and link color node's alpha output to mat alpha input
+        mat.node_tree.links.new(color_node.outputs["Alpha"], mat.node_tree.nodes[0].inputs["Alpha"])
+
+        mat["Collision_Disabled"] = False
+        mat["Collision_Flags"] = ModelBIN_ColSeg.get_collision_flag_dict(0x0000_0000)
+        mat["Collision_Flags"]["Use Default SFXs"] = True
+        mat["Collision_SFX"] = Dicts.COLLISION_SFX["Normal"]
+        mat["BINjo_Version"] = "0.1.0"
+        target_object.data.materials.append(mat)
+        
+        return {'FINISHED'}
 
 
 # class list to abstract / loopify the reg() und unreg() funcs
@@ -912,8 +1167,11 @@ classes = [
     BINJO_PT_main_panel,
     BINJO_PT_material_panel,
     BINJO_OT_import_from_ROM,
+    BINJO_OT_import_from_BIN,
     BINJO_OT_export_to_BIN,
-    BINJO_OT_dump_images
+    BINJO_OT_dump_images,
+    BINJO_OT_change_mat_img,
+    BINJO_OT_create_mat
 ]
 
 def register():

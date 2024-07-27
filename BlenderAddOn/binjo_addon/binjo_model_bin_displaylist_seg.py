@@ -434,7 +434,7 @@ class ModelBIN_DLSeg:
         if (self.command_list[-1].command_name != "G_ENDDL"):
             # unset the OtherMode bits...
             self.command_list.append(DisplayList_Command(full=
-                DisplayList_Command.G_SetOtherMode_H(("G_MDSFT_TEXTLUT"), 2, DisplayList_Command.DisplayList_Command.OtherMode_CLEAR)
+                DisplayList_Command.G_SetOtherMode_H(("G_MDSFT_TEXTLUT"), 2, DisplayList_Command.OtherMode_CLEAR)
             ))
             self.command_list.append(DisplayList_Command(full=
                 DisplayList_Command.G_ENDDL()

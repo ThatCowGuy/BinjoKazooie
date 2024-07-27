@@ -9,7 +9,7 @@ class ModelBIN_Header:
         self.start_identifier   = 0x0000_000B
         self.geo_offset         = 0
         self.tex_offset         = 0x0038
-        self.geo_type           = 0
+        self.geo_type           = 0x0002 # tri-linear as default
         self.DL_offset          = 0
         # === 0x10 ========================================================
         self.vtx_offset         = 0

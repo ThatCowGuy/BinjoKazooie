@@ -267,7 +267,7 @@ class Dicts:
         0b0001: "Metal",
         0b0010: "Hollow",
         0b0011: "Stone",
-        0b0100: "Woodn",
+        0b0100: "Wood",
         0b0101: "Snow",
         0b0110: "Rustling",
         0b0111: "Mud",

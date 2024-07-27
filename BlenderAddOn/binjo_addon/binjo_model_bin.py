@@ -37,14 +37,18 @@ class ModelBIN:
         self.VtxSeg.populate_from_data(bin_data, self.Header.vtx_offset, vtx_cnt=self.Header.vtx_cnt)
         # Bone
         self.ColSeg.populate_from_data(bin_data, self.Header.coll_offset)
+        print("HI 1")
         self.ColSeg.link_vertex_objects_for_all_tris(self.VtxSeg.vtx_list)
+        print("HI 2")
         self.DLSeg.populate_from_data(bin_data, self.Header.DL_offset)
+        print("HI 3")
         # FX
         # FX_END
         # AnimTex
         # Geo ---- NOTE: Im currently ignoring this when building from ROM data
 
         self.build_complete_tri_list()
+        print("HI 4")
 
     def export_to_BIN(self, filename="default.bin"):
         output = bytearray()
@@ -80,6 +84,7 @@ class ModelBIN:
         if (self.DLSeg.valid == True):
             self.DLSeg.file_offset = current_filesize
             self.Header.DL_offset = self.DLSeg.file_offset
+            # self.Header.tri_cnt = self.DLSeg.DL_tri_cnt # might be neccessary at some point
             output += self.DLSeg.get_bytes()
             current_filesize = len(output)
             
