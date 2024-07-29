@@ -1162,8 +1162,26 @@ namespace Binjo
             {
                 chosen_filename = SFD.FileName;
                 File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
-                System.Console.WriteLine(String.Format("Saving Object File {0}...", chosen_filename));
+                System.Console.WriteLine(String.Format("Saving DL Text File {0}...", chosen_filename));
                 write_displaylist_text(chosen_filename);
+                return;
+            }
+            System.Console.WriteLine("Cancelled");
+            return;
+        }
+        public void export_geolayout_text()
+        {
+            string chosen_filename = Path.Combine(File_Handler.get_basedir_or_exports(), String.Format("{0}_GeoL.txt", this.loaded_bin_name));
+
+            SaveFileDialog SFD = new SaveFileDialog();
+            SFD.InitialDirectory = File_Handler.get_basedir_or_exports();
+            SFD.FileName = chosen_filename;
+            if (SFD.ShowDialog() == DialogResult.OK)
+            {
+                chosen_filename = SFD.FileName;
+                File_Handler.remembered_exports_path = Path.GetDirectoryName(chosen_filename);
+                System.Console.WriteLine(String.Format("Saving GeoL Text File {0}...", chosen_filename));
+                write_geolayout_text(chosen_filename);
                 return;
             }
             System.Console.WriteLine("Cancelled");
@@ -1202,6 +1220,20 @@ namespace Binjo
                         DisplayList_Segment.get_cmd_details(cmd)
                     ));
                     i += 0x08;
+                }
+            }
+        }
+        public void write_geolayout_text(string filepath)
+        {
+            List<String[]> GeoL_Content = this.geo_seg.get_content_of_elements();
+            using (StreamWriter output_txt = new StreamWriter(filepath))
+            {
+                foreach (String[] cmd_chain in GeoL_Content)
+                {
+                    output_txt.WriteLine("GeoCommand Chain:");
+                    output_txt.WriteLine(String.Format("{0}",
+                        cmd_chain[0]
+                    ));
                 }
             }
         }

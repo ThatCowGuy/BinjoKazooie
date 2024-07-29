@@ -77,6 +77,7 @@ namespace Binjo
             this.export_GLTF_button = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.panel8 = new System.Windows.Forms.Panel();
+            this.Converter_TexDataSize_Label = new System.Windows.Forms.Label();
             this.label18 = new System.Windows.Forms.Label();
             this.Converter_Format_ComBox = new System.Windows.Forms.ComboBox();
             this.Converter_Height_ComBox = new System.Windows.Forms.ComboBox();
@@ -90,7 +91,7 @@ namespace Binjo
             this.Converter_Load_Btn = new System.Windows.Forms.Button();
             this.Converter_Output_ImgBox = new System.Windows.Forms.PictureBox();
             this.Converter_Input_ImgBox = new System.Windows.Forms.PictureBox();
-            this.Converter_TexDataSize_Label = new System.Windows.Forms.Label();
+            this.export_GeoL_TXT_button = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
@@ -642,6 +643,7 @@ namespace Binjo
             // panel7
             // 
             this.panel7.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel7.Controls.Add(this.export_GeoL_TXT_button);
             this.panel7.Controls.Add(this.label10);
             this.panel7.Controls.Add(this.dataGridView7);
             this.panel7.Location = new System.Drawing.Point(559, 524);
@@ -732,6 +734,16 @@ namespace Binjo
             this.panel8.Size = new System.Drawing.Size(541, 195);
             this.panel8.TabIndex = 22;
             this.panel8.Paint += new System.Windows.Forms.PaintEventHandler(this.panel8_Paint);
+            // 
+            // Converter_TexDataSize_Label
+            // 
+            this.Converter_TexDataSize_Label.AutoSize = true;
+            this.Converter_TexDataSize_Label.ForeColor = System.Drawing.Color.White;
+            this.Converter_TexDataSize_Label.Location = new System.Drawing.Point(263, 168);
+            this.Converter_TexDataSize_Label.Name = "Converter_TexDataSize_Label";
+            this.Converter_TexDataSize_Label.Size = new System.Drawing.Size(126, 13);
+            this.Converter_TexDataSize_Label.TabIndex = 28;
+            this.Converter_TexDataSize_Label.Text = "Converted Tex DataSize:";
             // 
             // label18
             // 
@@ -905,15 +917,18 @@ namespace Binjo
             this.Converter_Input_ImgBox.TabStop = false;
             this.Converter_Input_ImgBox.Click += new System.EventHandler(this.pictureBox4_Click);
             // 
-            // Converter_TexDataSize_Label
+            // export_GeoL_TXT_button
             // 
-            this.Converter_TexDataSize_Label.AutoSize = true;
-            this.Converter_TexDataSize_Label.ForeColor = System.Drawing.Color.White;
-            this.Converter_TexDataSize_Label.Location = new System.Drawing.Point(263, 168);
-            this.Converter_TexDataSize_Label.Name = "Converter_TexDataSize_Label";
-            this.Converter_TexDataSize_Label.Size = new System.Drawing.Size(126, 13);
-            this.Converter_TexDataSize_Label.TabIndex = 28;
-            this.Converter_TexDataSize_Label.Text = "Converted Tex DataSize:";
+            this.export_GeoL_TXT_button.FlatAppearance.BorderColor = System.Drawing.Color.Silver;
+            this.export_GeoL_TXT_button.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Gray;
+            this.export_GeoL_TXT_button.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Gray;
+            this.export_GeoL_TXT_button.Location = new System.Drawing.Point(138, 6);
+            this.export_GeoL_TXT_button.Name = "export_GeoL_TXT_button";
+            this.export_GeoL_TXT_button.Size = new System.Drawing.Size(125, 23);
+            this.export_GeoL_TXT_button.TabIndex = 25;
+            this.export_GeoL_TXT_button.Text = "Export GeoL as TXT";
+            this.export_GeoL_TXT_button.UseVisualStyleBackColor = true;
+            this.export_GeoL_TXT_button.Click += new System.EventHandler(this.export_GeoL_TXT_button_Click);
             // 
             // BinjoKazooie
             // 
@@ -1042,6 +1057,7 @@ namespace Binjo
         private System.Windows.Forms.Label label18;
         private System.Windows.Forms.ComboBox Converter_Format_ComBox;
         private System.Windows.Forms.Label Converter_TexDataSize_Label;
+        private System.Windows.Forms.Button export_GeoL_TXT_button;
     }
 }
 

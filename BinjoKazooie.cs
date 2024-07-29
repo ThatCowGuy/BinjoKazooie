@@ -824,6 +824,10 @@ namespace Binjo
         {
             this.handler.export_displaylist_text();
         }
+        private void export_GeoL_TXT_button_Click(object sender, EventArgs e)
+        {
+            this.handler.export_geolayout_text();
+        }
 
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
