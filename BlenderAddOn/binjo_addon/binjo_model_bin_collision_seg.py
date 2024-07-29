@@ -140,7 +140,9 @@ class ModelBIN_ColSeg:
                 self.unique_tri_cnt += 1
 
         print(f"parsed {self.tri_cnt} collision tris within {self.geo_cube_cnt} cubes.")
-        print(f"{self.unique_tri_cnt} ({(100.0 * self.unique_tri_cnt / self.tri_cnt):.2f}%) of those tris are unique.")
+        unique_percentage = (100.0 * self.unique_tri_cnt / self.tri_cnt)
+        print(f"{self.unique_tri_cnt} ({unique_percentage:.2f}%) of those tris were unique;")
+        print(f" ==> Blender Model tri-cnt reduced by {100.0 - unique_percentage:.2f}%")
         self.valid = True
         return
 
@@ -181,7 +183,7 @@ class ModelBIN_ColSeg:
         # try getting a regex match from the material name (should be an attribute later)
         match = re.search(rf".*_.*(0x[0-9,A-F]+)", mat_name)
         if (match == None):
-            print(f"Couldnt parse coll_type from Material {mat_name}")
+            print(f"Couldn't parse coll_type from Material {mat_name}")
             return None
         # group(1) is actually the first group, because group(0) is reserved for the full-match...
         return int(match.group(1), 0x10)
@@ -192,7 +194,6 @@ class ModelBIN_ColSeg:
             return 0
 
         SFX_val = binjo_utils.apply_bitmask(coll_type, 0b00000000_00000000_00001111_00000000)
-        print(binjo_utils.to_decal_hex(coll_type, 4), SFX_val, Dicts.COLLISION_SFX_REV[SFX_val])
         return SFX_val
 
 

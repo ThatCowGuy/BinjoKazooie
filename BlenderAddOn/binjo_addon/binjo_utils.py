@@ -9,13 +9,15 @@ from . binjo_dicts import Dicts
 
 
 
-def to_decal_hex(val, dig):
+def to_decal_hex(val, dig, prefix="0x"):
+    if dig == 8:
+        return f"{prefix}{val:016X}"
     if dig == 4:
-        return f"0x{val:08X}"
+        return f"{prefix}{val:08X}"
     if dig == 2:
-        return f"0x{val:04X}"
+        return f"{prefix}{val:04X}"
     if dig == 1:
-        return f"0x{val:02X}"
+        return f"{prefix}{val:02X}"
 
 def read_bytes(data, offset, cnt, type="uint"):
     result = 0x00

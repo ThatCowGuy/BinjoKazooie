@@ -32,7 +32,7 @@ class ModelBIN_VtxSeg:
         self.center_y =     binjo_utils.read_bytes(file_data, file_offset + 0x0E, 2, type="signed")
         self.center_z =     binjo_utils.read_bytes(file_data, file_offset + 0x10, 2, type="signed")
         self.local_norm =   binjo_utils.read_bytes(file_data, file_offset + 0x12, 2, type="signed")
-        self.vtx_cnt =      binjo_utils.read_bytes(file_data, file_offset + 0x14, 2)
+        self.vtx_cnt =      binjo_utils.read_bytes(file_data, file_offset + 0x14, 2)                    // 2
         self.global_norm =  binjo_utils.read_bytes(file_data, file_offset + 0x16, 2, type="signed")
 
         # calculated properties

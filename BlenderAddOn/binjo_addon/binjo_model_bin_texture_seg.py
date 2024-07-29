@@ -63,11 +63,15 @@ class ModelBIN_TexSeg:
         self.tex_elements = []
         for tex in tex_list:
             tex.datasection_offset_data = self.data_size
-            self.data_size += tex.data_size
             tex.file_offset_meta = self.file_offset_meta + (self.tex_cnt * ModelBIN_TexElem.META_SIZE)
             self.tex_cnt += 1
             self.tex_elements.append(tex)
+            self.data_size += tex.data_size
         
+        # for the data size, dont forget to add the meta element sizes too !
+        self.data_size += ModelBIN_TexSeg.HEADER_SIZE
+        self.data_size += (self.tex_cnt * ModelBIN_TexElem.META_SIZE)
+
         self.meta_data_size = (self.tex_cnt * ModelBIN_TexElem.META_SIZE)
         self.full_header_size = ModelBIN_TexSeg.HEADER_SIZE + self.meta_data_size
         self.file_offset_data = self.file_offset + self.full_header_size
@@ -143,6 +147,7 @@ class ModelBIN_TexElem:
         # === 0x00 ===============================
         self.data_size = img_data_size
         self.img_data = binjo_utils.get_bytes(data, file_offset_data, self.data_size)
+
         self.contains_transparency = binjo_utils.check_IMG_data_for_transparency(self.img_data, self.tex_type)
         self.palette, self.color_pixels = binjo_utils.convert_img_data_to_pixels(
             self.img_data,

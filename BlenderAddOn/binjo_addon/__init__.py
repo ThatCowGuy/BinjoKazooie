@@ -566,6 +566,7 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                 material_tex_index_dict[mat.name] = -1
                 continue
             # create a tex object from the image data linked to this material
+            # this hurts a LOOOT...
             tex = ModelBIN_TexElem.build_from_IMG(mat.node_tree.nodes["TEX"].image)
             # and add it to our list if it is new
             if (tex not in tex_list):

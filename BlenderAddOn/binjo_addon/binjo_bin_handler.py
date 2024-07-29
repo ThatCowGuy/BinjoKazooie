@@ -55,8 +55,6 @@ class BINjo_ModelBIN_Handler:
             print(f"Cancelling Model instantiation...")
             return
 
-        print(len(model_file_data))
-
         self.model_object = ModelBIN()
         self.model_object.populate_from_data(model_file_data)
         self.model_object.arrange_mesh_data()

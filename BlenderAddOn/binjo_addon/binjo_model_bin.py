@@ -37,18 +37,14 @@ class ModelBIN:
         self.VtxSeg.populate_from_data(bin_data, self.Header.vtx_offset, vtx_cnt=self.Header.vtx_cnt)
         # Bone
         self.ColSeg.populate_from_data(bin_data, self.Header.coll_offset)
-        print("HI 1")
         self.ColSeg.link_vertex_objects_for_all_tris(self.VtxSeg.vtx_list)
-        print("HI 2")
         self.DLSeg.populate_from_data(bin_data, self.Header.DL_offset)
-        print("HI 3")
         # FX
         # FX_END
         # AnimTex
         # Geo ---- NOTE: Im currently ignoring this when building from ROM data
 
         self.build_complete_tri_list()
-        print("HI 4")
 
     def export_to_BIN(self, filename="default.bin"):
         output = bytearray()
@@ -249,8 +245,6 @@ class ModelBIN:
             if mat not in self.mat_list:
                 mat.link_image_object(self.TexSeg)
                 self.mat_list.append(mat)
-                print(f"appended MAT: {mat.name}")
-
             tri.mat_index = self.mat_list.index(mat)
         return
 
