@@ -13,7 +13,7 @@ class ModelBIN_VtxSeg:
         
     # it's not guaranteed that there is a proper VTX count inside this segment,
     # so pass over the one from the BIN Header segment instead
-    def populate_from_data(self, file_data, file_offset, vtx_cnt=0):
+    def populate_from_data(self, file_data, file_offset, bin_header_vtx_cnt=0):
         if file_offset == 0:
             print("No Vertex Segment")
             self.valid = False
@@ -35,9 +35,13 @@ class ModelBIN_VtxSeg:
         self.vtx_cnt =      binjo_utils.read_bytes(file_data, file_offset + 0x14, 2)
         self.global_norm =  binjo_utils.read_bytes(file_data, file_offset + 0x16, 2, type="signed")
 
-        # calculated properties
-        if (self.vtx_cnt == 0):
-            self.vtx_cnt = vtx_cnt
+        # if the vtx_cnt parsed from the VTX-Seg Header is different from the one from the BIN-Header,
+        # assume this is a mistake and give a warning on the console window
+        if (self.vtx_cnt != bin_header_vtx_cnt != 0):
+            print(f"parsed vtx-cnt from VTX-Seg ({self.vtx_cnt}) is different from BIN-Header vtx-cnt ({bin_header_vtx_cnt}) !")
+        # always assume the header count is more accurate !! (if it exists)
+        if (bin_header_vtx_cnt != 0):
+            self.vtx_cnt = bin_header_vtx_cnt
 
         self.vtx_list = []
         for idx in range(0, self.vtx_cnt):

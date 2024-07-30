@@ -34,7 +34,7 @@ class ModelBIN:
     def populate_from_data(self, bin_data):
         self.Header = ModelBIN_Header(bin_data)
         self.TexSeg.populate_from_data(bin_data, self.Header.tex_offset)
-        self.VtxSeg.populate_from_data(bin_data, self.Header.vtx_offset, vtx_cnt=self.Header.vtx_cnt)
+        self.VtxSeg.populate_from_data(bin_data, self.Header.vtx_offset, bin_header_vtx_cnt=self.Header.vtx_cnt)
         # Bone
         self.ColSeg.populate_from_data(bin_data, self.Header.coll_offset)
         self.ColSeg.link_vertex_objects_for_all_tris(self.VtxSeg.vtx_list)
