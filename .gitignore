@@ -6,8 +6,11 @@
 
 # and all types of binary data files
 *.bin
+*.bin*
 *.bak
+*.bak*
 *.blend
+*.blend*
 
 *__pycache__*
 *.cache

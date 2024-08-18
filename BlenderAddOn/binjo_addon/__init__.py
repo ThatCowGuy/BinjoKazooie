@@ -818,18 +818,21 @@ class BINJO_OT_create_model_from_bin_handler(bpy.types.Operator):
 
         print("Creating new Object...")
         # setting up a new mesh for the scene
-        aaa = bpy.data.meshes.new("import_Mesh").name
-        imported_mesh = bpy.data.meshes[aaa]
-        imported_object = bpy.data.objects.new("import_Object", imported_mesh)
+        new_mesh_name = bpy.data.meshes.new("import_Mesh").name
+        new_obj_name = bpy.data.objects.new("import_Object", bpy.data.meshes[new_mesh_name]).name
         
         vertices    = bin_handler.model_object.vertex_coord_list
         edges       = []
         faces       = bin_handler.model_object.face_idx_list
-        imported_mesh.from_pydata(vertices, edges, faces)
+        bpy.data.meshes[new_mesh_name].from_pydata(vertices, edges, faces)
 
         # create over-arching layer/attribute elements
-        import_UV = imported_object.data.uv_layers.new(name="import_UV")
-        color_attribute = imported_mesh.attributes.new(name='import_Color', domain='CORNER', type='BYTE_COLOR')
+        new_UV_name = bpy.data.objects[new_obj_name].data.uv_layers.new(name="import_UV").name
+        new_col_attr_name = bpy.data.meshes[new_mesh_name].attributes.new(
+            name='import_Color',
+            domain='CORNER',
+            type='BYTE_COLOR'
+        ).name
 
         # now create actual materials from the mat-names
         for binjo_mat in bin_handler.model_object.mat_list:
@@ -840,7 +843,6 @@ class BINJO_OT_create_model_from_bin_handler(bpy.types.Operator):
             tex_node = mat.node_tree.nodes["TEX"]
             tex_node.image = binjo_mat.Blender_IMG
             if (tex_node.image is not None):
-
                 if (os.path.isdir(context.scene.binjo_props.export_path) == False):
                     self.report({'WARNING'}, f"Export Path is not set to a viable Directory - Not saving tmp Images...")
                 elif (os.access(context.scene.binjo_props.export_path, (os.R_OK & os.W_OK)) == False):
@@ -856,37 +858,41 @@ class BINJO_OT_create_model_from_bin_handler(bpy.types.Operator):
             mat["Collision_SFX"] = ModelBIN_ColSeg.get_SFX_from_mat_name(mat.name)
 
             # and add it to the mat-list
-            imported_object.data.materials.append(mat)
+            bpy.data.objects[new_obj_name].data.materials.append(mat)
+
+        # since Im not creating new data, I can hold a ref to these now
+        UV_layer = bpy.data.objects[new_obj_name].data.uv_layers[new_UV_name]
+        col_attr = bpy.data.meshes[new_mesh_name].attributes[new_col_attr_name]
 
         loop_ids = []
-        for (face, tri) in zip(imported_mesh.polygons, bin_handler.model_object.complete_tri_list):
+        for (face, tri) in zip(bpy.data.meshes[new_mesh_name].polygons, bin_handler.model_object.complete_tri_list):
             # set material index of the face according to the data within tri
             face.material_index = tri.mat_index
             # and set the UV coords of the face through the loop indices
-            import_UV.data[face.loop_indices[0]].uv = (tri.vtx_1.transformed_U, tri.vtx_1.transformed_V)
-            import_UV.data[face.loop_indices[1]].uv = (tri.vtx_2.transformed_U, tri.vtx_2.transformed_V)
-            import_UV.data[face.loop_indices[2]].uv = (tri.vtx_3.transformed_U, tri.vtx_3.transformed_V)
+            UV_layer.data[face.loop_indices[0]].uv = (tri.vtx_1.transformed_U, tri.vtx_1.transformed_V)
+            UV_layer.data[face.loop_indices[1]].uv = (tri.vtx_2.transformed_U, tri.vtx_2.transformed_V)
+            UV_layer.data[face.loop_indices[2]].uv = (tri.vtx_3.transformed_U, tri.vtx_3.transformed_V)
             
             # aswell as the RGBA shades
-            if ("INVIS" in imported_object.data.materials[face.material_index].name):
+            if ("INVIS" in bpy.data.objects[new_obj_name].data.materials[face.material_index].name):
                 # if the toggle is active
                 if (context.scene.binjo_props.highlight_invis == True):
                     # pure collision tris will be drawn in magenta
-                    color_attribute.data[face.loop_indices[0]].color = (1.0, 0, 1.0, 1.0)
-                    color_attribute.data[face.loop_indices[1]].color = (1.0, 0, 1.0, 1.0)
-                    color_attribute.data[face.loop_indices[2]].color = (1.0, 0, 1.0, 1.0)
+                    col_attr.data[face.loop_indices[0]].color = (1.0, 0, 1.0, 1.0)
+                    col_attr.data[face.loop_indices[1]].color = (1.0, 0, 1.0, 1.0)
+                    col_attr.data[face.loop_indices[2]].color = (1.0, 0, 1.0, 1.0)
                 else:
                     # otherwise make them gray and fully transparent
-                    color_attribute.data[face.loop_indices[0]].color = (0.7, 0.7, 0.7, 0.0)
-                    color_attribute.data[face.loop_indices[1]].color = (0.7, 0.7, 0.7, 0.0)
-                    color_attribute.data[face.loop_indices[2]].color = (0.7, 0.7, 0.7, 0.0)
+                    col_attr.data[face.loop_indices[0]].color = (0.7, 0.7, 0.7, 0.0)
+                    col_attr.data[face.loop_indices[1]].color = (0.7, 0.7, 0.7, 0.0)
+                    col_attr.data[face.loop_indices[2]].color = (0.7, 0.7, 0.7, 0.0)
             else:
                 # others get their vertex RGBA values assigned (regardless of textured or not)
-                color_attribute.data[face.loop_indices[0]].color = (tri.vtx_1.r/255, tri.vtx_1.g/255, tri.vtx_1.b/255, tri.vtx_1.a/255)
-                color_attribute.data[face.loop_indices[1]].color = (tri.vtx_2.r/255, tri.vtx_2.g/255, tri.vtx_2.b/255, tri.vtx_2.a/255)
-                color_attribute.data[face.loop_indices[2]].color = (tri.vtx_3.r/255, tri.vtx_3.g/255, tri.vtx_3.b/255, tri.vtx_3.a/255)
+                col_attr.data[face.loop_indices[0]].color = (tri.vtx_1.r/255, tri.vtx_1.g/255, tri.vtx_1.b/255, tri.vtx_1.a/255)
+                col_attr.data[face.loop_indices[1]].color = (tri.vtx_2.r/255, tri.vtx_2.g/255, tri.vtx_2.b/255, tri.vtx_2.a/255)
+                col_attr.data[face.loop_indices[2]].color = (tri.vtx_3.r/255, tri.vtx_3.g/255, tri.vtx_3.b/255, tri.vtx_3.a/255)
 
-        scene.collection.objects.link(imported_object)
+        scene.collection.objects.link(bpy.data.objects[new_obj_name])
 
         # just some names to check if neccessary
         print([e.name for e in bpy.data.materials[0].node_tree.nodes["Principled BSDF"].inputs])
