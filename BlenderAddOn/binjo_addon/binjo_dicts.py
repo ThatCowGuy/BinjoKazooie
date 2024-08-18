@@ -8,6 +8,22 @@ class Dicts:
         "IA8":      0x10, # IA8 - each byte is a pixel; a nibble of intensity and a nibble of alpha
     }
 
+    TEXEL_FMT_BITSIZE = {
+        "CI4": 4,           "CI4 (5551)": 4,            0x01: 4,
+        "CI8": 8,           "CI8 (5551)": 8,            0x02: 8,
+        "RGBA16": 16,       "RGBA16 (5551)": 16,        0x04: 16,
+        "RGBA32": 32,       "RGBA32 (8888)": 32,        0x08: 32,
+        "IA8": 8,           "IA8 (44)": 8,              0x10: 8
+    }
+
+    TEX_TYPE_PALETTE_SIZE = {
+        "CI4": 0x20,        "CI4 (5551)": 0x20,         0x01: 0x20,
+        "CI8": 0x0200,      "CI8 (5551)": 0x0200,       0x02: 0x0200,
+        "RGBA16": 0x00,     "RGBA16 (5551)": 0x00,      0x04: 0x00,
+        "RGBA32": 0x00,     "RGBA32 (8888)": 0x00,      0x08: 0x00,
+        "IA8": 0x00,        "IA8 (44)": 0x00,           0x10: 0x00
+    }
+
     F3DEX_CMD_NAMES = {
         "G_SPNOOP"           : 0x00,
         "G_MTX"              : 0x01,
@@ -279,14 +295,6 @@ class Dicts:
         0b1101: "unused_0D",
         0b1110: "unused_0E",
         0b1111: "unused_0F"
-    }
-
-    TEXEL_FMT_BITSIZE = {
-        "RGBA32": 32,       "RGBA32 (8888)": 32,
-        "RGBA16": 16,       "RGBA16 (5551)": 16,
-        "CI8": 8,           "CI8 (5551)": 8,
-        "CI4": 4,           "CI4 (5551)": 4,
-        "IA8": 8,           "IA8 (44)": 8
     }
 
     RSP_GEOMODE_FLAGS = {

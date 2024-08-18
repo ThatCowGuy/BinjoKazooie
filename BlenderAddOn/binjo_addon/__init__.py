@@ -408,8 +408,12 @@ class BINJO_PT_main_panel(bpy.types.Panel):
         # import from BIN
         layout.split()
         layout.split()
+        # row = layout.row()
+        # row.label(text="Exporting :")
         row = layout.row()
-        row.label(text="Exporting :")
+        row.label(text="Set Export Path :")
+        row = layout.row()
+        row.prop(context.scene.binjo_props, "export_path", text="")
 
         row = layout.row()
         row.operator("conversion.to_bin")
@@ -531,6 +535,13 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
         export_timer_start = timer()
         export_timer = timer()
         scene = context.scene
+
+        if (os.path.isdir(context.scene.binjo_props.export_path) == False):
+            self.report({'ERROR'}, f"Export Path is not set to a viable Directory !")
+            return {'CANCELLED'}
+        if (os.access(context.scene.binjo_props.export_path, (os.R_OK & os.W_OK)) == False):
+            self.report({'ERROR'}, f"Incorrect Permissions for Export Path Directory !")
+            return {'CANCELLED'}
 
         global bin_handler
         new_ModelBin_A = ModelBIN()
@@ -656,8 +667,8 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                 for (vertex_idx, loop_idx) in zip(polygon.vertices, polygon.loop_indices):
                     # get the XYZ coord containers, RGBA shade containers and UV coord containers
                     coords = target_object.data.vertices[vertex_idx].co
-                    rgba =  color_attribute.data[loop_idx].color
-                    uvs = uv_layer.data[loop_idx].uv
+                    rgba   = color_attribute.data[loop_idx].color
+                    uvs    = uv_layer.data[loop_idx].uv
                     # and extract the individual values (and correct the coordinate system)
                     x, y, z = [round(coord) for coord in coords]
                     x, y, z = x, z, -y
@@ -675,6 +686,12 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                         face_contains_transparency = True
                         break
                 
+                # try to realign the UVs if they extend too far 
+                success = binjo_utils.realign_vtx_UVs(vtx_triplet, tex.width, tex.height)
+                if (success != 0):
+                    self.report({'ERROR'}, f"UVs of a Face are extending too much !")
+                    return {'CANCELLED'}
+
                 if (
                     context.scene.binjo_props.force_model_A == True or \
                     (tex_contains_transparency == False and face_contains_transparency == False)
@@ -801,7 +818,8 @@ class BINJO_OT_create_model_from_bin_handler(bpy.types.Operator):
 
         print("Creating new Object...")
         # setting up a new mesh for the scene
-        imported_mesh = bpy.data.meshes.new("import_Mesh")
+        aaa = bpy.data.meshes.new("import_Mesh").name
+        imported_mesh = bpy.data.meshes[aaa]
         imported_object = bpy.data.objects.new("import_Object", imported_mesh)
         
         vertices    = bin_handler.model_object.vertex_coord_list
@@ -822,8 +840,14 @@ class BINJO_OT_create_model_from_bin_handler(bpy.types.Operator):
             tex_node = mat.node_tree.nodes["TEX"]
             tex_node.image = binjo_mat.Blender_IMG
             if (tex_node.image is not None):
-                tex_node.image.filepath_raw = f"{context.scene.binjo_props.export_path}/{tex_node.image.name}"
-                tex_node.image.save()
+
+                if (os.path.isdir(context.scene.binjo_props.export_path) == False):
+                    self.report({'WARNING'}, f"Export Path is not set to a viable Directory - Not saving tmp Images...")
+                elif (os.access(context.scene.binjo_props.export_path, (os.R_OK & os.W_OK)) == False):
+                    self.report({'WARNING'}, f"Incorrect Permissions for Export Path Directory !")
+                else:
+                    tex_node.image.filepath_raw = f"{context.scene.binjo_props.export_path}/{tex_node.image.name}"
+                    tex_node.image.save()
             # also parse the collision properties and assign them correctly after defaulting
             mat["Collision_Disabled"] = bool("NOCOLL" in mat.name)
             mat["Collision_Flags"] = ModelBIN_ColSeg.get_collision_flag_dict(
@@ -963,6 +987,25 @@ class BINJO_OT_convert_all_mats_to_binjo(bpy.types.Operator):
         if (target_object is None):
             self.report({'ERROR'}, f"No Object selected !")
             return {'CANCELLED'}
+                
+        # create over-arching layer/attribute elements
+
+        # if there is a color attr already, keep it and rename it for consistency
+        if (len(target_object.data.color_attributes) > 0):
+            target_object.data.color_attributes[0].name = "import_Color"
+            color_attribute = target_object.data.color_attributes[0]
+        # otherwise, create a new one
+        else:
+            color_attribute = target_object.data.color_attributes.new(name='import_Color', domain='CORNER', type='BYTE_COLOR')
+            for idx in range(0, len(color_attribute.data)):
+                color_attribute.data[idx].color = (1.0, 1.0, 1.0, 1.0)
+        
+        # same for UVs
+        if (len(target_object.data.uv_layers) > 0):
+            target_object.data.uv_layers[0].name = "import_UV"
+            import_UV = target_object.data.uv_layers[0]
+        else:
+            import_UV = imported_object.data.uv_layers.new(name="import_UV")
         
         for mat in target_object.data.materials:
             # only convert mats that dont match the current binjo version
@@ -1007,15 +1050,6 @@ def set_mat_to_default(mat):
             if (old_node.name == "Principled BSDF" or old_node.name == "Material Output"):
                 continue
             mat.node_tree.nodes.remove(old_node)
-
-    # create over-arching layer/attribute elements
-    # this doesn't work like that yet...
-    # if (len(target_object.data.uv_layers) == 0):
-    #     target_object.data.uv_layers.new(name="import_UV")
-    # if (target_object.data.meshes.attributes.get('import_Color', None) is None):
-    #     color_attribute = target_object.data.meshes.attributes.new(name='import_Color', domain='CORNER', type='BYTE_COLOR')
-    #     for idx in range(0, len(color_attribute.data)):
-    #         color_attribute.data[idx].color = (1.0, 1.0, 1.0, 1.0)
         
     # setting internal parameters within the mat
     mat.use_nodes = True
@@ -1074,6 +1108,23 @@ class BINJO_OT_create_mat(bpy.types.Operator, ImportHelper):
         if (target_object is None):
             self.report({'ERROR'}, f"No Object selected !")
             return {'CANCELLED'}
+
+        # if there is a color attr already, keep it and rename it for consistency
+        if (len(target_object.data.color_attributes) > 0):
+            target_object.data.color_attributes[0].name = "import_Color"
+            color_attribute = target_object.data.color_attributes[0]
+        # otherwise, create a new one
+        else:
+            color_attribute = target_object.data.color_attributes.new(name='import_Color', domain='CORNER', type='BYTE_COLOR')
+            for idx in range(0, len(color_attribute.data)):
+                color_attribute.data[idx].color = (1.0, 1.0, 1.0, 1.0)
+        
+        # same for UVs
+        if (len(target_object.data.uv_layers) > 0):
+            target_object.data.uv_layers[0].name = "import_UV"
+            import_UV = target_object.data.uv_layers[0]
+        else:
+            import_UV = imported_object.data.uv_layers.new(name="import_UV")
 
         mat = bpy.data.materials.new("new_mat")
         set_mat_to_default(mat)

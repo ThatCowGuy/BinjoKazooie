@@ -9,6 +9,32 @@ from . binjo_dicts import Dicts
 
 
 
+# if any of the VTXs UVs are misaligned / too far away from 0, realign all of the
+# VTX within the given list (always assume it's a triplet because model should be triangulated)
+def realign_vtx_UVs(vtx_triplet, tex_w, tex_h):
+    # higher bound
+    while (np.max([vtx_triplet[0].u, vtx_triplet[1].u, vtx_triplet[2].u]) > 0x8000):
+        for vtx in vtx_triplet:
+            vtx.u -= (64 * tex_w)
+    while (np.max([vtx_triplet[0].v, vtx_triplet[1].v, vtx_triplet[2].v]) > 0x8000):
+        for vtx in vtx_triplet:
+            vtx.v -= (64 * tex_h)
+    # lower bound
+    while (np.min([vtx_triplet[0].u, vtx_triplet[1].u, vtx_triplet[2].u]) < -0x7FFF):
+        for vtx in vtx_triplet:
+            vtx.u += (64 * tex_w)
+    while (np.min([vtx_triplet[0].v, vtx_triplet[1].v, vtx_triplet[2].v]) < -0x7FFF):
+        for vtx in vtx_triplet:
+            vtx.v += (64 * tex_h)
+    # if either UV is NOW bigger than 0x8000 again, the UV face is bigger than 0xFFFF in total !
+    if (
+        np.max([vtx_triplet[0].u, vtx_triplet[1].u, vtx_triplet[2].u]) > 0x8000 or \
+        np.max([vtx_triplet[0].v, vtx_triplet[1].v, vtx_triplet[2].v]) > 0x8000
+    ):
+        print(f"A Face has way too big UVs: {[f'XYZ={(vtx.x, vtx.y, vtx.z)} UV={(vtx.u, vtx.v)}' for vtx in vtx_triplet]} !")
+        return -1
+    return 0
+
 def to_decal_hex(val, dig, prefix="0x"):
     if dig == 8:
         return f"{prefix}{val:016X}"
