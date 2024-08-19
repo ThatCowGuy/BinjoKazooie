@@ -60,7 +60,7 @@ def highlight_invis_changed(self, context):
                 color_attribute.data[face.loop_indices[2]].color = (0.7, 0.7, 0.7, 0.0)
 
 disable_collision_update_function = False
-def collision_checkboxes_changed(self, context):
+def collision_changed(self, context):
     # only update the materials collision dict, if this wasnt disabled
     global disable_collision_update_function
     if (disable_collision_update_function == False):
@@ -70,26 +70,10 @@ def collision_checkboxes_changed(self, context):
             if (mat is not None):
                 for idx, key in enumerate(mat["Collision_Flags"].keys()):
                     mat["Collision_Flags"][key] = bool(context.scene.binjo_props.collision_checkboxes[idx])
-
-def collision_disabled_changed(self, context):
-    # only update the materials collision dict, if this wasnt disabled
-    global disable_collision_update_function
-    if (disable_collision_update_function == False):
-        # and check for object and active-mat existence
-        if (context.active_object is not None):
-            mat = context.active_object.active_material
-            if (mat is not None):
                 mat["Collision_Disabled"] = bool(context.scene.binjo_props.collision_disabled[0])
-
-def collision_SFX_changed(self, context):
-    # only update the materials collision dict, if this wasnt disabled
-    global disable_collision_update_function
-    if (disable_collision_update_function == False):
-        # and check for object and active-mat existence
-        if (context.active_object is not None):
-            mat = context.active_object.active_material
-            if (mat is not None):
+                mat["Visibility_Disabled"] = bool(context.scene.binjo_props.visibility_disabled[0])
                 mat["Collision_SFX"] = Dicts.COLLISION_SFX[context.scene.binjo_props.SFX_value_enum]
+
 
 
 @persistent
@@ -152,25 +136,39 @@ class BINJO_Properties(bpy.types.PropertyGroup):
         description="Force everything to export into a singular Model-BIN.",
         default = False
     )
+    scale_factor : bpy.props.IntProperty(
+        name="",
+        description="Determine by how much the Model is rescaled on Import and Export",
+        default = 100,
+        min = 1,
+        max = 1000
+    )
     highlight_invis : bpy.props.BoolProperty(
         name="Highlight INVIS Mats",
-        description="Highlight all the INVIS Materials in Magenta; Those are usually Collision only.",
+        description="Highlight all the INVIS (Collision-Only) Materials in Magenta",
         default = False,
         update = highlight_invis_changed
     )
     collision_disabled : bpy.props.BoolVectorProperty(
         name="Collision Disabled",
-        description="Materials with disabled collision will not be part of the Collision-Model at all; They're strictly visual-only.",
+        description="Materials with disabled Collision will not be part of the Collision-Model at all; They're strictly visual-only.",
         size=1,
         default = (False,) * 1,
-        update = collision_disabled_changed
+        update = collision_changed
+    )
+    visibility_disabled : bpy.props.BoolVectorProperty(
+        name="Visibility Disabled",
+        description="Materials with disabled Visibility will not be drawn at all; They're strictly collision-only.",
+        size=1,
+        default = (False,) * 1,
+        update = collision_changed
     )
     collision_checkboxes : bpy.props.BoolVectorProperty(
         name="Collision Flags",
         description="Set the Collision Flags of the Selected Material.",
         size=len(Dicts.COLLISION_FLAGS.keys()),
         default = (False,) * len(Dicts.COLLISION_FLAGS.keys()),
-        update = collision_checkboxes_changed
+        update = collision_changed
     )
     show_all_coll_flags : bpy.props.BoolProperty(
         name="Show all Coll Flags",
@@ -363,7 +361,7 @@ class BINJO_Properties(bpy.types.PropertyGroup):
         description="SFX Value Enum to determine Surface Sound",
         default="Normal",
         items = [(key, key, "") for key in Dicts.COLLISION_SFX.keys()],
-        update = collision_SFX_changed
+        update = collision_changed
     )
     
 
@@ -405,11 +403,9 @@ class BINJO_PT_main_panel(bpy.types.Panel):
         row = layout.row()
         row.operator("conversion.from_bin")
 
-        # import from BIN
+        # export
         layout.split()
         layout.split()
-        # row = layout.row()
-        # row.label(text="Exporting :")
         row = layout.row()
         row.label(text="Set Export Path :")
         row = layout.row()
@@ -422,21 +418,14 @@ class BINJO_PT_main_panel(bpy.types.Panel):
         # row = layout.row()
         # row.operator("conversion.dump_images")
         
+        # tooling / settings
         layout.split()
         layout.split()
-        row = layout.row()
-        row.label(text="Tooling :")
 
         # control elements
         row = layout.row()
-        row.operator("material.create_mat")
-        row = layout.row()
-        row.operator("material.change_mat_img")
-        row = layout.row()
-        row.operator("object.convert_materials")
-
-        row = layout.row()
-        row.prop(context.scene.binjo_props, "highlight_invis")
+        row.label(text="Scale Factor :")
+        row.prop(context.scene.binjo_props, "scale_factor")
 
 
 # PT elements are GUI Panels to collect and arrange Features + Props
@@ -448,71 +437,77 @@ class BINJO_PT_material_panel(bpy.types.Panel):
     bl_options = {"HIDE_HEADER"} # this forces the panel to the top in the stack as a side-effect
 
     def draw(self, context):
-        # update_collision_dict_hidden(context)
         layout = self.layout
 
+        # general mat tools
         box = layout.box()
         
         inner_box = box.box()
         head_row = inner_box.row()
         head_row.label(text=f"BINjo Material Collision Editor")
-
-        row = box.row()
-        row.prop(context.scene.binjo_props, "show_all_coll_flags", text="Show all Collision Flags")
         
         mat = None
         if (context.active_object is not None):
             mat = context.active_object.active_material
 
+            row = box.row()
+            row.operator("material.create_mat")
+            row.operator("object.convert_materials")
+
+            row = box.row()
+            row.prop(context.scene.binjo_props, "highlight_invis")
+            row = box.row()
+            row.prop(context.scene.binjo_props, "show_all_coll_flags", text="Show ALL Collision Flags")
+
+            inner_box = box.box()
+            row = inner_box.row()
+            # check if any mat is selected
             if (mat is None):
-                row = box.row()
                 row.label(text="No Material is selected.")
                 return
-                
+            # and if the selected mat is a Binjo one
             if (mat.get("BINjo_Version", None) is None):
-                row = box.row()
                 row.label(text="Selected Material is not a BINjo Mat.")
                 return
+            
+            row.label(text=f"Selected Material: {mat.name}")
 
-            if (mat is not None):
-
-                row = box.row()
-                row.prop(context.scene.binjo_props, "collision_disabled", index=0, text="Collision disabled entirely")
-
-                sfx_row = box.row()
-                sfx_row.prop(context.scene.binjo_props, "SFX_value_enum", text="Sound Effect")
-
-                element_row = box.row()
-                element_columns = (element_row.column(), element_row.column())
-                
-                # determine how many rows will be needed for the display
-                if (context.scene.binjo_props.show_all_coll_flags == True):
-                    # the +1 is basically like calling ceil() except without calling it
-                    display_row_cnt = ((len(Dicts.COLLISION_FLAGS.keys()) + 1) // 2)
-                if (context.scene.binjo_props.show_all_coll_flags == False):
-                    display_row_cnt = 5
-
-                displayed_elements = 0
-                for idx, key in enumerate(mat["Collision_Flags"].keys()):
-                    # if the toggle to show all flags is OFF, skip those that should be skipped
-                    if ((context.scene.binjo_props.show_all_coll_flags == False) and ("UNK" in key or "(" in key)):
-                        continue
-                    # if the element is the SFX value, skip it (handled further up in sfx_row)
-                    if (key == "SFX Value"):
-                        continue
-                    # draw the element
-                    element_columns[displayed_elements // display_row_cnt].prop(
-                        context.scene.binjo_props, "collision_checkboxes",
-                        index=idx, text=key
-                    )
-                    displayed_elements += 1
-
-        if (context.scene.binjo_props.show_all_coll_flags == True):
             row = box.row()
-            if (mat is not None):
-                row.label(text=f"Selected Material: {mat.name}")
-            else:
-                row.label(text="No Material Selected")
+            row.prop(context.scene.binjo_props, "collision_disabled", index=0, text="Disable Collision")
+            row.prop(context.scene.binjo_props, "visibility_disabled", index=0, text="Disable Visibility")
+
+            sfx_row = box.row()
+            sfx_row.prop(context.scene.binjo_props, "SFX_value_enum", text="Sound Effect")
+
+            element_row = box.row()
+            element_columns = (element_row.column(), element_row.column())
+            
+            # determine how many rows will be needed for the display
+            if (context.scene.binjo_props.show_all_coll_flags == True):
+                # the +1 is basically like calling ceil() except without calling it
+                display_row_cnt = ((len(Dicts.COLLISION_FLAGS.keys()) + 1) // 2)
+            if (context.scene.binjo_props.show_all_coll_flags == False):
+                display_row_cnt = 5
+
+            displayed_elements = 0
+            for idx, key in enumerate(mat["Collision_Flags"].keys()):
+                # if the toggle to show all flags is OFF, skip those that should be skipped
+                if ((context.scene.binjo_props.show_all_coll_flags == False) and ("UNK" in key or "(" in key)):
+                    continue
+                # if the element is the SFX value, skip it (handled further up in sfx_row)
+                if (key == "SFX Value"):
+                    continue
+                # draw the element
+                element_columns[displayed_elements // display_row_cnt].prop(
+                    context.scene.binjo_props, "collision_checkboxes",
+                    index=idx, text=key
+                )
+                displayed_elements += 1
+            
+            row = box.row()
+            row.operator("material.change_mat_img")
+
+        # if (context.scene.binjo_props.show_all_coll_flags == True):
 
 
 
@@ -670,7 +665,7 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                     rgba   = color_attribute.data[loop_idx].color
                     uvs    = uv_layer.data[loop_idx].uv
                     # and extract the individual values (and correct the coordinate system)
-                    x, y, z = [round(coord) for coord in coords]
+                    x, y, z = [round(coord * context.scene.binjo_props.scale_factor) for coord in coords]
                     x, y, z = x, z, -y
                     r, g, b, a = [round(255 * channel) for channel in rgba]
                     u_transf, v_transf = uvs.x, uvs.y
@@ -711,7 +706,7 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                     if (coll_type is not None):
                         collision_tris_A.append(tri)
                     # and if it has a valid tex_id, create the aforementioned DL command chunk for the buffered tris
-                    if (tex_id >= 0):
+                    if (tex_id >= 0 and assigned_mat["visibility_disabled"] is False):
                         buffered_tris_A.append(tri)
                         # if we reached 10 buffered tris, we dump them into a tri-drawing chunk and flush it
                         # (the DL VTX-Buffer can hold 0x20==32 verts; 10 tris have 30 verts)
@@ -734,7 +729,7 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                     if (coll_type is not None):
                         collision_tris_B.append(tri)
                     # and if it has a valid tex_id, create the aforementioned DL command chunk for the buffered tris
-                    if (tex_id >= 0):
+                    if (tex_id >= 0 and assigned_mat["visibility_disabled"] is False):
                         buffered_tris_B.append(tri)
                         # if we reached 10 buffered tris, we dump them into a tri-drawing chunk and flush it
                         # (the DL VTX-Buffer can hold 0x20==32 verts; 10 tris have 30 verts)
@@ -743,9 +738,9 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                             buffered_tris_B = []
 
             # now the polygon loop is over; check if some buffered tris are left over
-            if (tex_id >= 0 and len(buffered_tris_A) > 0):
+            if (tex_id >= 0 and len(buffered_tris_A) > 0 and assigned_mat["visibility_disabled"] is False):
                 DL_command_list_A.extend(ModelBIN_DLSeg.build_tri_drawing_commands(buffered_tris_A))
-            if (tex_id >= 0 and len(buffered_tris_B) > 0):
+            if (tex_id >= 0 and len(buffered_tris_B) > 0 and assigned_mat["visibility_disabled"] is False):
                 DL_command_list_B.extend(ModelBIN_DLSeg.build_tri_drawing_commands(buffered_tris_B))
         
         # use the count of extracted A-model VTXs to determine if we need a A-Model at all
@@ -820,8 +815,9 @@ class BINJO_OT_create_model_from_bin_handler(bpy.types.Operator):
         # setting up a new mesh for the scene
         new_mesh_name = bpy.data.meshes.new("import_Mesh").name
         new_obj_name = bpy.data.objects.new("import_Object", bpy.data.meshes[new_mesh_name]).name
-        
-        vertices    = bin_handler.model_object.vertex_coord_list
+
+        # this line essentially just divides every coord by the scale factor through a nested list-comprehension
+        vertices    = [[(coord / context.scene.binjo_props.scale_factor) for coord in coordlist] for coordlist in bin_handler.model_object.vertex_coord_list]
         edges       = []
         faces       = bin_handler.model_object.face_idx_list
         bpy.data.meshes[new_mesh_name].from_pydata(vertices, edges, faces)
@@ -852,6 +848,7 @@ class BINJO_OT_create_model_from_bin_handler(bpy.types.Operator):
                     tex_node.image.save()
             # also parse the collision properties and assign them correctly after defaulting
             mat["Collision_Disabled"] = bool("NOCOLL" in mat.name)
+            mat["Visibility_Disabled"] = bool("INVIS" in mat.name)
             mat["Collision_Flags"] = ModelBIN_ColSeg.get_collision_flag_dict(
                 initial_value=ModelBIN_ColSeg.get_colltype_from_mat_name(mat.name)
             )
@@ -1095,6 +1092,7 @@ def set_mat_to_default(mat):
     mat.node_tree.links.new(color_node.outputs["Alpha"], mat.node_tree.nodes[0].inputs["Alpha"])
 
     mat["Collision_Disabled"] = False
+    mat["Visibility_Disabled"] = False
     mat["Collision_Flags"] = ModelBIN_ColSeg.get_collision_flag_dict(0x0000_0000)
     mat["Collision_Flags"]["Use Default SFXs"] = True
     mat["Collision_SFX"] = Dicts.COLLISION_SFX["Normal"]
@@ -1105,7 +1103,7 @@ def set_mat_to_default(mat):
 class BINJO_OT_create_mat(bpy.types.Operator, ImportHelper):
     """Create a new BINjo Material"""
     bl_idname = "material.create_mat"
-    bl_label = "Create new Material"
+    bl_label = "New Material"
     bl_options = {'REGISTER'}
 
     def execute(self, context):
