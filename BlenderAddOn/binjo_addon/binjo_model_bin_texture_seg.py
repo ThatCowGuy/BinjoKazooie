@@ -145,17 +145,16 @@ class ModelBIN_TexElem:
 
         expected_texel_size = ((self.width * self.height) * Dicts.TEXEL_FMT_BITSIZE[self.tex_type]) // 8
         expected_palet_size = Dicts.TEX_TYPE_PALETTE_SIZE[self.tex_type]
-        print(binjo_utils.to_decal_hex(img_data_size - (expected_palet_size + expected_texel_size), 4))
         # at this point, Im checking 2 things:
         # 1) BB erronously declares some CI8 textures as being CI4 in the headers. This results
         #    in a palette-size difference of exactly 0x1E0 bytes, and double the expected texel-size
         if (img_data_size == (expected_palet_size + 0x1E0 + int(expected_texel_size * 2.0))):
-            print("Detected CI8 Texture erronously declared as being CI4 in header; Changing tex_type.")
+            print(f"Tex {binjo_utils.to_decal_hex(self.datasection_offset_data, 4)} erronously declared as CI4 in Header instead of CI8; Changing tex_type.")
             self.tex_type = Dicts.TEX_TYPES["CI8"]
         # 2) If a texture contains mipmaps, its data-size (minus the palette) will be exactly
         #    1.5x larger, regardless of its dimension.
         if (img_data_size == (expected_palet_size + int(expected_texel_size * 1.5))):
-            print("Detected mipmapped Texture; ignoring for now.")
+            print(f"Tex {binjo_utils.to_decal_hex(self.datasection_offset_data, 4)} is mipmapped; ignoring for now...")
 
         # additional parsed properties (DATA elements)
         # === 0x00 ===============================

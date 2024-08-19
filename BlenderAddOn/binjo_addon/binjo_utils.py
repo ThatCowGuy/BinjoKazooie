@@ -7,7 +7,13 @@ import sys
 from . import binjo_model_LU
 from . binjo_dicts import Dicts
 
+from timeit import default_timer as timer
 
+
+
+def report_time(running_timer, msg):
+    print(f">>> ({timer() - running_timer:.3f}s) -- {msg}.")
+    return timer()
 
 # if any of the VTXs UVs are misaligned / too far away from 0, realign all of the
 # VTX within the given list (always assume it's a triplet because model should be triangulated)

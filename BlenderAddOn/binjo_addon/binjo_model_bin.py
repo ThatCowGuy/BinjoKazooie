@@ -7,6 +7,8 @@ from . binjo_model_bin_collision_seg import ModelBIN_ColSeg, ModelBIN_TriElem
 from . binjo_model_bin_displaylist_seg import ModelBIN_DLSeg, TileDescriptor
 from . binjo_model_bin_geolayout_seg import ModelBIN_GeoSeg, ModelBIN_GeoCommandChain
 
+from timeit import default_timer as timer
+
 class ModelBIN:
     # Header                done
     # Texture               done
@@ -32,19 +34,37 @@ class ModelBIN:
         self.GeoSeg = ModelBIN_GeoSeg()
 
     def populate_from_data(self, bin_data):
+        populate_timer_start = timer()
+        populate_timer = timer()
+
         self.Header = ModelBIN_Header(bin_data)
+        populate_timer = binjo_utils.report_time(populate_timer, "Header Segment Populated")
+
         self.TexSeg.populate_from_data(bin_data, self.Header.tex_offset)
+        populate_timer = binjo_utils.report_time(populate_timer, "Tex Segment Populated")
+
         self.VtxSeg.populate_from_data(bin_data, self.Header.vtx_offset, bin_header_vtx_cnt=self.Header.vtx_cnt)
+        populate_timer = binjo_utils.report_time(populate_timer, "VTX Segment Populated")
+
         # Bone
+
         self.ColSeg.populate_from_data(bin_data, self.Header.coll_offset)
         self.ColSeg.link_vertex_objects_for_all_tris(self.VtxSeg.vtx_list)
+        populate_timer = binjo_utils.report_time(populate_timer, "Collision Segment Populated")
+
         self.DLSeg.populate_from_data(bin_data, self.Header.DL_offset)
+        populate_timer = binjo_utils.report_time(populate_timer, "DL Segment Populated")
+
         # FX
         # FX_END
         # AnimTex
         # Geo ---- NOTE: Im currently ignoring this when building from ROM data
 
         self.build_complete_tri_list()
+        populate_timer = binjo_utils.report_time(populate_timer, "Tri-List completed")
+
+        populate_timer_start = binjo_utils.report_time(populate_timer_start, "ModelBIN fully populated.")
+        return
 
     def export_to_BIN(self, filename="default.bin"):
         output = bytearray()
@@ -180,28 +200,34 @@ class ModelBIN:
                     self.add_and_transform_tri(tmp_tri, descriptor_array[active_descriptor])
                     continue
 
-    # this func needs the entire existing-tri list aswell as the vtx-seg, so its in the collection class
+    # this func figures out if the new DL-Segment tri is already part of the tri-list (from ColSeg), and if
+    # so, applys all the visual information to this already existing tri instead of using the new one.
+    # this is VERY slow unfortunately...
+    # this func also needs the entire existing-tri list aswell as the vtx-seg, so its in the collection class...
     def add_and_transform_tri(self, new_tri, tile_descriptor):
         # first, check if the tri already exists in our list
-        matching_tri_index = -1
-        for idx, existing_tri in enumerate(self.complete_tri_list):
-            if (existing_tri.compare_only_indices(new_tri) == True):
-                matching_tri_index = idx
-                new_tri = existing_tri
-                break
-        # if the tri wasnt already added, its vertex objects wont be linked yet
-        if (matching_tri_index == -1):
-            new_tri.link_vertex_objects(self.VtxSeg.vtx_list)
+        # matching_tri_index = -1
+        # for idx, existing_tri in enumerate(self.complete_tri_list):
+        #     if (existing_tri.compare_only_indices(new_tri) == True):
+        #         matching_tri_index = idx
+        #         new_tri = existing_tri
+        #         break
+        
+        # python trick to find the "next" (or earliest in this case) matching element from a list OR a default
+        matching_tri = next((existing_tri for existing_tri in self.complete_tri_list if existing_tri.compare_only_indices(new_tri)), None)
+
+        # if the tri wasnt found, it's new; So the vertex objects wont be linked yet and we have to add it
+        if (matching_tri is None):
+            matching_tri = new_tri
+            matching_tri.link_vertex_objects(self.VtxSeg.vtx_list)
+            self.complete_tri_list.append(matching_tri)
         # this is ALWAYS true if the tri was found in the DLs; Textured or not
-        new_tri.visible = True
+        matching_tri.visible = True
         # finally, link the tex ID and calculate the Blender-UVs with the help of the descriptor
-        new_tri.tex_idx = tile_descriptor.tex_idx
-        new_tri.vtx_1.calc_transformed_UVs(tile_descriptor)
-        new_tri.vtx_2.calc_transformed_UVs(tile_descriptor)
-        new_tri.vtx_3.calc_transformed_UVs(tile_descriptor)
-        # and add the new tri if it wasnt added before
-        if (matching_tri_index == -1):
-            self.complete_tri_list.append(new_tri)
+        matching_tri.tex_idx = tile_descriptor.tex_idx
+        matching_tri.vtx_1.calc_transformed_UVs(tile_descriptor)
+        matching_tri.vtx_2.calc_transformed_UVs(tile_descriptor)
+        matching_tri.vtx_3.calc_transformed_UVs(tile_descriptor)
 
 
 

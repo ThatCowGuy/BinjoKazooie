@@ -129,15 +129,15 @@ class ModelBIN_ColSeg:
             self.geo_cube_list.append(cube)
 
         self.tri_list = []
-        self.unique_tri_list = []
         for idx in range(0, self.tri_cnt):
             file_offset_tri = self.file_offset_tris + (idx * ModelBIN_TriElem.SIZE)
             tri = ModelBIN_TriElem()
             tri.build_from_binary_data(file_data, file_offset_tri)
             self.tri_list.append(tri)
-            if (tri not in self.unique_tri_list):
-                self.unique_tri_list.append(tri)
-                self.unique_tri_cnt += 1
+
+        # python trick to remove duplicates; sets are always unique
+        self.unique_tri_list = list(frozenset(self.tri_list))
+        self.unique_tri_cnt = len(self.unique_tri_list)
 
         print(f"parsed {self.tri_cnt} collision tris within {self.geo_cube_cnt} cubes.")
         unique_percentage = (100.0 * self.unique_tri_cnt / self.tri_cnt)
@@ -300,7 +300,7 @@ class ModelBIN_TriElem:
     def compare_only_indices(self, other):
         if not isinstance(other, ModelBIN_TriElem):
             return False
-        # checking all cyclic permutations because they are essentially identical
+        # checking all cyclic permutations because they are essentially identical;
         # non-cyclic permutations have a different normal-vector though !
         if (
             self.index_1 == other.index_1 and \
@@ -332,6 +332,9 @@ class ModelBIN_TriElem:
             return False
         # and finally compare the indices
         return (self.compare_only_indices(other))
+
+    def __hash__(self):
+        return hash((self.index_1, self.index_2, self.index_3, self.collision_type, self.tex_idx))
 
     # built-in less_then() method; used to evaluate (A < B) expressions
     def __lt__(self, other):

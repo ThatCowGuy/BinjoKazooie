@@ -26,7 +26,7 @@ bl_info = {
     "category": "Object",
 }
 bin_handler = None
-version_num = "0.1.2"
+version_num = "0.1.3"
 
 
 
@@ -90,8 +90,9 @@ def general_update_function(scene):
             # update all the flags
             for idx, key in enumerate(mat["Collision_Flags"].keys()):
                 context.scene.binjo_props.collision_checkboxes[idx] = bool(mat["Collision_Flags"][key])
-            # as well as the collision-enabled state
+            # as well as the collision- and visibility-disabled states
             context.scene.binjo_props.collision_disabled[0] = bool(mat["Collision_Disabled"])
+            context.scene.binjo_props.visibility_disabled[0] = bool(mat["Visibility_Disabled"])
             # and the collision SFX
             context.scene.binjo_props.SFX_value_enum = Dicts.COLLISION_SFX_REV[mat["Collision_SFX"]]
 
@@ -138,7 +139,7 @@ class BINJO_Properties(bpy.types.PropertyGroup):
     )
     scale_factor : bpy.props.IntProperty(
         name="",
-        description="Determine by how much the Model is rescaled on Import and Export",
+        description="The Model is downscaled by this factor on Import, and upscaled on Export",
         default = 100,
         min = 1,
         max = 1000
@@ -808,8 +809,7 @@ class BINJO_OT_create_model_from_bin_handler(bpy.types.Operator):
     def execute(self, context):       
         global bin_handler
         scene = context.scene
-        export_timer_start = timer()
-        export_timer = timer()
+        import_timer_start = timer()
 
         print("Creating new Object...")
         # setting up a new mesh for the scene
@@ -893,8 +893,7 @@ class BINJO_OT_create_model_from_bin_handler(bpy.types.Operator):
 
         # just some names to check if neccessary
         print([e.name for e in bpy.data.materials[0].node_tree.nodes["Principled BSDF"].inputs])
-        print(f"({timer() - export_timer:.3f}s) -- Done.")
-        export_timer = timer()
+        print(f"({timer() - import_timer_start:.3f}s) -- Done.")
 
         return { 'FINISHED' }
 
