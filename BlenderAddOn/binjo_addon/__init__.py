@@ -144,6 +144,25 @@ class BINJO_Properties(bpy.types.PropertyGroup):
         min = 1,
         max = 1000
     )
+    custom_color_picker: bpy.props.FloatVectorProperty(
+        name = "RGBA",
+        description="Color Picker for solid shading",
+        subtype='COLOR_GAMMA',
+        size=4,
+        default=(1.0, 1.0, 1.0, 1.0),
+        min= 0.0, # these only refer to the brightness slider
+        max = 1.0
+    )
+    enable_color_shading : bpy.props.BoolProperty(
+        name="Use Color",
+        description="Apply the selected Color when using the BINjo shading",
+        default = True
+    )
+    enable_alpha_shading : bpy.props.BoolProperty(
+        name="Use Alpha",
+        description="Apply the selected Alpha when using the BINjo shading",
+        default = True
+    )
     highlight_invis : bpy.props.BoolProperty(
         name="Highlight INVIS Mats",
         description="Highlight all the INVIS (Collision-Only) Materials in Magenta",
@@ -377,9 +396,9 @@ class BINJO_Properties(bpy.types.PropertyGroup):
 #===========================================================================================================
 
 # PT elements are GUI Panels to collect and arrange Features + Props
-class BINJO_PT_main_panel(bpy.types.Panel):
+class BINJO_PT_import_export_panel(bpy.types.Panel):
     """ GUI Panel for stuff """
-    bl_label = "BINjo Control Panel"        # Panel Headline
+    bl_label = "BINjo Import / Export"      # Panel Headline
     bl_space_type = "VIEW_3D"               # Editting View under which to find the Panel
     bl_region_type = "UI"                   #
     bl_category = 'Tool'                    # Which Tab the Panel is located under
@@ -403,6 +422,9 @@ class BINJO_PT_main_panel(bpy.types.Panel):
         row.operator("conversion.from_rom")
         row = layout.row()
         row.operator("conversion.from_bin")
+        row = layout.row()
+        row.label(text="Scale Factor :")
+        row.prop(context.scene.binjo_props, "scale_factor")
 
         # export
         layout.split()
@@ -416,18 +438,28 @@ class BINJO_PT_main_panel(bpy.types.Panel):
         row.operator("conversion.to_bin")
         row = layout.row()
         row.prop(context.scene.binjo_props, "force_model_A")
-        # row = layout.row()
-        # row.operator("conversion.dump_images")
         
-        # tooling / settings
-        layout.split()
-        layout.split()
+class BINJO_PT_RGBA_shader_panel(bpy.types.Panel):
+    """ GUI Panel for stuff """
+    bl_label = "BINjo RGBA Shader"          # Panel Headline
+    bl_space_type = "VIEW_3D"               # Editting View under which to find the Panel
+    bl_region_type = "UI"                   #
+    bl_category = 'Tool'                    # Which Tab the Panel is located under
+    bl_options = {'HEADER_LAYOUT_EXPAND'}   #
+    
+    def draw(self, context):
+        layout = self.layout
 
-        # control elements
+        # flat shader
         row = layout.row()
-        row.label(text="Scale Factor :")
-        row.prop(context.scene.binjo_props, "scale_factor")
-
+        row.prop(context.scene.binjo_props, "custom_color_picker", text="Solid Shade")
+        row = layout.row()
+        row.prop(context.scene.binjo_props, "enable_color_shading")
+        row.prop(context.scene.binjo_props, "enable_alpha_shading")
+        row = layout.row()
+        row.operator("object.shade_selected_faces")
+        row = layout.row()
+        row.operator("object.shade_selected_verts")
 
 # PT elements are GUI Panels to collect and arrange Features + Props
 class BINJO_PT_material_panel(bpy.types.Panel):
@@ -1037,6 +1069,88 @@ class BINJO_OT_change_mat_img(bpy.types.Operator, ImportHelper):
 
         print(self.filepath)
         return {'FINISHED'}
+        
+class BINJO_OT_shade_selected_verts(bpy.types.Operator):
+    """Shade the currently selected Vertices (Bleeding into other Faces)"""
+    bl_idname = "object.shade_selected_verts"
+    bl_label = "Shade Selected Vertices"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        # check for object and active-mat existence
+        target_object = context.active_object
+        if (target_object is None):
+            self.report({'ERROR'}, f"No Object selected !")
+            return {'CANCELLED'}
+        
+        original_mode = target_object.mode
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # get the assigned color attribute data and the vertex-list
+        vertex_list  = target_object.data.vertices
+        color_data   = target_object.data.color_attributes[0].data
+        new_rgba_vec = context.scene.binjo_props.custom_color_picker
+
+        for face in target_object.data.polygons:
+            for (vertex_idx, loop_idx) in zip(face.vertices, face.loop_indices):
+                # if the vtx is not selected, skip it
+                if (vertex_list[vertex_idx].select == False):
+                    continue
+                if (context.scene.binjo_props.enable_color_shading is True):
+                    color_data[loop_idx].color[0] = new_rgba_vec[0]
+                    color_data[loop_idx].color[1] = new_rgba_vec[1]
+                    color_data[loop_idx].color[2] = new_rgba_vec[2]
+                if (context.scene.binjo_props.enable_alpha_shading is True):
+                    color_data[loop_idx].color[3] = new_rgba_vec[3]
+
+        bpy.ops.object.mode_set(mode=original_mode)
+        return {'FINISHED'}
+
+class BINJO_OT_shade_selected_faces(bpy.types.Operator):
+    """Shade the currently selected Faces"""
+    bl_idname = "object.shade_selected_faces"
+    bl_label = "Shade Selected Faces"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        # check for object and active-mat existence
+        target_object = context.active_object
+        if (target_object is None):
+            self.report({'ERROR'}, f"No Object selected !")
+            return {'CANCELLED'}
+        
+        original_mode = target_object.mode
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # get the assigned color attribute data and the vertex-list
+        vertex_list  = target_object.data.vertices
+        color_data   = target_object.data.color_attributes[0].data
+        new_rgba_vec = context.scene.binjo_props.custom_color_picker
+
+        for face in target_object.data.polygons:
+            # if the face is not selected, skip it
+            if (face.select == False):
+                continue
+            for loop_idx in face.loop_indices:
+                if (context.scene.binjo_props.enable_color_shading is True):
+                    color_data[loop_idx].color[0] = new_rgba_vec[0]
+                    color_data[loop_idx].color[1] = new_rgba_vec[1]
+                    color_data[loop_idx].color[2] = new_rgba_vec[2]
+                if (context.scene.binjo_props.enable_alpha_shading is True):
+                    color_data[loop_idx].color[3] = new_rgba_vec[3]
+
+        bpy.ops.object.mode_set(mode=original_mode)
+        return {'FINISHED'}
+
+
+
+
+
+
+
+
+
+
 
 def set_mat_to_default(mat):
     # first, retain (potential) old images, and remove old nodes
@@ -1143,7 +1257,8 @@ class BINJO_OT_create_mat(bpy.types.Operator, ImportHelper):
 # class list to abstract / loopify the reg() und unreg() funcs
 classes = [
     BINJO_Properties,
-    BINJO_PT_main_panel,
+    BINJO_PT_import_export_panel,
+    BINJO_PT_RGBA_shader_panel,
     BINJO_PT_material_panel,
     BINJO_OT_create_model_from_bin_handler,
     BINJO_OT_import_from_ROM,
@@ -1151,6 +1266,8 @@ classes = [
     BINJO_OT_export_to_BIN,
     BINJO_OT_dump_images,
     BINJO_OT_change_mat_img,
+    BINJO_OT_shade_selected_verts,
+    BINJO_OT_shade_selected_faces,
     BINJO_OT_create_mat,
     BINJO_OT_convert_all_mats_to_binjo
 ]
