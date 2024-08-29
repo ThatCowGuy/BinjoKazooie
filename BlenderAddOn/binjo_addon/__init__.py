@@ -1,6 +1,7 @@
 
 
 import os
+import numpy as np
 from timeit import default_timer as timer
 
 from . binjo_model_bin import ModelBIN
@@ -457,6 +458,8 @@ class BINJO_PT_RGBA_shader_panel(bpy.types.Panel):
         row.prop(context.scene.binjo_props, "enable_color_shading")
         row.prop(context.scene.binjo_props, "enable_alpha_shading")
         row = layout.row()
+        row.operator("object.copy_selected_shade")
+        row = layout.row()
         row.operator("object.shade_selected_faces")
         row = layout.row()
         row.operator("object.shade_selected_verts")
@@ -581,8 +584,8 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
             return {'CANCELLED'}
 
         target_object = context.active_object
-        color_attribute = target_object.data.color_attributes["import_Color"]
-        uv_layer = target_object.data.uv_layers["import_UV"]
+        color_attribute = target_object.data.color_attributes[0]
+        uv_layer = target_object.data.uv_layers[0]
         # remember current mode, and set it to OBJECT for the time being
         original_mode = target_object.mode
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -739,8 +742,10 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                     if (coll_type is not None):
                         collision_tris_A.append(tri)
                     # and if it has a valid tex_id, create the aforementioned DL command chunk for the buffered tris
-                    if (tex_id >= 0 and assigned_mat["visibility_disabled"] is False):
+                    print(tex_id, assigned_mat["Visibility_Disabled"])
+                    if (tex_id >= 0 and assigned_mat["Visibility_Disabled"] == False):
                         buffered_tris_A.append(tri)
+                        print("hello DL ?")
                         # if we reached 10 buffered tris, we dump them into a tri-drawing chunk and flush it
                         # (the DL VTX-Buffer can hold 0x20==32 verts; 10 tris have 30 verts)
                         if (len(buffered_tris_A) == 10): 
@@ -762,7 +767,7 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                     if (coll_type is not None):
                         collision_tris_B.append(tri)
                     # and if it has a valid tex_id, create the aforementioned DL command chunk for the buffered tris
-                    if (tex_id >= 0 and assigned_mat["visibility_disabled"] is False):
+                    if (tex_id >= 0 and assigned_mat["Visibility_Disabled"] == False):
                         buffered_tris_B.append(tri)
                         # if we reached 10 buffered tris, we dump them into a tri-drawing chunk and flush it
                         # (the DL VTX-Buffer can hold 0x20==32 verts; 10 tris have 30 verts)
@@ -771,9 +776,9 @@ class BINJO_OT_export_to_BIN(bpy.types.Operator):
                             buffered_tris_B = []
 
             # now the polygon loop is over; check if some buffered tris are left over
-            if (tex_id >= 0 and len(buffered_tris_A) > 0 and assigned_mat["visibility_disabled"] is False):
+            if (tex_id >= 0 and len(buffered_tris_A) > 0 and assigned_mat["Visibility_Disabled"] == False):
                 DL_command_list_A.extend(ModelBIN_DLSeg.build_tri_drawing_commands(buffered_tris_A))
-            if (tex_id >= 0 and len(buffered_tris_B) > 0 and assigned_mat["visibility_disabled"] is False):
+            if (tex_id >= 0 and len(buffered_tris_B) > 0 and assigned_mat["Visibility_Disabled"] == False):
                 DL_command_list_B.extend(ModelBIN_DLSeg.build_tri_drawing_commands(buffered_tris_B))
         
         # use the count of extracted A-model VTXs to determine if we need a A-Model at all
@@ -1096,11 +1101,11 @@ class BINJO_OT_shade_selected_verts(bpy.types.Operator):
                 # if the vtx is not selected, skip it
                 if (vertex_list[vertex_idx].select == False):
                     continue
-                if (context.scene.binjo_props.enable_color_shading is True):
+                if (context.scene.binjo_props.enable_color_shading == True):
                     color_data[loop_idx].color[0] = new_rgba_vec[0]
                     color_data[loop_idx].color[1] = new_rgba_vec[1]
                     color_data[loop_idx].color[2] = new_rgba_vec[2]
-                if (context.scene.binjo_props.enable_alpha_shading is True):
+                if (context.scene.binjo_props.enable_alpha_shading == True):
                     color_data[loop_idx].color[3] = new_rgba_vec[3]
 
         bpy.ops.object.mode_set(mode=original_mode)
@@ -1132,12 +1137,45 @@ class BINJO_OT_shade_selected_faces(bpy.types.Operator):
             if (face.select == False):
                 continue
             for loop_idx in face.loop_indices:
-                if (context.scene.binjo_props.enable_color_shading is True):
+                if (context.scene.binjo_props.enable_color_shading == True):
                     color_data[loop_idx].color[0] = new_rgba_vec[0]
                     color_data[loop_idx].color[1] = new_rgba_vec[1]
                     color_data[loop_idx].color[2] = new_rgba_vec[2]
-                if (context.scene.binjo_props.enable_alpha_shading is True):
+                if (context.scene.binjo_props.enable_alpha_shading == True):
                     color_data[loop_idx].color[3] = new_rgba_vec[3]
+
+        bpy.ops.object.mode_set(mode=original_mode)
+        return {'FINISHED'}
+        
+class BINJO_OT_copy_selected_shade(bpy.types.Operator):
+    """Copy the (mean) Shade of all selected Elements"""
+    bl_idname = "object.copy_selected_shade"
+    bl_label = "Copy Selected Shade"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        # check for object and active-mat existence
+        target_object = context.active_object
+        if (target_object is None):
+            self.report({'ERROR'}, f"No Object selected !")
+            return {'CANCELLED'}
+        
+        original_mode = target_object.mode
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # get the assigned color attribute data and the vertex-list
+        vertex_list  = target_object.data.vertices
+        color_data   = target_object.data.color_attributes[0].data
+
+        selected_vert_shades = []
+        for face in target_object.data.polygons:
+            for (vertex_idx, loop_idx) in zip(face.vertices, face.loop_indices):
+                # if the vtx is not selected, skip it
+                if (vertex_list[vertex_idx].select == True):
+                    selected_vert_shades.append(color_data[loop_idx].color)
+        new_rgba_vec = np.mean(selected_vert_shades, axis=0)
+
+        context.scene.binjo_props.custom_color_picker = new_rgba_vec
 
         bpy.ops.object.mode_set(mode=original_mode)
         return {'FINISHED'}
@@ -1268,6 +1306,7 @@ classes = [
     BINJO_OT_change_mat_img,
     BINJO_OT_shade_selected_verts,
     BINJO_OT_shade_selected_faces,
+    BINJO_OT_copy_selected_shade,
     BINJO_OT_create_mat,
     BINJO_OT_convert_all_mats_to_binjo
 ]
