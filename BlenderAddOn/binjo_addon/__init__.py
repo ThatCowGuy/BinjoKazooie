@@ -75,7 +75,15 @@ def collision_changed(self, context):
                 mat["Visibility_Disabled"] = bool(context.scene.binjo_props.visibility_disabled[0])
                 mat["Collision_SFX"] = Dicts.COLLISION_SFX[context.scene.binjo_props.SFX_value_enum]
 
-
+def RGBA_changed(self, context):
+    # only update the materials collision dict, if this wasnt disabled
+    global disable_collision_update_function
+    if (disable_collision_update_function == False):
+        # update the selected RGBA display
+        context.scene.binjo_props.custom_color_picker[0] = float(context.scene.binjo_props.color_picker_R / 255)
+        context.scene.binjo_props.custom_color_picker[1] = float(context.scene.binjo_props.color_picker_G / 255)
+        context.scene.binjo_props.custom_color_picker[2] = float(context.scene.binjo_props.color_picker_B / 255)
+        context.scene.binjo_props.custom_color_picker[3] = float(context.scene.binjo_props.color_picker_A / 255)
 
 @persistent
 def general_update_function(scene):
@@ -96,6 +104,11 @@ def general_update_function(scene):
             context.scene.binjo_props.visibility_disabled[0] = bool(mat["Visibility_Disabled"])
             # and the collision SFX
             context.scene.binjo_props.SFX_value_enum = Dicts.COLLISION_SFX_REV[mat["Collision_SFX"]]
+            # update the selected RGBA display
+            context.scene.binjo_props.color_picker_R = round(255 * context.scene.binjo_props.custom_color_picker[0])
+            context.scene.binjo_props.color_picker_G = round(255 * context.scene.binjo_props.custom_color_picker[1])
+            context.scene.binjo_props.color_picker_B = round(255 * context.scene.binjo_props.custom_color_picker[2])
+            context.scene.binjo_props.color_picker_A = round(255 * context.scene.binjo_props.custom_color_picker[3])
 
     disable_collision_update_function = False
 
@@ -153,6 +166,38 @@ class BINJO_Properties(bpy.types.PropertyGroup):
         default=(1.0, 1.0, 1.0, 1.0),
         min= 0.0, # these only refer to the brightness slider
         max = 1.0
+    )
+    color_picker_R: bpy.props.IntProperty(
+        name = "R",
+        description="R Value of current RGBA Shade",
+        default=255,
+        min= 0,
+        max = 255,
+        update = RGBA_changed
+    )
+    color_picker_G: bpy.props.IntProperty(
+        name="G",
+        description="G Value of current RGBA Shade",
+        default=255,
+        min=0,
+        max=255,
+        update = RGBA_changed
+    )
+    color_picker_B: bpy.props.IntProperty(
+        name="B",
+        description="B Value of current RGBA Shade",
+        default=255,
+        min=0,
+        max=255,
+        update = RGBA_changed
+    )
+    color_picker_A: bpy.props.IntProperty(
+        name="A",
+        description="A Value of current RGBA Shade",
+        default=255,
+        min=0,
+        max=255,
+        update = RGBA_changed
     )
     enable_color_shading : bpy.props.BoolProperty(
         name="Use Color",
@@ -439,7 +484,20 @@ class BINJO_PT_import_export_panel(bpy.types.Panel):
         row.operator("conversion.to_bin")
         row = layout.row()
         row.prop(context.scene.binjo_props, "force_model_A")
-        
+
+blender_icons_dict = {
+    'NONE': 0, 'QUESTION': 1, 'ERROR': 2, 'CANCEL': 3, 'TRIA_RIGHT': 4,
+    'TRIA_DOWN': 5, 'TRIA_LEFT': 6, 'TRIA_UP': 7, 'ARROW_LEFTRIGHT': 8, 'PLUS': 9,
+    'DISCLOSURE_TRI_RIGHT': 10, 'DISCLOSURE_TRI_DOWN': 11, 'RADIOBUT_OFF': 12, 'RADIOBUT_ON': 13, 'MENU_PANEL': 14,
+    'BLENDER': 15, 'GRIP': 16, 'DOT': 17, 'COLLAPSEMENU': 18, 'X': 19,
+    'DUPLICATE': 20, 'TRASH': 21, 'COLLECTION_NEW': 22, 'OPTIONS': 23, 'NODE': 24,
+    'NODE_SEL': 25, 'WINDOW': 26, 'WORKSPACE': 27, 'RIGHTARROW_THIN': 28, 'BORDERMOVE': 29,
+    'VIEWZOOM': 30, 'ADD': 31, 'REMOVE': 32, 'PANEL_CLOSE': 33, 'COPY_ID': 34,
+    'EYEDROPPER': 35, 'CHECKMARK': 36, 'AUTO': 37, 'CHECKBOX_DEHLT': 38, 'CHECKBOX_HLT': 39,
+    'UNLOCKED': 40, 'LOCKED': 41, 'UNPINNED': 42, 'PINNED': 43, 'SCREEN_BACK': 44,
+    'RIGHTARROW': 45, 'DOWNARROW_HLT': 46, 'FCURVE_SNAPSHOT': 47, 'OBJECT_HIDDEN': 48, 'TOPBAR': 49,
+    "INSET": 157, "IMAGES": 159
+}
 class BINJO_PT_RGBA_shader_panel(bpy.types.Panel):
     """ GUI Panel for stuff """
     bl_label = "BINjo RGBA Shader"          # Panel Headline
@@ -455,10 +513,18 @@ class BINJO_PT_RGBA_shader_panel(bpy.types.Panel):
         row = layout.row()
         row.prop(context.scene.binjo_props, "custom_color_picker", text="Solid Shade")
         row = layout.row()
+        row.prop(context.scene.binjo_props, "color_picker_R")
+        row.prop(context.scene.binjo_props, "color_picker_G")
+        row = layout.row()
+        row.prop(context.scene.binjo_props, "color_picker_B")
+        row.prop(context.scene.binjo_props, "color_picker_A")
+        row = layout.row()
+        row.operator("object.copy_selected_shade", icon_value=blender_icons_dict["EYEDROPPER"])
+        
+        layout.split()
+        row = layout.row()
         row.prop(context.scene.binjo_props, "enable_color_shading")
         row.prop(context.scene.binjo_props, "enable_alpha_shading")
-        row = layout.row()
-        row.operator("object.copy_selected_shade")
         row = layout.row()
         row.operator("object.shade_selected_faces")
         row = layout.row()
@@ -1076,9 +1142,9 @@ class BINJO_OT_change_mat_img(bpy.types.Operator, ImportHelper):
         return {'FINISHED'}
         
 class BINJO_OT_shade_selected_verts(bpy.types.Operator):
-    """Shade the currently selected Vertices (Bleeding into other Faces)"""
+    """Shade all currently selected Vertices (may bleed into connected Faces)"""
     bl_idname = "object.shade_selected_verts"
-    bl_label = "Shade Selected Vertices"
+    bl_label = "Shade Selected Verts"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -1112,7 +1178,7 @@ class BINJO_OT_shade_selected_verts(bpy.types.Operator):
         return {'FINISHED'}
 
 class BINJO_OT_shade_selected_faces(bpy.types.Operator):
-    """Shade the currently selected Faces"""
+    """Shade all currently selected Faces"""
     bl_idname = "object.shade_selected_faces"
     bl_label = "Shade Selected Faces"
     bl_options = {'REGISTER', 'UNDO'}
@@ -1148,9 +1214,9 @@ class BINJO_OT_shade_selected_faces(bpy.types.Operator):
         return {'FINISHED'}
         
 class BINJO_OT_copy_selected_shade(bpy.types.Operator):
-    """Copy the (mean) Shade of all selected Elements"""
+    """Copy the (mean) RGBA-Shade of all selected Elements"""
     bl_idname = "object.copy_selected_shade"
-    bl_label = "Copy Selected Shade"
+    bl_label = "Get RGBA from Selected"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
